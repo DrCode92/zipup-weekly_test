@@ -1,0 +1,1169 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>리팩토링(Refactoring)과 코드 스멜(Code Smell) — KPC 정보관리기술사 ZIP-UP</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+body{font-family:'Noto Sans KR',sans-serif}
+.def-box{background:linear-gradient(135deg,#eef2ff 0%,#e0e7ff 100%);border-left:4px solid #4f46e5;border-radius:8px;padding:1.25rem;margin-bottom:1rem}
+.def-box p{color:#312e81;font-weight:500;margin:0;line-height:1.8}
+.insight-box{background-color:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:1rem;margin:1rem 0}
+.insight-box::before{content:'💡';margin-right:.5rem}
+.textbook-content h3{font-size:1.25rem;font-weight:700;color:#1e3a8a;margin-top:1.5rem;margin-bottom:.75rem;border-left:4px solid #4f46e5;padding-left:.75rem}
+.textbook-content h4{font-size:1.1rem;font-weight:600;color:#374151;margin-top:1rem;margin-bottom:.5rem}
+.textbook-content p{margin-bottom:1rem;line-height:1.8;color:#4b5563}
+.textbook-content ul{list-style-type:disc;padding-left:1.5rem;margin-bottom:1rem;color:#4b5563}
+.textbook-content li{margin-bottom:.5rem;line-height:1.7}
+.textbook-content table{width:100%;border-collapse:collapse;margin-bottom:1.5rem;font-size:.95rem}
+.textbook-content th,.textbook-content td{border:1px solid #e5e7eb;padding:.75rem;text-align:left}
+.textbook-content th{background-color:#f9fafb;font-weight:600;color:#1f2937}
+.textbook-content .highlight{background-color:#eef2ff;color:#4338ca;font-weight:600;padding:0 4px;border-radius:4px}
+.textbook-content pre{background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:1rem;overflow-x:auto;margin-bottom:1rem;font-size:.85rem;line-height:1.6}
+.textbook-content code{font-family:'Courier New',monospace}
+.tech-block{transition:all .3s ease;cursor:pointer}
+.tech-block:hover{transform:translateY(-2px);box-shadow:0 4px 6px -1px rgba(0,0,0,.1)}
+.tech-block.selected{ring:2px;ring-color:#4f46e5;background-color:#eef2ff;border-color:#4f46e5}
+.nav-item.active{border-bottom:2px solid #4f46e5;color:#4f46e5;font-weight:700}
+.chat-msg{border-radius:12px;padding:10px 14px;margin-bottom:10px;max-width:85%;font-size:.95rem}
+.chat-msg.user{background-color:#4f46e5;color:#fff;align-self:flex-end;margin-left:auto}
+.chat-msg.ai{background-color:#f3f4f6;color:#1f2937;align-self:flex-start;border:1px solid #e5e7eb}
+#chat-sidebar{transition:transform .3s ease-in-out}
+#chat-sidebar.closed{transform:translateX(100%)}
+#chat-sidebar.open{transform:translateX(0)}
+.typing-indicator span{display:inline-block;width:6px;height:6px;background-color:#4f46e5;border-radius:50%;animation:typing 1.4s infinite ease-in-out both;margin:0 2px}
+.typing-indicator span:nth-child(1){animation-delay:-.32s}
+.typing-indicator span:nth-child(2){animation-delay:-.16s}
+@keyframes typing{0%,80%,100%{transform:scale(0)}40%{transform:scale(1)}}
+.chart-container{position:relative;width:100%;max-width:600px;margin-left:auto;margin-right:auto;height:350px;max-height:400px}
+.no-scrollbar::-webkit-scrollbar{display:none}
+.no-scrollbar{-ms-overflow-style:none;scrollbar-width:none}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.animate-fade-in{animation:fadeIn .4s ease-out forwards}
+</style>
+</head><body class="bg-stone-100 min-h-screen flex flex-col overflow-x-hidden">
+<header class="bg-white shadow-sm sticky top-0 z-40">
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+<div class="flex justify-between items-center pt-3 pb-1">
+<div class="flex flex-col justify-center min-w-0">
+<span class="text-[10px] sm:text-xs text-indigo-600 font-bold uppercase tracking-wider leading-tight">KPC 정보관리기술사 ZIP-UP 심화반</span>
+<div class="flex items-center gap-2">
+<span class="text-lg sm:text-xl font-bold text-gray-900 tracking-tight truncate">리팩토링(Refactoring)과 코드 스멜(Code Smell)</span>
+<span class="text-[10px] sm:text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-bold flex-shrink-0">2026</span>
+</div>
+</div>
+</div>
+<nav class="flex space-x-1 sm:space-x-4 overflow-x-auto no-scrollbar pb-1 items-center">
+<button onclick="navTo('overview')" id="nav-overview" class="nav-item active px-1 pt-1 pb-2 text-xs sm:text-sm font-medium whitespace-nowrap">개요 및 개념</button>
+<button onclick="navTo('smells')" id="nav-smells" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium whitespace-nowrap">코드 스멜 & 기법</button>
+<button onclick="navTo('process')" id="nav-process" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium whitespace-nowrap">프로세스 & 도구</button>
+<button onclick="navTo('cases')" id="nav-cases" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium whitespace-nowrap">사례 & 연관이론</button>
+<button onclick="navTo('textbook')" id="nav-textbook" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium whitespace-nowrap">원문 학습</button>
+<button onclick="navTo('script')" id="nav-script" class="nav-item hidden px-1 pt-1 pb-2 text-xs sm:text-sm font-medium whitespace-nowrap text-amber-700">🎬 강의 스크립트</button>
+<button onclick="navTo('quiz')" id="nav-quiz" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium whitespace-nowrap">퀴즈 & 암기</button>
+<span class="w-px h-4 bg-gray-300 flex-shrink-0"></span>
+<button onclick="toggleSettings()" class="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium text-indigo-600 hover:bg-indigo-50 border border-indigo-200 hover:border-indigo-400 transition-all whitespace-nowrap flex-shrink-0" title="API Key 설정">🔑 API</button>
+</nav>
+</div>
+</header>
+<main class="flex-grow max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12 pb-24">
+<section id="overview">
+<div class="bg-white rounded-xl shadow-sm p-6 sm:p-8 border-l-4 border-indigo-500">
+<h2 class="text-xl font-bold text-gray-900 mb-4">📖 개요 및 개념</h2>
+
+<!-- 정의 박스 -->
+<div class="def-box mb-6">
+<p><strong>리팩토링(Refactoring)</strong>이란 소프트웨어의 <strong>외부 동작(기능)을 변경하지 않으면서 내부 구조를 개선하는 활동</strong>이다. Martin Fowler(1999)가 체계적으로 정의하고, 72가지 리팩토링 카탈로그를 제시하였다.</p>
+</div>
+<div class="def-box mb-6">
+<p><strong>코드 스멜(Code Smell)</strong>이란 코드에 존재하는 <strong>잠재적 설계 결함을 나타내는 징후(Symptom)</strong>이다. Kent Beck이 처음 제안하고 Martin Fowler가 체계화한 개념으로, 코드 스멜 자체는 버그가 아니지만 <strong>버그로 이어질 가능성이 높은 구조적 문제</strong>를 나타낸다.</p>
+</div>
+
+<!-- 개념 해설 -->
+<div class="mt-4 mb-6">
+<p class="text-gray-700 leading-relaxed mb-3">리팩토링은 집의 외관은 그대로 두고 내부 배관과 전기 배선을 새로 정리하는 것과 같습니다. 사용자(외부)가 보기에는 똑같은 소프트웨어인데, 개발자(내부)가 코드를 유지보수하거나 확장할 때 훨씬 수월해집니다. 핵심 전제는 <strong>자동화된 테스트(Automated Testing)</strong>로, 코드 변경 후 기존 기능이 깨지지 않았음을 보장합니다.</p>
+<p class="text-gray-700 leading-relaxed">코드 스멜은 냉장고에서 나는 이상한 냄새와 같습니다. 냄새가 난다고 바로 음식이 상한 건 아니지만, 누군가가 살펴봐야 한다는 경고 신호입니다. SW 유지보수 비용은 전체 생명주기 비용의 60~80%를 차지하며, 이 비용의 대부분이 코드 품질 문제에서 기인합니다.</p>
+</div>
+
+<!-- 역사적 맥락 -->
+<h3 class="text-lg font-bold text-gray-900 mt-6 mb-3">📅 발전 경로</h3>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+<div class="bg-indigo-50 rounded-lg p-4 border border-indigo-200">
+<div class="text-xs font-bold text-indigo-600 mb-1">1992</div>
+<div class="font-semibold text-gray-900 text-sm">William Opdyke</div>
+<p class="text-xs text-gray-600 mt-1">리팩토링 최초 박사논문 — OOP에서의 리팩토링 학술화</p>
+</div>
+<div class="bg-purple-50 rounded-lg p-4 border border-purple-200">
+<div class="text-xs font-bold text-purple-600 mb-1">1999</div>
+<div class="font-semibold text-gray-900 text-sm">Martin Fowler</div>
+<p class="text-xs text-gray-600 mt-1">Refactoring 1판 출간 — 72개 카탈로그, "코드 스멜" 대중화</p>
+</div>
+<div class="bg-green-50 rounded-lg p-4 border border-green-200">
+<div class="text-xs font-bold text-green-600 mb-1">2000</div>
+<div class="font-semibold text-gray-900 text-sm">Kent Beck</div>
+<p class="text-xs text-gray-600 mt-1">XP에서 리팩토링을 핵심 실천법으로 채택</p>
+</div>
+<div class="bg-amber-50 rounded-lg p-4 border border-amber-200">
+<div class="text-xs font-bold text-amber-600 mb-1">2008</div>
+<div class="font-semibold text-gray-900 text-sm">Robert C. Martin</div>
+<p class="text-xs text-gray-600 mt-1">Clean Code 출간 — SOLID 원칙과 리팩토링 연결</p>
+</div>
+<div class="bg-teal-50 rounded-lg p-4 border border-teal-200">
+<div class="text-xs font-bold text-teal-600 mb-1">2018</div>
+<div class="font-semibold text-gray-900 text-sm">Fowler 2판</div>
+<p class="text-xs text-gray-600 mt-1">JavaScript 기반 현대적 리팩토링 기법 업데이트</p>
+</div>
+</div>
+
+<!-- 비교 차트 -->
+<h3 class="text-lg font-bold text-gray-900 mt-6 mb-3">📊 리팩토링 전후 품질 비교</h3>
+<div class="chart-container mb-4"><canvas id="refactorCompareChart"></canvas></div>
+<p class="text-xs text-gray-400 text-center">* 점수는 상대적 비교를 위한 예시 값입니다.</p>
+</div>
+</section>
+
+<section id="smells" class="hidden">
+<div class="bg-white rounded-xl shadow-sm p-6 sm:p-8 border-l-4 border-red-500">
+<h2 class="text-xl font-bold text-gray-900 mb-4">🔍 코드 스멜 & 리팩토링 기법</h2>
+
+<!-- 5대 범주 클릭 확장 -->
+<h3 class="text-lg font-bold text-gray-900 mb-3">Martin Fowler의 22가지 코드 스멜 — 5대 범주</h3>
+<p class="text-sm text-gray-600 mb-4">각 범주를 클릭하면 상세 코드 스멜 목록을 볼 수 있습니다.</p>
+
+<div class="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-4">
+<div id="smell-bloaters" class="smell-block tech-block bg-white border-2 border-red-300 rounded-lg p-3 text-center selected ring-2 ring-indigo-500" onclick="updateSmellDetail('bloaters')">
+<div class="text-2xl mb-1">💥</div>
+<div class="font-bold text-sm text-gray-900">비대화</div>
+<div class="text-xs text-gray-500">5개 스멜</div>
+</div>
+<div id="smell-oo-abusers" class="smell-block tech-block bg-white border-2 border-amber-300 rounded-lg p-3 text-center" onclick="updateSmellDetail('oo-abusers')">
+<div class="text-2xl mb-1">⚠️</div>
+<div class="font-bold text-sm text-gray-900">OO 남용</div>
+<div class="text-xs text-gray-500">4개 스멜</div>
+</div>
+<div id="smell-change-preventers" class="smell-block tech-block bg-white border-2 border-purple-300 rounded-lg p-3 text-center" onclick="updateSmellDetail('change-preventers')">
+<div class="text-2xl mb-1">🚧</div>
+<div class="font-bold text-sm text-gray-900">변경 방해</div>
+<div class="text-xs text-gray-500">3개 스멜</div>
+</div>
+<div id="smell-dispensables" class="smell-block tech-block bg-white border-2 border-green-300 rounded-lg p-3 text-center" onclick="updateSmellDetail('dispensables')">
+<div class="text-2xl mb-1">🗑️</div>
+<div class="font-bold text-sm text-gray-900">불필요</div>
+<div class="text-xs text-gray-500">5개 스멜</div>
+</div>
+<div id="smell-couplers" class="smell-block tech-block bg-white border-2 border-teal-300 rounded-lg p-3 text-center" onclick="updateSmellDetail('couplers')">
+<div class="text-2xl mb-1">🔗</div>
+<div class="font-bold text-sm text-gray-900">결합도</div>
+<div class="text-xs text-gray-500">4개 스멜</div>
+</div>
+</div>
+<div id="smell-detail-content" class="mb-6">
+<div class="border-l-4 border-red-500 bg-red-50 rounded-lg p-4 animate-fade-in">
+<h4 class="font-bold text-gray-900 mb-2">비대화 (Bloaters)</h4>
+<p class="text-sm text-gray-700 mb-2">코드가 불필요하게 거대해진 상태입니다.</p>
+<ul class="text-sm text-gray-600 space-y-1 list-disc pl-4">
+<li><strong>긴 메서드(Long Method)</strong>: 10줄 초과 시 의심, 20줄 초과 시 분할 고려</li>
+<li><strong>거대한 클래스(Large Class)</strong>: 너무 많은 책임을 가진 클래스</li>
+<li><strong>긴 매개변수 목록(Long Parameter List)</strong>: 4개 이상</li>
+<li><strong>기본형 집착(Primitive Obsession)</strong>: 객체 대신 기본형 남용</li>
+<li><strong>데이터 덩어리(Data Clumps)</strong>: 항상 함께 다니는 데이터 그룹</li>
+</ul>
+</div>
+</div>
+
+<!-- 범주별 수 차트 -->
+<div class="chart-container mb-6" style="height:250px"><canvas id="smellChart"></canvas></div>
+
+<!-- 대표 코드 스멜 3가지 + 리팩토링 기법 -->
+<h3 class="text-lg font-bold text-gray-900 mt-6 mb-3">🎯 대표 코드 스멜 3가지 &amp; 리팩토링 기법 ("긴중산")</h3>
+
+<!-- 1. 긴 메서드 -->
+<div class="bg-red-50 rounded-lg p-5 border border-red-200 mb-4">
+<h4 class="font-bold text-gray-900 mb-2">① 긴 메서드(Long Method) → <span class="text-indigo-700">Extract Method</span></h4>
+<p class="text-sm text-gray-700 mb-3">하나의 메서드가 지나치게 길어 이해와 유지보수가 어려운 상태. 10줄 초과 시 의심, 20줄 초과 시 분할 고려.</p>
+<!-- 리팩토링 전후 비교 시각화 -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div>
+<div class="text-xs font-bold text-red-600 mb-2">리팩토링 전</div>
+<div class="bg-white rounded-lg border border-red-300 p-3">
+<div class="bg-red-100 rounded px-3 py-2 text-sm font-mono text-red-800 mb-2">printOrderReport() {</div>
+<div class="pl-4 space-y-1 text-xs text-gray-500">
+<div class="bg-gray-100 rounded px-2 py-1">// 고객 정보 출력 ... (20줄)</div>
+<div class="bg-gray-100 rounded px-2 py-1">// 주문 내역 출력 ... (30줄)</div>
+<div class="bg-gray-100 rounded px-2 py-1">// 합계 계산 ... (15줄)</div>
+</div>
+<div class="bg-red-100 rounded px-3 py-2 text-sm font-mono text-red-800 mt-2">}</div>
+</div>
+</div>
+<div>
+<div class="text-xs font-bold text-green-600 mb-2">리팩토링 후</div>
+<div class="bg-white rounded-lg border border-green-300 p-3">
+<div class="bg-green-100 rounded px-3 py-2 text-sm font-mono text-green-800 mb-2">printOrderReport() {</div>
+<div class="pl-4 space-y-1 text-sm font-mono text-indigo-700">
+<div class="bg-indigo-50 rounded px-2 py-1">printCustomer();</div>
+<div class="bg-indigo-50 rounded px-2 py-1">printOrder();</div>
+<div class="bg-indigo-50 rounded px-2 py-1">printTotal();</div>
+</div>
+<div class="bg-green-100 rounded px-3 py-2 text-sm font-mono text-green-800 mt-2">}</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- 2. 중복 코드 -->
+<div class="bg-green-50 rounded-lg p-5 border border-green-200 mb-4">
+<h4 class="font-bold text-gray-900 mb-2">② 중복 코드(Duplicated Code) → <span class="text-indigo-700">Extract/Pull Up Method</span></h4>
+<p class="text-sm text-gray-700 mb-3">동일·유사 코드가 두 곳 이상 존재. DRY(Don't Repeat Yourself) 원칙 위반.</p>
+<table class="w-full text-sm border-collapse">
+<thead><tr class="bg-green-100"><th class="border border-green-300 px-3 py-2 text-left">중복 위치</th><th class="border border-green-300 px-3 py-2 text-left">리팩토링 기법</th></tr></thead>
+<tbody>
+<tr><td class="border border-green-200 px-3 py-2">같은 클래스 내</td><td class="border border-green-200 px-3 py-2 font-medium text-indigo-700">Extract Method</td></tr>
+<tr><td class="border border-green-200 px-3 py-2">형제 클래스 간</td><td class="border border-green-200 px-3 py-2 font-medium text-indigo-700">Pull Up Method (부모로 이동)</td></tr>
+<tr><td class="border border-green-200 px-3 py-2">관련 없는 클래스 간</td><td class="border border-green-200 px-3 py-2 font-medium text-indigo-700">Extract Class (공통 클래스 추출)</td></tr>
+</tbody>
+</table>
+</div>
+
+<!-- 3. 산탄총 수술 -->
+<div class="bg-purple-50 rounded-lg p-5 border border-purple-200 mb-4">
+<h4 class="font-bold text-gray-900 mb-2">③ 산탄총 수술(Shotgun Surgery) → <span class="text-indigo-700">Move Method / Inline Class</span></h4>
+<p class="text-sm text-gray-700 mb-3">하나의 변경이 여러 클래스에 걸쳐 수정을 요구하는 상태. 관련 기능이 분산되어 작은 변경에도 다수의 파일을 수정해야 함.</p>
+<div class="flex items-center justify-center gap-2 flex-wrap">
+<div class="bg-purple-200 rounded px-3 py-2 text-xs font-medium text-purple-800">ClassA 수정</div>
+<span class="text-purple-400">+</span>
+<div class="bg-purple-200 rounded px-3 py-2 text-xs font-medium text-purple-800">ClassB 수정</div>
+<span class="text-purple-400">+</span>
+<div class="bg-purple-200 rounded px-3 py-2 text-xs font-medium text-purple-800">ClassC 수정</div>
+<span class="text-2xl">→</span>
+<div class="bg-indigo-200 rounded px-3 py-2 text-xs font-medium text-indigo-800">통합 Class 1곳 수정</div>
+</div>
+</div>
+
+<!-- 전체 대응표 -->
+<h3 class="text-lg font-bold text-gray-900 mt-6 mb-3">📋 코드 스멜-리팩토링 기법 대응표</h3>
+<div class="overflow-x-auto">
+<table class="w-full text-sm border-collapse">
+<thead><tr class="bg-indigo-50"><th class="border border-indigo-200 px-3 py-2 text-left">코드 스멜</th><th class="border border-indigo-200 px-3 py-2 text-left">증상</th><th class="border border-indigo-200 px-3 py-2 text-left">리팩토링 기법</th></tr></thead>
+<tbody>
+<tr><td class="border border-gray-200 px-3 py-2 font-medium">긴 메서드</td><td class="border border-gray-200 px-3 py-2">메서드 20줄 이상</td><td class="border border-gray-200 px-3 py-2 text-indigo-700 font-medium">Extract Method</td></tr>
+<tr class="bg-gray-50"><td class="border border-gray-200 px-3 py-2 font-medium">중복 코드</td><td class="border border-gray-200 px-3 py-2">동일 코드 2곳 이상</td><td class="border border-gray-200 px-3 py-2 text-indigo-700 font-medium">Extract/Pull Up Method</td></tr>
+<tr><td class="border border-gray-200 px-3 py-2 font-medium">산탄총 수술</td><td class="border border-gray-200 px-3 py-2">1변경→여러 클래스 수정</td><td class="border border-gray-200 px-3 py-2 text-indigo-700 font-medium">Move Method / Inline Class</td></tr>
+<tr class="bg-gray-50"><td class="border border-gray-200 px-3 py-2 font-medium">긴 매개변수 목록</td><td class="border border-gray-200 px-3 py-2">매개변수 4개 이상</td><td class="border border-gray-200 px-3 py-2 text-indigo-700 font-medium">Introduce Parameter Object</td></tr>
+<tr><td class="border border-gray-200 px-3 py-2 font-medium">기능 선망</td><td class="border border-gray-200 px-3 py-2">다른 클래스 데이터 과도 사용</td><td class="border border-gray-200 px-3 py-2 text-indigo-700 font-medium">Move Method</td></tr>
+<tr class="bg-gray-50"><td class="border border-gray-200 px-3 py-2 font-medium">Switch 문</td><td class="border border-gray-200 px-3 py-2">반복적 switch/case</td><td class="border border-gray-200 px-3 py-2 text-indigo-700 font-medium">Replace Conditional with Polymorphism</td></tr>
+<tr><td class="border border-gray-200 px-3 py-2 font-medium">거대한 클래스</td><td class="border border-gray-200 px-3 py-2">책임이 너무 많은 클래스</td><td class="border border-gray-200 px-3 py-2 text-indigo-700 font-medium">Extract Class</td></tr>
+<tr class="bg-gray-50"><td class="border border-gray-200 px-3 py-2 font-medium">메시지 체인</td><td class="border border-gray-200 px-3 py-2">a.getB().getC().getD()</td><td class="border border-gray-200 px-3 py-2 text-indigo-700 font-medium">Hide Delegate</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+</section>
+
+<section id="process" class="hidden">
+<div class="bg-white rounded-xl shadow-sm p-6 sm:p-8 border-l-4 border-amber-500">
+<h2 class="text-xl font-bold text-gray-900 mb-4">⚙️ 리팩토링 프로세스 & 도구</h2>
+
+<!-- 5단계 프로세스 흐름도 -->
+<h3 class="text-lg font-bold text-gray-900 mb-4">리팩토링 5단계 프로세스</h3>
+<div class="flex flex-col md:flex-row items-stretch gap-3 mb-6">
+<div class="flex-1 bg-red-50 rounded-lg p-4 border border-red-200 text-center">
+<div class="bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center mx-auto mb-2 font-bold text-sm">1</div>
+<div class="font-bold text-sm text-gray-900 mb-1">코드 스멜 식별</div>
+<ul class="text-xs text-gray-600 text-left list-disc pl-4 space-y-1"><li>정적 분석</li><li>코드 리뷰</li><li>메트릭 측정</li></ul>
+</div>
+<div class="hidden md:flex items-center text-gray-400 text-xl font-bold">→</div>
+<div class="flex-1 bg-amber-50 rounded-lg p-4 border border-amber-200 text-center">
+<div class="bg-amber-500 text-white rounded-full w-8 h-8 flex items-center justify-center mx-auto mb-2 font-bold text-sm">2</div>
+<div class="font-bold text-sm text-gray-900 mb-1">코드 분석</div>
+<ul class="text-xs text-gray-600 text-left list-disc pl-4 space-y-1"><li>영향 범위 파악</li><li>의존성 분석</li></ul>
+</div>
+<div class="hidden md:flex items-center text-gray-400 text-xl font-bold">→</div>
+<div class="flex-1 bg-indigo-50 rounded-lg p-4 border border-indigo-200 text-center">
+<div class="bg-indigo-500 text-white rounded-full w-8 h-8 flex items-center justify-center mx-auto mb-2 font-bold text-sm">3</div>
+<div class="font-bold text-sm text-gray-900 mb-1">리팩토링 적용</div>
+<ul class="text-xs text-gray-600 text-left list-disc pl-4 space-y-1"><li>소규모 단계별</li><li>한 번에 하나만</li></ul>
+</div>
+<div class="hidden md:flex items-center text-gray-400 text-xl font-bold">→</div>
+<div class="flex-1 bg-green-50 rounded-lg p-4 border border-green-200 text-center">
+<div class="bg-green-500 text-white rounded-full w-8 h-8 flex items-center justify-center mx-auto mb-2 font-bold text-sm">4</div>
+<div class="font-bold text-sm text-gray-900 mb-1">테스트 실행</div>
+<ul class="text-xs text-gray-600 text-left list-disc pl-4 space-y-1"><li>단위 테스트</li><li>통합 테스트</li><li>회귀 테스트</li></ul>
+</div>
+<div class="hidden md:flex items-center text-gray-400 text-xl font-bold">→</div>
+<div class="flex-1 bg-purple-50 rounded-lg p-4 border border-purple-200 text-center">
+<div class="bg-purple-500 text-white rounded-full w-8 h-8 flex items-center justify-center mx-auto mb-2 font-bold text-sm">5</div>
+<div class="font-bold text-sm text-gray-900 mb-1">반복/완료</div>
+<ul class="text-xs text-gray-600 text-left list-disc pl-4 space-y-1"><li>추가 스멜 점검</li><li>커밋</li></ul>
+</div>
+</div>
+
+<div class="insight-box mb-6">리팩토링은 반드시 <strong>소규모 단계별</strong>로 적용하고, 매 단계마다 테스트를 실행해야 합니다. 큰 변경을 한꺼번에 하면 어디서 문제가 생겼는지 찾기 어려워집니다.</div>
+
+<!-- 리팩토링 vs 관련 개념 비교 -->
+<h3 class="text-lg font-bold text-gray-900 mt-6 mb-3">리팩토링 vs 관련 개념 비교</h3>
+<div class="overflow-x-auto mb-6">
+<table class="w-full text-sm border-collapse">
+<thead><tr class="bg-amber-50"><th class="border border-amber-200 px-3 py-2 text-left">비교 기준</th><th class="border border-amber-200 px-3 py-2 text-center">리팩토링</th><th class="border border-amber-200 px-3 py-2 text-center">리엔지니어링</th><th class="border border-amber-200 px-3 py-2 text-center">리스트럭처링</th><th class="border border-amber-200 px-3 py-2 text-center">최적화</th></tr></thead>
+<tbody>
+<tr><td class="border border-gray-200 px-3 py-2 font-medium">외부 동작</td><td class="border border-gray-200 px-3 py-2 text-center text-green-700 font-medium">불변</td><td class="border border-gray-200 px-3 py-2 text-center text-red-600">변경 가능</td><td class="border border-gray-200 px-3 py-2 text-center text-green-700">불변</td><td class="border border-gray-200 px-3 py-2 text-center text-green-700">불변</td></tr>
+<tr class="bg-gray-50"><td class="border border-gray-200 px-3 py-2 font-medium">범위</td><td class="border border-gray-200 px-3 py-2 text-center">코드 수준</td><td class="border border-gray-200 px-3 py-2 text-center">시스템 전체</td><td class="border border-gray-200 px-3 py-2 text-center">코드 구조</td><td class="border border-gray-200 px-3 py-2 text-center">성능 중심</td></tr>
+<tr><td class="border border-gray-200 px-3 py-2 font-medium">목적</td><td class="border border-gray-200 px-3 py-2 text-center">내부 품질</td><td class="border border-gray-200 px-3 py-2 text-center">비즈니스 혁신</td><td class="border border-gray-200 px-3 py-2 text-center">구조 재배치</td><td class="border border-gray-200 px-3 py-2 text-center">성능 향상</td></tr>
+<tr class="bg-gray-50"><td class="border border-gray-200 px-3 py-2 font-medium">테스트 전제</td><td class="border border-gray-200 px-3 py-2 text-center font-bold text-indigo-700">필수</td><td class="border border-gray-200 px-3 py-2 text-center">선택</td><td class="border border-gray-200 px-3 py-2 text-center">선택</td><td class="border border-gray-200 px-3 py-2 text-center font-bold text-indigo-700">필수</td></tr>
+<tr><td class="border border-gray-200 px-3 py-2 font-medium">빈도</td><td class="border border-gray-200 px-3 py-2 text-center">일상적(수시)</td><td class="border border-gray-200 px-3 py-2 text-center">대규모(수년)</td><td class="border border-gray-200 px-3 py-2 text-center">중규모</td><td class="border border-gray-200 px-3 py-2 text-center">병목 발생 시</td></tr>
+</tbody>
+</table>
+</div>
+
+<!-- 탐지 도구 -->
+<h3 class="text-lg font-bold text-gray-900 mt-6 mb-3">🛠️ 코드 스멜 탐지 도구</h3>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+<div class="strategy-card bg-indigo-50 rounded-lg p-4 border border-indigo-200 cursor-pointer" onclick="toggleStrategy(this)">
+<div class="strategy-summary flex items-center justify-between">
+<div class="flex items-center gap-2"><span class="text-lg">🔍</span><span class="font-bold text-sm text-gray-900">SonarQube</span><span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded">다국어</span></div>
+<span class="text-gray-400 text-xs">클릭하여 상세보기 ▼</span>
+</div>
+<div class="strategy-detail hidden mt-3 text-sm text-gray-700">가장 대표적 정적 분석 도구. 코드 스멜 + 버그 + 보안 취약점 통합 탐지. CI/CD 파이프라인 연동으로 매 커밋마다 자동 검사 가능.</div>
+</div>
+<div class="strategy-card bg-green-50 rounded-lg p-4 border border-green-200 cursor-pointer" onclick="toggleStrategy(this)">
+<div class="strategy-summary flex items-center justify-between">
+<div class="flex items-center gap-2"><span class="text-lg">☕</span><span class="font-bold text-sm text-gray-900">PMD</span><span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">Java</span></div>
+<span class="text-gray-400 text-xs">클릭하여 상세보기 ▼</span>
+</div>
+<div class="strategy-detail hidden mt-3 text-sm text-gray-700">Java 정적 분석 도구. 긴 메서드, 중복 코드, 복잡도 탐지에 특화.</div>
+</div>
+<div class="strategy-card bg-amber-50 rounded-lg p-4 border border-amber-200 cursor-pointer" onclick="toggleStrategy(this)">
+<div class="strategy-summary flex items-center justify-between">
+<div class="flex items-center gap-2"><span class="text-lg">📜</span><span class="font-bold text-sm text-gray-900">ESLint</span><span class="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded">JavaScript</span></div>
+<span class="text-gray-400 text-xs">클릭하여 상세보기 ▼</span>
+</div>
+<div class="strategy-detail hidden mt-3 text-sm text-gray-700">JavaScript 코드 스타일 + 구조적 문제 탐지. 플러그인 확장 가능.</div>
+</div>
+<div class="strategy-card bg-purple-50 rounded-lg p-4 border border-purple-200 cursor-pointer" onclick="toggleStrategy(this)">
+<div class="strategy-summary flex items-center justify-between">
+<div class="flex items-center gap-2"><span class="text-lg">🐍</span><span class="font-bold text-sm text-gray-900">Pylint</span><span class="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded">Python</span></div>
+<span class="text-gray-400 text-xs">클릭하여 상세보기 ▼</span>
+</div>
+<div class="strategy-detail hidden mt-3 text-sm text-gray-700">Python PEP8 위반 + 코드 스멜 탐지. Python 표준 정적 분석 도구.</div>
+</div>
+</div>
+</div>
+</section>
+
+<section id="cases" class="hidden">
+<div class="bg-white rounded-xl shadow-sm p-6 sm:p-8 border-l-4 border-teal-500">
+<h2 class="text-xl font-bold text-gray-900 mb-4">🏢 적용 사례 & 연관 이론</h2>
+
+<!-- 사례 -->
+<h3 class="text-lg font-bold text-gray-900 mb-3">실무 적용 사례</h3>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+<div class="bg-blue-50 rounded-lg p-5 border border-blue-200">
+<div class="flex items-center gap-2 mb-2"><span class="text-xl">🌐</span><h4 class="font-bold text-gray-900">Google — Large-Scale Changes</h4></div>
+<ul class="text-sm text-gray-700 space-y-2 list-disc pl-4">
+<li>약 <strong>20억 줄</strong> 규모의 단일 코드 저장소(Monorepo) 운영</li>
+<li>LSC 시스템으로 <strong>연간 약 50,000건</strong>의 자동 리팩토링 실행</li>
+<li>deprecated API 교체, 네이밍 규칙 통일 등 자동화</li>
+<li>리팩토링은 <strong>개인의 선택이 아닌 조직 차원의 필수 활동</strong></li>
+</ul>
+</div>
+<div class="bg-green-50 rounded-lg p-5 border border-green-200">
+<div class="flex items-center gap-2 mb-2"><span class="text-xl">🏥</span><h4 class="font-bold text-gray-900">국민건강보험공단 — 차세대 시스템</h4></div>
+<ul class="text-sm text-gray-700 space-y-2 list-disc pl-4">
+<li>2020년 약 <strong>2,000억 원</strong> 규모 차세대 시스템 구축</li>
+<li>레거시 <strong>COBOL → Java</strong> 전환 시 대규모 리팩토링</li>
+<li>약 300만 줄에서 <strong>중복 코드 40% 감소</strong></li>
+<li><strong>유지보수 비용 연간 약 30% 절감</strong></li>
+</ul>
+</div>
+</div>
+
+<!-- 연관 이론 -->
+<h3 class="text-lg font-bold text-gray-900 mt-6 mb-3">연관 이론 연결</h3>
+
+<!-- SOLID 원칙 매핑 -->
+<div class="strategy-card bg-indigo-50 rounded-lg p-4 border border-indigo-200 cursor-pointer mb-3" onclick="toggleStrategy(this)">
+<div class="strategy-summary flex items-center justify-between">
+<div class="flex items-center gap-2"><span class="text-lg">🏗️</span><span class="font-bold text-sm text-gray-900">SOLID 원칙과 코드 스멜 매핑</span></div>
+<span class="text-gray-400 text-xs">▼</span>
+</div>
+<div class="strategy-detail hidden mt-3">
+<table class="w-full text-sm border-collapse">
+<thead><tr class="bg-indigo-100"><th class="border border-indigo-200 px-3 py-2 text-left">SOLID 원칙</th><th class="border border-indigo-200 px-3 py-2 text-left">위반 시 발생 코드 스멜</th></tr></thead>
+<tbody>
+<tr><td class="border border-gray-200 px-3 py-2">SRP (단일 책임)</td><td class="border border-gray-200 px-3 py-2">Large Class, Long Method</td></tr>
+<tr class="bg-gray-50"><td class="border border-gray-200 px-3 py-2">OCP (개방-폐쇄)</td><td class="border border-gray-200 px-3 py-2">Switch Statements</td></tr>
+<tr><td class="border border-gray-200 px-3 py-2">LSP (리스코프 치환)</td><td class="border border-gray-200 px-3 py-2">Refused Bequest</td></tr>
+<tr class="bg-gray-50"><td class="border border-gray-200 px-3 py-2">ISP (인터페이스 분리)</td><td class="border border-gray-200 px-3 py-2">Large Class (인터페이스 비대화)</td></tr>
+<tr><td class="border border-gray-200 px-3 py-2">DIP (의존 역전)</td><td class="border border-gray-200 px-3 py-2">Feature Envy, Inappropriate Intimacy</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<!-- 기술 부채 -->
+<div class="strategy-card bg-amber-50 rounded-lg p-4 border border-amber-200 cursor-pointer mb-3" onclick="toggleStrategy(this)">
+<div class="strategy-summary flex items-center justify-between">
+<div class="flex items-center gap-2"><span class="text-lg">💰</span><span class="font-bold text-sm text-gray-900">기술 부채(Technical Debt)</span></div>
+<span class="text-gray-400 text-xs">▼</span>
+</div>
+<div class="strategy-detail hidden mt-3 text-sm text-gray-700">
+<p class="mb-2">Ward Cunningham(1992)이 제안한 개념으로, 코드 스멜의 누적이 조직에 미치는 경제적 영향을 설명합니다. 코드 스멜을 방치하면 마치 <strong>빚의 이자</strong>처럼 유지보수 비용이 눈덩이로 불어납니다.</p>
+<div class="flex items-center gap-2 flex-wrap mt-2">
+<div class="bg-red-100 rounded px-3 py-1 text-xs text-red-800">코드 스멜 방치</div><span>→</span>
+<div class="bg-red-200 rounded px-3 py-1 text-xs text-red-800">기술 부채 누적</div><span>→</span>
+<div class="bg-red-300 rounded px-3 py-1 text-xs text-red-900">유지보수 비용 증가</div><span>→</span>
+<div class="bg-red-400 rounded px-3 py-1 text-xs text-white">개발 속도 저하</div>
+</div>
+<p class="mt-2">✅ <strong>리팩토링 = 기술 부채 상환 활동</strong></p>
+</div>
+</div>
+
+<!-- TDD -->
+<div class="strategy-card bg-green-50 rounded-lg p-4 border border-green-200 cursor-pointer mb-3" onclick="toggleStrategy(this)">
+<div class="strategy-summary flex items-center justify-between">
+<div class="flex items-center gap-2"><span class="text-lg">🔄</span><span class="font-bold text-sm text-gray-900">TDD와 Red-Green-Refactor</span></div>
+<span class="text-gray-400 text-xs">▼</span>
+</div>
+<div class="strategy-detail hidden mt-3 text-sm text-gray-700">
+<p class="mb-3">Kent Beck의 TDD 사이클에서 리팩토링은 핵심 단계입니다. 자동화된 테스트가 있어야 안전한 리팩토링이 가능하므로, TDD와 리팩토링은 상호 보완적 관계입니다.</p>
+<div class="flex items-center justify-center gap-3 flex-wrap">
+<div class="bg-red-100 rounded-full px-4 py-2 text-sm font-bold text-red-700 border-2 border-red-300">🔴 Red<br><span class="text-xs font-normal">테스트 작성</span></div>
+<span class="text-xl">→</span>
+<div class="bg-green-100 rounded-full px-4 py-2 text-sm font-bold text-green-700 border-2 border-green-300">🟢 Green<br><span class="text-xs font-normal">구현</span></div>
+<span class="text-xl">→</span>
+<div class="bg-indigo-100 rounded-full px-4 py-2 text-sm font-bold text-indigo-700 border-2 border-indigo-300">🔵 Refactor<br><span class="text-xs font-normal">리팩토링</span></div>
+<span class="text-xl">↩</span>
+</div>
+</div>
+</div>
+
+<!-- 시험 출제 관점 -->
+<h3 class="text-lg font-bold text-gray-900 mt-6 mb-3">🎯 시험 출제 관점</h3>
+<div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+<ul class="text-sm text-gray-700 space-y-2 list-disc pl-4">
+<li><strong>1교시형</strong>: "리팩토링의 정의와 대표적 코드 스멜, 리팩토링 기법을 설명하시오" → 제1~3장 중심</li>
+<li><strong>1교시형</strong>: "기술 부채의 정의와 관리 방안을 설명하시오" → 연관 이론 활용</li>
+<li><strong>2교시형 연계</strong>: "SW 품질 향상 전략" → 리팩토링 + 정적 분석 + 코드 리뷰 + CI/CD</li>
+</ul>
+</div>
+</div>
+</section>
+
+<section id="textbook" class="hidden">
+<div class="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+<h2 class="text-xl font-bold text-gray-900 mb-6">📚 원문 학습</h2>
+<div class="textbook-content">
+
+<h3>제1장 개요 및 배경</h3>
+
+<h4>1.1 리팩토링의 정의</h4>
+<p>리팩토링(Refactoring)이란 소프트웨어의 <strong>외부 동작(기능)을 변경하지 않으면서 내부 구조를 개선하는 활동</strong>이다. Martin Fowler는 1999년 저서 <em>"Refactoring: Improving the Design of Existing Code"</em>에서 리팩토링을 체계적으로 정의하고, 72가지 리팩토링 카탈로그를 제시하였다.</p>
+<div class="insight-box">핵심 전제: <strong>외부 동작 불변(Behavior Preservation)</strong> — 리팩토링 전후로 프로그램의 입출력, 기능, API가 동일해야 한다. 이를 보장하기 위해 <strong>자동화된 테스트(Automated Testing)</strong>가 필수 전제 조건이다.</div>
+
+<h4>1.2 코드 스멜의 정의</h4>
+<p>코드 스멜(Code Smell)이란 코드에 존재하는 <strong>잠재적 설계 결함을 나타내는 징후(Symptom)</strong>이다. Kent Beck이 처음 제안하고 Martin Fowler가 체계화한 개념으로, 코드 스멜 자체는 버그가 아니지만 <strong>버그로 이어질 가능성이 높은 구조적 문제</strong>를 나타낸다.</p>
+<p><em>"코드 스멜은 반드시 문제가 있다는 뜻이 아니다. 그러나 누군가가 살펴봐야 한다는 신호이다."</em> — Martin Fowler</p>
+
+<h4>1.3 역사적 맥락</h4>
+<table>
+<thead><tr><th>연도</th><th>사건</th><th>의의</th></tr></thead>
+<tbody>
+<tr><td>1992</td><td>William Opdyke, 리팩토링에 대한 최초 박사논문 발표</td><td>객체지향 프로그래밍에서의 리팩토링 개념 학술화</td></tr>
+<tr><td>1999</td><td>Martin Fowler, <em>Refactoring</em> 1판 출간</td><td>리팩토링 72개 카탈로그 체계화, "코드 스멜" 용어 대중화</td></tr>
+<tr><td>2000</td><td>Kent Beck, <em>eXtreme Programming Explained</em></td><td>XP에서 리팩토링을 핵심 실천법으로 채택</td></tr>
+<tr><td>2008</td><td>Robert C. Martin, <em>Clean Code</em> 출간</td><td>클린 코드와 리팩토링의 연결, SOLID 원칙 강조</td></tr>
+<tr><td>2018</td><td>Martin Fowler, <em>Refactoring</em> 2판 출간 (JavaScript 기반)</td><td>현대적 리팩토링 기법 업데이트</td></tr>
+</tbody>
+</table>
+
+<h3>제2장 핵심 개념: 리팩토링 프레임워크</h3>
+
+<h4>2.1 리팩토링의 목적과 효과</h4>
+<table>
+<thead><tr><th>목적</th><th>설명</th><th>효과</th></tr></thead>
+<tbody>
+<tr><td>가독성 향상</td><td>코드를 이해하기 쉬운 구조로 변환</td><td>유지보수 비용 절감, 인수인계 용이</td></tr>
+<tr><td>중복 제거</td><td>DRY(Don't Repeat Yourself) 원칙 적용</td><td>변경 시 일관성 보장, 버그 발생률 감소</td></tr>
+<tr><td>설계 개선</td><td>결합도 감소, 응집도 증가</td><td>변경 영향 범위 축소, 테스트 용이성 향상</td></tr>
+<tr><td>성능 최적화 기반</td><td>구조가 명확해야 성능 병목 식별 가능</td><td>효과적 성능 튜닝 가능</td></tr>
+</tbody>
+</table>
+
+<h4>2.2 리팩토링 vs 관련 개념 비교</h4>
+<table>
+<thead><tr><th>비교 기준</th><th>리팩토링</th><th>리엔지니어링</th><th>리스트럭처링</th><th>최적화</th></tr></thead>
+<tbody>
+<tr><td>외부 동작</td><td>불변</td><td>변경 가능</td><td>불변</td><td>불변</td></tr>
+<tr><td>범위</td><td>코드 수준</td><td>시스템 전체</td><td>코드 구조</td><td>성능 중심</td></tr>
+<tr><td>목적</td><td>내부 품질 향상</td><td>비즈니스 프로세스 혁신</td><td>구조 재배치</td><td>성능 향상</td></tr>
+<tr><td>테스트 전제</td><td>필수</td><td>선택</td><td>선택</td><td>필수</td></tr>
+<tr><td>빈도</td><td>일상적(수시)</td><td>대규모(수년 주기)</td><td>중규모</td><td>병목 발생 시</td></tr>
+</tbody>
+</table>
+
+<h3>제3장 대표적 코드 스멜과 리팩토링 기법</h3>
+
+<h4>3.1 Martin Fowler의 코드 스멜 분류 체계</h4>
+<p>Martin Fowler는 22가지 코드 스멜을 5개 범주로 분류하였다.</p>
+<!-- 코드 스멜 분류 체계 HTML/CSS 시각화 -->
+<div class="bg-slate-50 rounded-lg border p-4 mb-4">
+<div class="text-center font-bold text-indigo-800 mb-3 text-sm">코드 스멜 분류 체계</div>
+<div class="bg-indigo-600 text-white text-center rounded-lg py-2 mb-3 text-sm font-bold">코드 스멜 (22가지, 5개 범주)</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 text-xs">
+<div class="bg-red-50 rounded border border-red-200 p-2">
+<div class="font-bold text-red-800 mb-1">1. 비대화(Bloaters)</div>
+<ul class="text-gray-600 space-y-0.5 list-disc pl-3"><li>긴 메서드(Long Method)</li><li>거대한 클래스(Large Class)</li><li>긴 매개변수 목록</li><li>기본형 집착</li><li>데이터 덩어리</li></ul>
+</div>
+<div class="bg-amber-50 rounded border border-amber-200 p-2">
+<div class="font-bold text-amber-800 mb-1">2. 객체지향 남용(OO Abusers)</div>
+<ul class="text-gray-600 space-y-0.5 list-disc pl-3"><li>Switch 문</li><li>임시 필드</li><li>거부된 유산</li><li>평행 상속 계층</li></ul>
+</div>
+<div class="bg-purple-50 rounded border border-purple-200 p-2">
+<div class="font-bold text-purple-800 mb-1">3. 변경 방해(Change Preventers)</div>
+<ul class="text-gray-600 space-y-0.5 list-disc pl-3"><li>산탄총 수술</li><li>확산적 변경</li><li>평행 상속 계층</li></ul>
+</div>
+<div class="bg-green-50 rounded border border-green-200 p-2">
+<div class="font-bold text-green-800 mb-1">4. 불필요한 것(Dispensables)</div>
+<ul class="text-gray-600 space-y-0.5 list-disc pl-3"><li>과도한 주석</li><li>중복 코드</li><li>게으른 클래스</li><li>데이터 클래스</li><li>죽은 코드</li></ul>
+</div>
+<div class="bg-teal-50 rounded border border-teal-200 p-2">
+<div class="font-bold text-teal-800 mb-1">5. 결합도 문제(Couplers)</div>
+<ul class="text-gray-600 space-y-0.5 list-disc pl-3"><li>기능 선망</li><li>부적절한 친밀</li><li>메시지 체인</li><li>중개자</li></ul>
+</div>
+</div>
+</div>
+
+<h4>3.2 대표 코드 스멜 3가지와 리팩토링 기법</h4>
+
+<p><strong>3.2.1 긴 메서드(Long Method) → Extract Method</strong></p>
+<p><strong>코드 스멜 설명</strong>: 하나의 메서드가 지나치게 길어 이해와 유지보수가 어려운 상태이다. 일반적으로 10줄을 초과하면 의심하고, 20줄을 초과하면 분할을 고려해야 한다.</p>
+<p><strong>리팩토링 기법: Extract Method (메서드 추출)</strong></p>
+<!-- Extract Method 전후 비교 시각화 -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+<div class="bg-red-50 rounded-lg border border-red-200 p-3">
+<div class="text-xs font-bold text-red-700 mb-2">리팩토링 전</div>
+<div class="bg-white rounded p-2 text-xs font-mono">
+<div class="text-gray-800">printOrderReport() {</div>
+<div class="text-gray-400 pl-4">// 고객 정보 출력 ... (20줄)</div>
+<div class="text-gray-400 pl-4">// 주문 내역 출력 ... (30줄)</div>
+<div class="text-gray-400 pl-4">// 합계 계산 ... (15줄)</div>
+<div class="text-gray-800">}</div>
+</div>
+</div>
+<div class="bg-green-50 rounded-lg border border-green-200 p-3">
+<div class="text-xs font-bold text-green-700 mb-2">리팩토링 후</div>
+<div class="bg-white rounded p-2 text-xs font-mono">
+<div class="text-gray-800">printOrderReport() {</div>
+<div class="text-indigo-700 pl-4">printCustomer();</div>
+<div class="text-indigo-700 pl-4">printOrder();</div>
+<div class="text-indigo-700 pl-4">printTotal();</div>
+<div class="text-gray-800">}</div>
+</div>
+</div>
+</div>
+
+<p><strong>3.2.2 중복 코드(Duplicated Code) → Extract Method / Pull Up Method</strong></p>
+<p><strong>코드 스멜 설명</strong>: 동일하거나 유사한 코드가 두 곳 이상에 존재하는 상태이다. DRY(Don't Repeat Yourself) 원칙 위반의 대표적 사례이다.</p>
+<p><strong>리팩토링 기법</strong>:</p>
+<ul>
+<li><strong>같은 클래스 내 중복</strong>: Extract Method로 공통 메서드 추출</li>
+<li><strong>형제 클래스 간 중복</strong>: Pull Up Method로 부모 클래스로 이동</li>
+<li><strong>관련 없는 클래스 간 중복</strong>: Extract Class로 공통 클래스 추출</li>
+</ul>
+
+<p><strong>3.2.3 산탄총 수술(Shotgun Surgery) → Move Method / Move Field</strong></p>
+<p><strong>코드 스멜 설명</strong>: 하나의 변경이 여러 클래스에 걸쳐 수정을 요구하는 상태이다. 관련 기능이 여러 클래스에 분산되어 있어, 작은 변경에도 다수의 파일을 수정해야 한다.</p>
+<p><strong>리팩토링 기법: Move Method / Inline Class</strong> — 흩어진 기능을 하나의 클래스로 통합하거나, 관련 메서드와 필드를 적절한 클래스로 이동.</p>
+
+<p><strong>추가 대표 코드 스멜과 리팩토링 기법 대응표</strong>:</p>
+<table>
+<thead><tr><th>코드 스멜</th><th>증상</th><th>리팩토링 기법</th></tr></thead>
+<tbody>
+<tr><td>긴 매개변수 목록</td><td>메서드에 매개변수 4개 이상</td><td>Introduce Parameter Object</td></tr>
+<tr><td>기능 선망(Feature Envy)</td><td>다른 클래스의 데이터를 과도 사용</td><td>Move Method</td></tr>
+<tr><td>Switch 문</td><td>switch/case의 반복적 사용</td><td>Replace Conditional with Polymorphism</td></tr>
+<tr><td>거대한 클래스</td><td>하나의 클래스가 너무 많은 책임</td><td>Extract Class</td></tr>
+<tr><td>데이터 클래스</td><td>getter/setter만 있는 클래스</td><td>Move Method (행위 추가)</td></tr>
+<tr><td>메시지 체인</td><td>a.getB().getC().getD() 연쇄 호출</td><td>Hide Delegate</td></tr>
+</tbody>
+</table>
+
+<h3>제4장 리팩토링 프로세스</h3>
+
+<h4>4.1 리팩토링 절차</h4>
+<!-- 리팩토링 프로세스 흐름도 HTML/CSS -->
+<div class="bg-slate-50 rounded-lg border p-4 mb-4">
+<div class="text-center font-bold text-indigo-800 mb-3 text-sm">리팩토링 프로세스 흐름도</div>
+<div class="flex flex-col md:flex-row items-stretch gap-2 text-xs">
+<div class="flex-1 bg-white rounded border p-2 text-center">
+<div class="font-bold text-red-700 mb-1">1. 코드 스멜 식별</div>
+<div class="text-gray-500">정적분석 / 코드리뷰 / 메트릭 측정</div>
+</div>
+<div class="hidden md:flex items-center text-gray-400 font-bold">→</div>
+<div class="flex-1 bg-white rounded border p-2 text-center">
+<div class="font-bold text-amber-700 mb-1">2. 코드 분석</div>
+<div class="text-gray-500">영향범위 파악 / 의존성 분석</div>
+</div>
+<div class="hidden md:flex items-center text-gray-400 font-bold">→</div>
+<div class="flex-1 bg-white rounded border p-2 text-center">
+<div class="font-bold text-indigo-700 mb-1">3. 리팩토링 적용</div>
+<div class="text-gray-500">소규모 단계별 / 한 번에 하나만</div>
+</div>
+<div class="hidden md:flex items-center text-gray-400 font-bold">→</div>
+<div class="flex-1 bg-white rounded border p-2 text-center">
+<div class="font-bold text-green-700 mb-1">4. 테스트 실행</div>
+<div class="text-gray-500">단위 / 통합 / 회귀 테스트</div>
+</div>
+<div class="hidden md:flex items-center text-gray-400 font-bold">→</div>
+<div class="flex-1 bg-white rounded border p-2 text-center">
+<div class="font-bold text-purple-700 mb-1">5. 반복/완료</div>
+<div class="text-gray-500">추가 스멜 점검 / 커밋</div>
+</div>
+</div>
+</div>
+
+<h4>4.2 코드 스멜 탐지 도구</h4>
+<table>
+<thead><tr><th>도구</th><th>언어</th><th>탐지 가능 스멜</th><th>특징</th></tr></thead>
+<tbody>
+<tr><td>SonarQube</td><td>다국어</td><td>전체 코드 스멜 + 버그 + 취약점</td><td>가장 대표적, CI/CD 연동</td></tr>
+<tr><td>PMD</td><td>Java</td><td>긴 메서드, 중복, 복잡도</td><td>정적 분석 도구</td></tr>
+<tr><td>ESLint</td><td>JavaScript</td><td>코드 스타일 + 구조적 문제</td><td>플러그인 확장</td></tr>
+<tr><td>Pylint</td><td>Python</td><td>PEP8 위반 + 코드 스멜</td><td>Python 표준</td></tr>
+<tr><td>IntelliJ IDEA</td><td>다국어</td><td>IDE 내장 코드 검사</td><td>자동 리팩토링 제안</td></tr>
+</tbody>
+</table>
+
+<h3>제5장 적용 사례</h3>
+
+<h4>5.1 Google의 대규모 리팩토링 (Codebase Health)</h4>
+<p>Google은 약 20억 줄 규모의 단일 코드 저장소(Monorepo)를 운영하며, "Large-Scale Changes (LSC)" 시스템을 통해 전사 코드베이스에 대한 대규모 리팩토링을 수행한다. 2019년 기준 연간 약 50,000건의 자동 리팩토링을 실행하였으며, deprecated API 교체, 네이밍 규칙 통일 등을 자동화하여 기술 부채를 지속적으로 관리하고 있다. Google의 사례는 리팩토링이 개인의 선택이 아닌 조직 차원의 필수 활동임을 보여준다.</p>
+
+<h4>5.2 국민건강보험공단 차세대 시스템 리팩토링</h4>
+<p>국민건강보험공단은 2020년 약 2,000억 원 규모의 차세대 시스템 구축 시, 레거시 COBOL 코드를 Java로 전환하면서 대규모 리팩토링을 수행하였다. 약 300만 줄의 레거시 코드에서 중복 코드 제거(약 40% 감소), 긴 메서드 분할, 모듈 간 결합도 감소를 달성하였으며, 이를 통해 유지보수 비용을 연간 약 30% 절감하는 효과를 거두었다.</p>
+
+<h3>제6장 연관 이론 연결</h3>
+
+<h4>6.1 SOLID 원칙과 리팩토링</h4>
+<p>Robert C. Martin의 SOLID 원칙은 리팩토링의 방향을 제시하는 핵심 설계 원칙이다. 단일 책임 원칙(SRP) 위반은 거대한 클래스(Large Class) 코드 스멜과 직결되고, 개방-폐쇄 원칙(OCP) 위반은 Switch 문 코드 스멜과 연관된다. 리팩토링은 SOLID 원칙 위반을 탐지하고 교정하는 실천적 수단이다.</p>
+
+<h4>6.2 기술 부채(Technical Debt)</h4>
+<p>Ward Cunningham(1992)이 제안한 기술 부채 개념은 코드 스멜의 누적이 조직에 미치는 경제적 영향을 설명한다. 코드 스멜을 방치하면 기술 부채가 누적되고, 이는 유지보수 비용 증가, 개발 속도 저하, 신규 기능 추가의 어려움으로 이어진다. 리팩토링은 기술 부채를 상환하는 활동이다.</p>
+
+<h4>6.3 TDD(Test-Driven Development)와 리팩토링</h4>
+<p>Kent Beck의 TDD는 Red-Green-Refactor 사이클에서 리팩토링을 핵심 단계로 포함한다. 테스트 작성(Red) → 구현(Green) → 리팩토링(Refactor)의 순환으로, 코드 품질을 지속적으로 개선하면서 개발을 진행한다. 자동화된 테스트가 있어야 안전한 리팩토링이 가능하므로, TDD와 리팩토링은 상호 보완적 관계이다.</p>
+
+<h3>제7장 시험 출제 관점</h3>
+
+<h4>7.1 기출 연계 포인트</h4>
+<ul>
+<li><strong>1교시형</strong>: "리팩토링의 정의와 대표적 코드 스멜, 리팩토링 기법을 설명하시오" → 제1~3장 중심</li>
+<li><strong>1교시형</strong>: "기술 부채의 정의와 관리 방안을 설명하시오" → 제6장 연관 이론 활용</li>
+<li><strong>2교시형 연계</strong>: "SW 품질 향상 전략" → 리팩토링 + 정적 분석 + 코드 리뷰 + CI/CD</li>
+</ul>
+
+<h4>7.2 답안 구성 전략</h4>
+<p><strong>서론 (15%)</strong>: SW 유지보수의 중요성 + 리팩토링·코드 스멜 정의</p>
+<p><strong>본론 (75%)</strong>:</p>
+<ul>
+<li>리팩토링 개념 및 전제조건(외부 동작 불변, 테스트) (15%)</li>
+<li>대표 코드 스멜 3가지 + 각각의 리팩토링 기법 (30%)</li>
+<li>리팩토링 프로세스(5단계) (15%)</li>
+<li>적용 사례 및 도구 (15%)</li>
+</ul>
+<p><strong>결론 (10%)</strong>: 기술 부채 관리 + TDD와의 연계 + 조직 문화로서의 리팩토링</p>
+
+</div>
+</div>
+</section>
+
+<section id="script" class="hidden">
+<div class="bg-white rounded-xl shadow-sm p-6 sm:p-8 border-l-4 border-amber-500">
+<div class="flex items-center gap-2 mb-4">
+<h2 class="text-xl font-bold text-gray-900">🎬 강의 스크립트</h2>
+<span class="bg-amber-100 text-amber-800 text-xs font-bold px-2 py-1 rounded">🔒 멘토 전용</span>
+</div>
+<div class="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-6 text-sm text-amber-800">
+💡 이 탭은 멘토 전용입니다. URL에 <code class="bg-amber-100 px-1 rounded">?mentor=true</code> 파라미터를 추가하면 접근할 수 있습니다.
+</div>
+<div class="textbook-content">
+
+<h4>🎬 도입부</h4>
+<p>안녕하세요, ZIP-UP 멘토링 수강생 여러분. 오늘은 소프트웨어 공학에서 정말 실무적이면서도 시험에 자주 나오는 토픽, 리팩토링과 코드 스멜에 대해 이야기해보겠습니다.</p>
+<p>이 토픽이 왜 중요하냐면요, SW 유지보수 비용이 전체 소프트웨어 생명주기 비용의 60~80%를 차지한다는 거 아시죠? 새로 개발하는 비용보다 기존 코드를 유지보수하는 비용이 훨씬 크다는 뜻이에요. 그런데 유지보수가 어려운 이유의 대부분이 코드 품질 문제예요. 코드가 지저분하면 버그 찾기도 어렵고, 새 기능 추가도 어렵고, 다른 개발자가 인수인계 받기도 어렵잖아요. 이 문제를 체계적으로 해결하는 방법이 바로 리팩토링이에요.</p>
+
+<h4>🎬 리팩토링 정의와 핵심 전제</h4>
+<p>자, 먼저 정의부터 잡아볼게요. 리팩토링은 Martin Fowler가 1999년에 체계화한 개념인데요, 핵심이 뭐냐면 <span class="highlight">"외부 동작을 변경하지 않으면서 내부 구조를 개선하는 것"</span>이에요. 여기서 "외부 동작 불변"이 정말 중요해요. 리팩토링은 기능을 추가하거나 바꾸는 게 아니에요. 겉으로 보이는 기능은 그대로인데, 안의 코드가 더 깔끔해지는 거예요. 비유를 하면요, 집의 외관은 그대로인데 내부 배관이랑 전기 배선을 새로 정리하는 것과 비슷해요.</p>
+<p>그리고 리팩토링의 필수 전제 조건이 있어요. 자동화된 테스트예요. 왜냐면 코드를 바꿨을 때 기존 기능이 깨지지 않았는지 확인해야 하거든요. 테스트 없이 리팩토링하면 기능이 깨지는 걸 모르고 넘어갈 수 있어요. 그래서 TDD, Test-Driven Development와 리팩토링은 뗄 수 없는 관계예요. Kent Beck의 TDD 사이클이 Red-Green-Refactor잖아요?</p>
+
+<h4>🎬 코드 스멜과 대표 3가지 ("긴중산")</h4>
+<p>자, 이제 코드 스멜로 넘어갈게요. 코드 스멜은 Kent Beck이 처음 쓴 용어인데요, "코드에서 뭔가 냄새가 난다"는 뜻이에요. 냉장고에서 이상한 냄새가 나면 뭔가 상한 게 있다는 신호잖아요? 코드도 마찬가지예요.</p>
+<p>Martin Fowler가 22가지 코드 스멜을 정리했는데, 이걸 다 외울 필요는 없어요. 시험에서 자주 나오는 대표적인 세 가지만 확실히 잡으면 돼요. <span class="highlight">"긴중산"</span>으로 외우세요. 긴 메서드, 중복 코드, 산탄총 수술이에요.</p>
+<p>첫째, <strong>긴 메서드(Long Method)</strong>예요. 하나의 메서드가 수십 줄, 수백 줄이 되면 읽기도 어렵고 수정하기도 어렵잖아요? 이때 쓰는 리팩토링 기법이 <strong>Extract Method</strong>, 메서드 추출이에요. 예를 들어 printOrderReport()라는 100줄짜리 메서드가 있으면, 고객 정보 출력 부분을 printCustomer()로, 주문 내역 부분을 printOrder()로 분리하는 거예요.</p>
+<p>둘째, <strong>중복 코드(Duplicated Code)</strong>예요. 같은 코드가 여러 곳에 복사되어 있는 거예요. DRY 원칙의 위반이죠. 같은 클래스 내 중복은 Extract Method로, 형제 클래스 간 중복은 Pull Up Method로, 관련 없는 클래스 간 중복은 Extract Class로 해결해요.</p>
+<p>셋째, <strong>산탄총 수술(Shotgun Surgery)</strong>이에요. 산탄총을 쏘면 탄환이 넓은 범위에 흩어지잖아요? 하나의 기능 변경을 위해 여러 파일, 여러 클래스를 수정해야 하는 상태예요. Move Method로 관련 기능을 하나의 클래스로 모으거나, Inline Class로 통합해서 해결합니다.</p>
+
+<h4>🎬 SOLID 원칙 연결과 기술 부채</h4>
+<p>여기서 코드 스멜과 SOLID 원칙의 연결도 알아두면 좋아요. 거대한 클래스(Large Class)는 SRP, 단일 책임 원칙 위반이에요. Switch 문의 반복 사용은 OCP, 개방-폐쇄 원칙 위반이에요. 이런 매핑을 답안에 쓰면 설계 원칙에 대한 깊은 이해를 증명할 수 있어요.</p>
+<p>기술 부채(Technical Debt)라는 개념도 연결해 드릴게요. 1992년에 Ward Cunningham이 제안한 개념인데요, 코드 스멜을 방치하면 마치 빚처럼 이자가 쌓인다는 거예요. 리팩토링은 이 기술 부채를 조기에 상환하는 활동이에요.</p>
+
+<h4>🎬 실무 사례와 도구</h4>
+<p>Google이 약 20억 줄 규모의 코드베이스를 관리하면서 연간 약 50,000건의 자동 리팩토링을 수행하고 있어요. 국내 사례로는 국민건강보험공단이 2020년에 레거시 COBOL 코드를 Java로 전환하면서 대규모 리팩토링을 수행했어요. 약 300만 줄에서 중복 코드를 40% 줄이고, 유지보수 비용을 연간 약 30% 절감했다고 합니다.</p>
+<p>SonarQube 같은 정적 분석 도구도 한 줄 언급하면 좋아요. CI/CD 파이프라인에 SonarQube를 연동하면 매 커밋마다 코드 스멜을 자동 탐지할 수 있거든요.</p>
+
+<h4>🎬 마무리 — 두문자어 정리</h4>
+<p>마지막 정리 갑니다. 세 가지 두문자어만 잡으시면 돼요.</p>
+<p><span class="highlight">"외불테필"</span> — 외부동작 불변, 테스트 필수. 이게 리팩토링의 정의이자 전제조건이에요.</p>
+<p><span class="highlight">"긴중산"</span> — 긴 메서드, 중복 코드, 산탄총 수술. 대표 코드 스멜 세 가지.</p>
+<p><span class="highlight">"추이다"</span> — 메서드 추출(Extract Method), 메서드 이동(Move Method), 다형성으로 조건문 대체(Replace Conditional with Polymorphism). 대표 리팩토링 기법 세 가지예요.</p>
+<p>다음 시간에는 벡터 데이터베이스와 HNSW에 대해 다뤄볼 건데요, 최신 AI 인프라의 핵심 기술이니까 기대해 주세요. 화이팅 하시고, 수고하셨습니다!</p>
+
+</div>
+</div>
+</section>
+
+<section id="quiz" class="hidden">
+<div class="bg-white rounded-xl shadow-sm p-6 sm:p-8 border-l-4 border-green-500">
+<h2 class="text-xl font-bold text-gray-900 mb-6">🎯 퀴즈 & 암기</h2>
+
+<!-- AI 실전 퀴즈 영역 -->
+<div class="bg-indigo-50 rounded-xl p-5 mb-8 border border-indigo-200">
+<div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
+<h3 class="text-lg font-bold text-indigo-900">✨ AI 실전 퀴즈</h3>
+<button id="btn-quiz-gen" onclick="generateQuiz()" class="bg-indigo-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors shadow-sm"><span>✨ 새로운 문제 생성</span></button>
+</div>
+<div id="quiz-placeholder" class="text-center py-8 text-gray-500"><p class="text-sm">버튼을 클릭하면 AI가 리팩토링/코드 스멜 관련 퀴즈를 생성합니다.</p></div>
+<div id="quiz-loading" class="hidden text-center py-8"><div class="typing-indicator inline-flex"><span></span><span></span><span></span></div><p class="text-sm text-gray-500 mt-2">AI가 문제를 생성하고 있습니다...</p></div>
+<div id="quiz-container" class="hidden">
+<div class="flex items-start gap-2 mb-3"><span id="quiz-type-badge" class="bg-indigo-100 text-indigo-800 text-xs font-bold px-2 py-1 rounded whitespace-nowrap mt-1">객관식</span><p id="quiz-question" class="text-gray-900 font-medium"></p></div>
+<div id="quiz-options" class="space-y-2 mb-4"></div>
+<div id="quiz-input-area" class="hidden mb-4">
+<div class="flex gap-2"><input type="text" id="quiz-answer-input" placeholder="정답을 입력하세요..." class="flex-grow border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" onkeypress="if(event.key==='Enter')checkShortAnswer()"><button id="btn-short-submit" onclick="checkShortAnswer()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700">제출</button></div>
+</div>
+<div id="quiz-feedback" class="hidden border-l-4 rounded-lg p-4 bg-gray-50"></div>
+</div>
+</div>
+
+<!-- 암기 노트 ① 두문자어 -->
+<h3 class="text-lg font-bold text-gray-900 mb-3">📝 암기 노트 ① — 두문자어</h3>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+<div class="bg-indigo-50 rounded-lg p-4 border border-indigo-200 text-center">
+<div class="text-2xl font-bold text-indigo-700 mb-1">"외불테필"</div>
+<div class="text-sm text-gray-700">리팩토링 핵심 전제</div>
+<div class="text-xs text-gray-500 mt-1"><strong>외</strong>부 동작 <strong>불</strong>변 + <strong>테</strong>스트 <strong>필</strong>수</div>
+</div>
+<div class="bg-red-50 rounded-lg p-4 border border-red-200 text-center">
+<div class="text-2xl font-bold text-red-700 mb-1">"긴중산"</div>
+<div class="text-sm text-gray-700">대표 코드 스멜 3가지</div>
+<div class="text-xs text-gray-500 mt-1"><strong>긴</strong> 메서드 + <strong>중</strong>복 코드 + <strong>산</strong>탄총 수술</div>
+</div>
+<div class="bg-green-50 rounded-lg p-4 border border-green-200 text-center">
+<div class="text-2xl font-bold text-green-700 mb-1">"추이다"</div>
+<div class="text-sm text-gray-700">대표 리팩토링 기법</div>
+<div class="text-xs text-gray-500 mt-1">메서드 <strong>추</strong>출 + 메서드 <strong>이</strong>동 + <strong>다</strong>형성 대체</div>
+</div>
+</div>
+
+<!-- 암기 노트 ② 골격 답안 -->
+<h3 class="text-lg font-bold text-gray-900 mb-3">📝 암기 노트 ② — 골격 답안 구조</h3>
+<div class="overflow-x-auto mb-6">
+<table class="w-full text-sm border-collapse">
+<thead><tr class="bg-indigo-50"><th class="border border-indigo-200 px-3 py-2 text-left">구분</th><th class="border border-indigo-200 px-3 py-2 text-left">비중</th><th class="border border-indigo-200 px-3 py-2 text-left">내용</th></tr></thead>
+<tbody>
+<tr><td class="border border-gray-200 px-3 py-2 font-medium">서론</td><td class="border border-gray-200 px-3 py-2">15%</td><td class="border border-gray-200 px-3 py-2">SW 유지보수 비용(60~80%) → 코드 품질 중요성 → 리팩토링 정의</td></tr>
+<tr class="bg-gray-50"><td class="border border-gray-200 px-3 py-2 font-medium" rowspan="4">본론</td><td class="border border-gray-200 px-3 py-2">15%</td><td class="border border-gray-200 px-3 py-2">리팩토링 개념 + 외부동작 불변 + 테스트 전제</td></tr>
+<tr class="bg-gray-50"><td class="border border-gray-200 px-3 py-2">30%</td><td class="border border-gray-200 px-3 py-2">대표 코드 스멜 3가지("긴중산") + 리팩토링 기법 대응표</td></tr>
+<tr class="bg-gray-50"><td class="border border-gray-200 px-3 py-2">15%</td><td class="border border-gray-200 px-3 py-2">리팩토링 프로세스 5단계 흐름도</td></tr>
+<tr class="bg-gray-50"><td class="border border-gray-200 px-3 py-2">15%</td><td class="border border-gray-200 px-3 py-2">Google LSC + SonarQube + CI/CD 연동</td></tr>
+<tr><td class="border border-gray-200 px-3 py-2 font-medium">결론</td><td class="border border-gray-200 px-3 py-2">10%</td><td class="border border-gray-200 px-3 py-2">기술 부채 관리 + TDD 연계 + 조직 문화화</td></tr>
+</tbody>
+</table>
+</div>
+
+<!-- 암기 노트 ③ 필수 도식 + 차별화 -->
+<h3 class="text-lg font-bold text-gray-900 mb-3">📝 암기 노트 ③ — 필수 도식 & 차별화 포인트</h3>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
+<div class="bg-amber-50 rounded-lg p-4 border border-amber-200">
+<h4 class="font-bold text-sm text-amber-800 mb-2">📊 필수 도식/표</h4>
+<ol class="text-sm text-gray-700 space-y-1 list-decimal pl-4">
+<li>코드 스멜-리팩토링 기법 대응표 (가장 중요!)</li>
+<li>Extract Method 리팩토링 전/후 코드 구조 비교</li>
+<li>리팩토링 프로세스 5단계 흐름도</li>
+<li>리팩토링 vs 리엔지니어링 비교표</li>
+</ol>
+</div>
+<div class="bg-teal-50 rounded-lg p-4 border border-teal-200">
+<h4 class="font-bold text-sm text-teal-800 mb-2">⭐ 차별화 포인트</h4>
+<ul class="text-sm text-gray-700 space-y-1 list-disc pl-4">
+<li>22가지 코드 스멜을 <strong>5개 범주</strong>로 분류 → 체계성 증명</li>
+<li><strong>SOLID 원칙과 코드 스멜 매핑</strong> (SRP→Large Class, OCP→Switch 문)</li>
+<li><strong>Google LSC 사례</strong> (연간 50,000건) → 실무 이해도</li>
+<li><strong>기술 부채(Ward Cunningham, 1992)</strong> → 경제적 관점</li>
+</ul>
+</div>
+</div>
+
+<!-- 제2부 전체 재현 -->
+<h3 class="text-lg font-bold text-gray-900 mb-3 mt-8 border-t pt-6">📖 제2부 — 서술형 답안 암기 요약 (전문)</h3>
+<div class="textbook-content">
+
+<div class="def-box">
+<p><strong>한 줄 정의:</strong> 리팩토링은 외부 동작을 변경하지 않으면서 코드의 내부 구조를 개선하는 활동이며, 코드 스멜은 리팩토링이 필요한 잠재적 설계 결함의 징후이다.</p>
+</div>
+
+<h4>핵심 키워드 맵</h4>
+<div class="bg-slate-50 rounded-lg border p-4 mb-4">
+<div class="text-sm space-y-1">
+<div class="font-bold text-indigo-800">리팩토링/코드 스멜</div>
+<div class="pl-4 border-l-2 border-indigo-300 space-y-1 text-gray-700">
+<div><strong>리팩토링 (Fowler, 1999)</strong>: 핵심 — 외부 동작 불변 + 내부 구조 개선 / 전제 — 자동화된 테스트 / 목적 — 가독성, 중복제거, 설계개선</div>
+<div><strong>코드 스멜 (Beck/Fowler)</strong>: 비대화(Long Method, Large Class), 변경방해(Shotgun Surgery, Divergent Change), 불필요(Duplicated Code, Dead Code), 결합도(Feature Envy, Message Chains)</div>
+<div><strong>리팩토링 기법</strong>: Extract Method, Move Method, Replace Conditional with Polymorphism, Introduce Parameter Object</div>
+<div><strong>연관</strong>: SOLID, 기술부채, TDD(Red-Green-Refactor)</div>
+</div>
+</div>
+</div>
+
+<h4>두문자어 암기법</h4>
+<p><strong>"외불테필"</strong> = 리팩토링 핵심 전제: <strong>외</strong>부 동작 <strong>불</strong>변 + <strong>테</strong>스트 <strong>필</strong>수</p>
+<p><strong>"긴중산"</strong> = 대표 코드 스멜 3가지: <strong>긴</strong> 메서드, <strong>중</strong>복 코드, <strong>산</strong>탄총 수술</p>
+<p><strong>"추이다"</strong> = 대표 리팩토링 기법: 메서드 <strong>추</strong>출, 메서드 <strong>이</strong>동, <strong>다</strong>형성으로 조건문 대체</p>
+
+<h4>골격 답안 구조</h4>
+<p><strong>[서론 15%]</strong> — SW 유지보수 비용(전체 비용의 60~80%) → 코드 품질의 중요성 → 리팩토링 정의</p>
+<p><strong>[본론 75%]</strong></p>
+<ul>
+<li>1. 리팩토링 개념 (15%) — 정의(Fowler, 1999) + 외부동작 불변 원칙 + 테스트 전제</li>
+<li>2. 대표 코드 스멜 3가지 + 리팩토링 기법 (30%) — 긴 메서드→Extract Method, 중복 코드→Pull Up Method/Extract Class, 산탄총 수술→Move Method/Inline Class</li>
+<li>3. 리팩토링 프로세스 (15%) — 스멜식별→분석→적용→테스트→반복 흐름도</li>
+<li>4. 적용 사례·도구 (15%) — Google LSC + SonarQube + CI/CD 연동</li>
+</ul>
+<p><strong>[결론 10%]</strong> — 기술 부채 관리 수단 + TDD 연계 + 조직 문화화 필요</p>
+
+<h4>필수 도식/표</h4>
+<ul>
+<li>1. <strong>코드 스멜-리팩토링 기법 대응표</strong>: 스멜→기법 매핑 (가장 중요!)</li>
+<li>2. <strong>리팩토링 전/후 코드 구조 비교</strong>: Extract Method 전/후</li>
+<li>3. <strong>리팩토링 프로세스 흐름도</strong>: 5단계 순환</li>
+<li>4. <strong>리팩토링 vs 리엔지니어링 비교표</strong></li>
+</ul>
+
+<h4>차별화 포인트</h4>
+<ul>
+<li><strong>Martin Fowler의 22가지 코드 스멜을 5개 범주로 분류</strong>하여 체계성 증명</li>
+<li><strong>SOLID 원칙과 코드 스멜의 매핑</strong>(SRP 위반→Large Class, OCP 위반→Switch 문)</li>
+<li><strong>Google의 LSC 사례</strong>(연간 50,000건 자동 리팩토링) 언급으로 실무 이해도 증명</li>
+<li><strong>기술 부채(Ward Cunningham, 1992)</strong>와 연결하여 경제적 관점 제시</li>
+</ul>
+
+</div>
+</div>
+</section>
+
+<div id="chat-sidebar" class="closed fixed top-0 right-0 w-80 sm:w-96 h-full bg-white shadow-2xl z-50 flex flex-col">
+<div class="flex items-center justify-between p-4 border-b bg-indigo-600 text-white">
+<span class="font-bold">💬 AI 튜터</span>
+<button onclick="toggleChat()" class="text-white hover:text-indigo-200 text-xl">&times;</button>
+</div>
+<div id="chat-messages" class="flex-grow overflow-y-auto p-4 flex flex-col space-y-2" style="max-height:calc(100vh - 140px)">
+<div class="chat-msg ai">안녕하세요! 리팩토링과 코드 스멜에 대해 궁금한 점을 질문해주세요.</div>
+</div>
+<div class="p-3 border-t flex gap-2">
+<input type="text" id="chat-input" placeholder="질문을 입력하세요..." class="flex-grow border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" onkeypress="if(event.key==='Enter')sendChat()">
+<button onclick="sendChat()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700">전송</button>
+</div>
+</div>
+<button onclick="toggleChat()" class="fixed bottom-6 right-6 bg-indigo-600 text-white w-14 h-14 rounded-full shadow-lg hover:bg-indigo-700 transition-all z-40 flex items-center justify-center text-2xl">💬</button>
+<div id="settings-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+<div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+<div class="flex justify-between items-center mb-4"><h3 class="text-lg font-bold text-gray-900">🔑 API Key 설정</h3><button onclick="toggleSettings()" class="text-gray-400 hover:text-gray-600 text-xl">&times;</button></div>
+<p class="text-sm text-gray-600 mb-4">Gemini API Key를 입력하면 AI 튜터 채팅과 퀴즈 생성 기능을 사용할 수 있습니다.</p>
+<input type="password" id="api-key-input" placeholder="Gemini API Key 입력..." class="w-full border rounded-lg px-4 py-2 mb-4 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+<div class="flex gap-2"><button onclick="saveApiKey()" class="flex-grow bg-indigo-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-indigo-700">저장</button><button onclick="toggleSettings()" class="px-4 py-2 border rounded-lg text-sm text-gray-600 hover:bg-gray-50">취소</button></div>
+<p class="text-xs text-gray-400 mt-3">💡 URL에 ?key=YOUR_KEY 파라미터로도 설정 가능합니다.</p>
+</div>
+</div>
+
+</main>
+<footer class="bg-white mt-12 py-8 border-t border-gray-200">
+<div class="max-w-6xl mx-auto px-4 text-center">
+<div class="flex flex-col md:flex-row justify-center items-center gap-2 md:gap-6 text-sm text-gray-600 mb-3 font-medium">
+<div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-indigo-500"></span><span>박교익PE (132회 정보관리기술사, dr.code92@gmail.com)</span></div>
+</div>
+<p class="text-xs text-gray-400">Copyright © KPC 정보관리기술사 ZIP-UP 심화반. All rights reserved.</p>
+</div>
+</footer>
+<script>
+// ── 멘토 모드 ──
+var isMentorMode = new URLSearchParams(window.location.search).get('mentor') === 'true';
+if (isMentorMode) { document.getElementById('nav-script').classList.remove('hidden'); }
+var sections = isMentorMode
+    ? ['overview','smells','process','cases','textbook','script','quiz']
+    : ['overview','smells','process','cases','textbook','quiz'];
+
+// ── 탭 네비게이션 ──
+function navTo(id) {
+    document.querySelectorAll('.nav-item').forEach(function(el){ el.classList.remove('active','text-indigo-600'); });
+    document.getElementById('nav-'+id).classList.add('active','text-indigo-600');
+    sections.forEach(function(s){ document.getElementById(s).classList.add('hidden'); });
+    document.getElementById(id).classList.remove('hidden');
+    window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// ── API Key 관리 ──
+function getApiKey() {
+    var urlKey = new URLSearchParams(window.location.search).get('key');
+    return urlKey || localStorage.getItem('geminiKey') || localStorage.getItem('gemini_api_key') || '';
+}
+function saveApiKey() {
+    var k = document.getElementById('api-key-input').value.trim();
+    if(k){ localStorage.setItem('geminiKey',k); localStorage.setItem('gemini_api_key',k); alert('API Key가 저장되었습니다.'); toggleSettings(); }
+    else { alert('API Key를 입력해주세요.'); }
+}
+function toggleSettings() {
+    var m = document.getElementById('settings-modal');
+    m.classList.toggle('hidden');
+    if(!m.classList.contains('hidden')){ document.getElementById('api-key-input').value = getApiKey(); }
+}
+
+// ── AI 튜터 채팅 ──
+function toggleChat() {
+    var sb = document.getElementById('chat-sidebar');
+    sb.classList.toggle('closed'); sb.classList.toggle('open');
+}
+async function sendChat() {
+    var input = document.getElementById('chat-input');
+    var msg = input.value.trim(); if(!msg) return; input.value = '';
+    var k = getApiKey();
+    if(!k){ alert('API Key를 먼저 설정해주세요.'); toggleSettings(); return; }
+    var mc = document.getElementById('chat-messages');
+    mc.innerHTML += '<div class="chat-msg user">'+msg+'</div>';
+    mc.innerHTML += '<div id="chat-typing" class="chat-msg ai"><div class="typing-indicator"><span></span><span></span><span></span></div></div>';
+    mc.scrollTop = mc.scrollHeight;
+    try {
+        var r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key='+k, {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({contents:[{parts:[{text:"당신은 정보관리기술사 시험 멘토입니다. '리팩토링과 코드 스멜' 관련 질문에 전문적이고 명쾌하게 답변해주세요. 300자 이내로 핵심만 요약.\n\n질문: "+msg}]}]})
+        });
+        var d = await r.json();
+        var reply = d.candidates[0].content.parts[0].text;
+        document.getElementById('chat-typing').remove();
+        mc.innerHTML += '<div class="chat-msg ai">'+marked.parse(reply)+'</div>';
+    } catch(e) {
+        document.getElementById('chat-typing').remove();
+        mc.innerHTML += '<div class="chat-msg ai">⚠️ 응답 생성 중 오류가 발생했습니다.</div>';
+    }
+    mc.scrollTop = mc.scrollHeight;
+}
+
+// ── 퀴즈 ──
+var geminiKey = (typeof getApiKey === 'function') ? (getApiKey() || '') : (localStorage.getItem('geminiKey') || localStorage.getItem('gemini_api_key') || '');
+var quizTypeHistory = [];
+var currentQuizData = null;
+var quizTopics = [
+    { category: "리팩토링 기초", keywords: "정의, Martin Fowler, 1999, 외부 동작 불변, 내부 구조 개선, 자동화된 테스트" },
+    { category: "코드 스멜 개념", keywords: "Kent Beck, 잠재적 설계 결함 징후, 22가지 코드 스멜, 5개 범주 분류" },
+    { category: "비대화·불필요 스멜", keywords: "긴 메서드, 거대한 클래스, 긴 매개변수 목록, 중복 코드, 죽은 코드, 게으른 클래스" },
+    { category: "변경방해·결합도 스멜", keywords: "산탄총 수술, 확산적 변경, 기능 선망, 메시지 체인, 부적절한 친밀" },
+    { category: "리팩토링 기법", keywords: "Extract Method, Move Method, Pull Up Method, Replace Conditional with Polymorphism, Introduce Parameter Object" },
+    { category: "리팩토링 프로세스", keywords: "스멜 식별, 코드 분석, 적용, 테스트 실행, 반복, SonarQube, PMD, ESLint" },
+    { category: "적용 사례", keywords: "Google LSC, 20억 줄 Monorepo, 연간 50000건, 국민건강보험공단, COBOL→Java, 중복 40% 감소" },
+    { category: "연관 이론", keywords: "SOLID 원칙, SRP, OCP, 기술 부채, Ward Cunningham 1992, TDD Red-Green-Refactor" }
+];
+
+async function generateQuiz() {
+    geminiKey = (typeof getApiKey === 'function') ? (getApiKey() || '') : geminiKey;
+    if (!geminiKey) { alert('API Key를 먼저 설정해주세요.'); toggleSettings(); return; }
+    document.getElementById('btn-quiz-gen').disabled = true;
+    document.getElementById('btn-quiz-gen').innerHTML = '<span>⏳ 생성 중...</span>';
+    document.getElementById('quiz-loading').classList.remove('hidden');
+    document.getElementById('quiz-container').classList.add('hidden');
+    document.getElementById('quiz-placeholder').classList.add('hidden');
+    document.getElementById('quiz-feedback').classList.add('hidden');
+    var isMC;
+    var recent = quizTypeHistory.slice(-2);
+    if (recent.length >= 2 && recent[0] === recent[1]) { isMC = !recent[1]; }
+    else { isMC = Math.random() > 0.5; }
+    quizTypeHistory.push(isMC);
+    var selected = quizTopics[Math.floor(Math.random() * quizTopics.length)];
+    var prompt;
+    if (isMC) {
+        prompt = "다음 카테고리에 대한 객관식 퀴즈 1문제를 만드세요.\n카테고리: " + selected.category + "\n관련 키워드: " + selected.keywords + "\n규칙: 반드시 위 카테고리와 키워드에 직접 관련된 문제를 출제하세요.\n4개의 선택지를 제공하고, 정답과 해설을 포함하세요.\nOutput JSON: {\"question\":\"문제\",\"options\":[\"A\",\"B\",\"C\",\"D\"],\"correctIndex\":0,\"explanation\":\"해설\"}";
+    } else {
+        prompt = "다음 카테고리에 대한 단답형 퀴즈 1문제를 만드세요.\n카테고리: " + selected.category + "\n관련 키워드: " + selected.keywords + "\n규칙: 반드시 위 카테고리와 키워드에 직접 관련된 문제를 출제하세요.\n정답은 1~3단어로 답할 수 있는 문제여야 합니다.\nOutput JSON: {\"question\":\"문제\",\"correctAnswer\":\"정답\",\"explanation\":\"해설\"}";
+    }
+    try {
+        var r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=' + geminiKey, {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ contents: [{parts:[{text: prompt}]}], generationConfig: { responseMimeType: "application/json" } })
+        });
+        var d = await r.json();
+        var t = d.candidates[0].content.parts[0].text;
+        t = t.replace(/```json\s*/gi,"").replace(/```\s*/g,"").trim();
+        var depth=0, start=-1, end=-1;
+        for(var i=0;i<t.length;i++){if(t[i]==='{'){if(depth===0)start=i;depth++;}else if(t[i]==='}'){depth--;if(depth===0&&start!==-1){end=i;break;}}}
+        if(start===-1||end===-1) throw new Error("No JSON found");
+        t=t.substring(start,end+1);
+        t=t.replace(/[\x00-\x1F\x7F]/g,function(c){return c==='\n'||c==='\r'||c==='\t'?' ':'';});
+        currentQuizData = JSON.parse(t);
+        renderQuiz(isMC);
+    } catch(e) {
+        alert('퀴즈 생성 중 오류: ' + e.message);
+        document.getElementById('quiz-placeholder').classList.remove('hidden');
+    }
+    document.getElementById('quiz-loading').classList.add('hidden');
+    document.getElementById('btn-quiz-gen').disabled = false;
+    document.getElementById('btn-quiz-gen').innerHTML = '<span>✨ 새로운 문제 생성</span>';
+}
+
+function renderQuiz(isMC) {
+    document.getElementById('quiz-container').classList.remove('hidden');
+    document.getElementById('quiz-question').textContent = currentQuizData.question;
+    document.getElementById('quiz-feedback').classList.add('hidden');
+    if (isMC) {
+        document.getElementById('quiz-type-badge').textContent = '객관식';
+        document.getElementById('quiz-type-badge').className = 'bg-indigo-100 text-indigo-800 text-xs font-bold px-2 py-1 rounded whitespace-nowrap mt-1';
+        document.getElementById('quiz-options').classList.remove('hidden');
+        document.getElementById('quiz-input-area').classList.add('hidden');
+        var optHtml = '';
+        currentQuizData.options.forEach(function(opt, idx) {
+            optHtml += '<button onclick="checkMultipleChoice('+idx+',this)" class="w-full text-left p-3 rounded-lg border border-gray-200 hover:border-indigo-400 hover:bg-indigo-50 transition-colors text-sm font-medium">'+String.fromCharCode(65+idx)+'. '+opt+'</button>';
+        });
+        document.getElementById('quiz-options').innerHTML = optHtml;
+    } else {
+        document.getElementById('quiz-type-badge').textContent = '단답형';
+        document.getElementById('quiz-type-badge').className = 'bg-green-100 text-green-800 text-xs font-bold px-2 py-1 rounded whitespace-nowrap mt-1';
+        document.getElementById('quiz-options').classList.add('hidden');
+        document.getElementById('quiz-input-area').classList.remove('hidden');
+        document.getElementById('quiz-answer-input').value = '';
+        document.getElementById('quiz-answer-input').focus();
+    }
+}
+
+function checkMultipleChoice(idx, btnEl) {
+    var correct = idx === currentQuizData.correctIndex;
+    document.querySelectorAll('#quiz-options button').forEach(function(b,i){
+        b.disabled = true; b.classList.remove('hover:border-indigo-400','hover:bg-indigo-50');
+        if(i===currentQuizData.correctIndex) b.classList.add('bg-green-100','border-green-500','text-green-800');
+        else if(i===idx&&!correct) b.classList.add('bg-red-100','border-red-500','text-red-800');
+    });
+    showQuizFeedback(correct, currentQuizData.options[currentQuizData.correctIndex], currentQuizData.explanation);
+}
+
+async function checkShortAnswer() {
+    geminiKey = (typeof getApiKey === 'function') ? (getApiKey() || '') : geminiKey;
+    var userAnswer = document.getElementById('quiz-answer-input').value.trim();
+    if (!userAnswer) { alert('정답을 입력해주세요.'); return; }
+    document.getElementById('btn-short-submit').textContent = '채점 중...';
+    document.getElementById('btn-short-submit').disabled = true;
+    try {
+        var gradingPrompt = "당신은 정보관리기술사 시험 채점관입니다. 아래 문제에 대해 사용자의 답안이 정답으로 인정될 수 있는지 판정하세요.\n\n문제: "+currentQuizData.question+"\n모범 정답: "+currentQuizData.correctAnswer+"\n사용자 답안: "+userAnswer+"\n\n판정 기준:\n- 핵심 의미가 동일하면 정답\n- 약어/풀네임 모두 인정\n- 영어/한글 혼용 인정\n- 띄어쓰기/조사 차이는 무시\n- 의미가 명확히 다르면 오답\n\nOutput JSON: {\"correct\":true,\"reason\":\"판정 이유\"}";
+        var r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key='+geminiKey,{
+            method:'POST',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({contents:[{parts:[{text:gradingPrompt}]}],generationConfig:{responseMimeType:"application/json"}})
+        });
+        var d = await r.json();
+        var t = d.candidates[0].content.parts[0].text;
+        t = t.replace(/```json\s*/gi,"").replace(/```\s*/g,"").trim();
+        var depth2=0,start2=-1,end2=-1;
+        for(var i2=0;i2<t.length;i2++){if(t[i2]==='{'){if(depth2===0)start2=i2;depth2++;}else if(t[i2]==='}'){depth2--;if(depth2===0&&start2!==-1){end2=i2;break;}}}
+        if(start2===-1||end2===-1) throw new Error("No JSON");
+        t=t.substring(start2,end2+1);
+        t=t.replace(/[\x00-\x1F\x7F]/g,function(c){return c==='\n'||c==='\r'||c==='\t'?' ':'';});
+        var result = JSON.parse(t);
+        showQuizFeedback(result.correct, currentQuizData.correctAnswer, currentQuizData.explanation + (result.reason ? '\n\nAI 채점: '+result.reason : ''));
+    } catch(e) {
+        var ua = userAnswer.replace(/\s/g,'').toLowerCase();
+        var ca = currentQuizData.correctAnswer.replace(/\s/g,'').toLowerCase();
+        var correct = ua===ca||ca.includes(ua)||ua.includes(ca);
+        showQuizFeedback(correct, currentQuizData.correctAnswer, currentQuizData.explanation);
+    }
+    document.getElementById('btn-short-submit').textContent = '제출';
+    document.getElementById('btn-short-submit').disabled = false;
+}
+
+function showQuizFeedback(correct, answer, explanation) {
+    var fb = document.getElementById('quiz-feedback');
+    fb.classList.remove('hidden','border-green-500','border-red-500');
+    fb.classList.add(correct?'border-green-500':'border-red-500');
+    fb.innerHTML = '<div class="flex items-center gap-2 mb-2"><span class="text-lg">'+(correct?'🎉':'😅')+'</span><span class="font-bold '+(correct?'text-green-700':'text-red-700')+'">'+(correct?'정답입니다!':'아쉽습니다!')+'</span></div>'+'<p class="text-sm text-gray-700 mb-1"><strong>정답:</strong> '+answer+'</p>'+'<p class="text-sm text-gray-600">'+explanation+'</p>';
+}
+
+// ── 인터랙티브 ──
+var smellDetails = {
+    'bloaters': { title: '비대화 (Bloaters)', colorClass: 'border-red-500 bg-red-50', content: '<p class="text-sm text-gray-700 mb-2">코드가 불필요하게 거대해진 상태입니다.</p><ul class="text-sm text-gray-600 space-y-1 list-disc pl-4"><li><strong>긴 메서드(Long Method)</strong>: 10줄 초과 시 의심, 20줄 초과 시 분할 고려</li><li><strong>거대한 클래스(Large Class)</strong>: 너무 많은 책임을 가진 클래스</li><li><strong>긴 매개변수 목록(Long Parameter List)</strong>: 4개 이상</li><li><strong>기본형 집착(Primitive Obsession)</strong>: 객체 대신 기본형 남용</li><li><strong>데이터 덩어리(Data Clumps)</strong>: 항상 함께 다니는 데이터 그룹</li></ul>' },
+    'oo-abusers': { title: '객체지향 남용 (OO Abusers)', colorClass: 'border-amber-500 bg-amber-50', content: '<p class="text-sm text-gray-700 mb-2">객체지향 원칙을 제대로 활용하지 못한 상태입니다.</p><ul class="text-sm text-gray-600 space-y-1 list-disc pl-4"><li><strong>Switch 문(Switch Statements)</strong>: 반복적 switch/case 사용</li><li><strong>임시 필드(Temporary Field)</strong>: 특정 상황에서만 사용되는 필드</li><li><strong>거부된 유산(Refused Bequest)</strong>: 상속받은 메서드/속성 미사용</li><li><strong>평행 상속 계층(Parallel Inheritance)</strong>: 한 클래스의 서브클래스 생성 시 다른 곳도 추가</li></ul>' },
+    'change-preventers': { title: '변경 방해 (Change Preventers)', colorClass: 'border-purple-500 bg-purple-50', content: '<p class="text-sm text-gray-700 mb-2">코드 변경이 여러 곳에 영향을 미치는 상태입니다.</p><ul class="text-sm text-gray-600 space-y-1 list-disc pl-4"><li><strong>산탄총 수술(Shotgun Surgery)</strong>: 하나의 변경이 여러 클래스 수정 요구</li><li><strong>확산적 변경(Divergent Change)</strong>: 하나의 클래스가 여러 이유로 변경</li><li><strong>평행 상속 계층(Parallel Inheritance)</strong>: 상속 구조가 병렬로 증가</li></ul>' },
+    'dispensables': { title: '불필요한 것 (Dispensables)', colorClass: 'border-green-500 bg-green-50', content: '<p class="text-sm text-gray-700 mb-2">제거하면 코드가 더 깔끔해지는 요소들입니다.</p><ul class="text-sm text-gray-600 space-y-1 list-disc pl-4"><li><strong>주석(Comments, 과도한)</strong>: 코드로 설명 가능한 주석</li><li><strong>중복 코드(Duplicated Code)</strong>: DRY 원칙 위반</li><li><strong>게으른 클래스(Lazy Class)</strong>: 하는 일이 거의 없는 클래스</li><li><strong>데이터 클래스(Data Class)</strong>: getter/setter만 있는 클래스</li><li><strong>죽은 코드(Dead Code)</strong>: 실행되지 않는 코드</li></ul>' },
+    'couplers': { title: '결합도 문제 (Couplers)', colorClass: 'border-teal-500 bg-teal-50', content: '<p class="text-sm text-gray-700 mb-2">클래스 간 지나치게 밀접한 의존 관계입니다.</p><ul class="text-sm text-gray-600 space-y-1 list-disc pl-4"><li><strong>기능 선망(Feature Envy)</strong>: 다른 클래스의 데이터를 과도 사용</li><li><strong>부적절한 친밀(Inappropriate Intimacy)</strong>: 다른 클래스 내부를 과도 접근</li><li><strong>메시지 체인(Message Chains)</strong>: a.getB().getC().getD() 연쇄 호출</li><li><strong>중개자(Middle Man)</strong>: 단순히 다른 객체에 위임만 하는 클래스</li></ul>' }
+};
+function updateSmellDetail(key) {
+    document.querySelectorAll('.smell-block').forEach(function(el){ el.classList.remove('selected','ring-2','ring-indigo-500'); });
+    var el = document.getElementById('smell-'+key);
+    if(el) { el.classList.add('selected','ring-2','ring-indigo-500'); }
+    var d = smellDetails[key];
+    if(d) {
+        document.getElementById('smell-detail-content').innerHTML = '<div class="border-l-4 '+d.colorClass+' rounded-lg p-4 animate-fade-in"><h4 class="font-bold text-gray-900 mb-2">'+d.title+'</h4>'+d.content+'</div>';
+    }
+}
+
+function toggleStrategy(el) {
+    var d = el.querySelector('.strategy-detail');
+    var s = el.querySelector('.strategy-summary');
+    if(d.classList.contains('hidden')) {
+        document.querySelectorAll('.strategy-card .strategy-detail').forEach(function(x){ x.classList.add('hidden'); });
+        document.querySelectorAll('.strategy-card .strategy-summary').forEach(function(x){ x.classList.remove('hidden'); });
+        d.classList.remove('hidden'); s.classList.add('hidden');
+    } else { d.classList.add('hidden'); s.classList.remove('hidden'); }
+}
+
+// ── Chart.js ──
+document.addEventListener('DOMContentLoaded', function() {
+    var ctx = document.getElementById('smellChart');
+    if (ctx) {
+        new Chart(ctx.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: ['비대화','객체지향남용','변경방해','불필요','결합도'],
+                datasets: [{
+                    label: '코드 스멜 수',
+                    data: [5, 4, 3, 5, 4],
+                    backgroundColor: ['#ef4444','#f59e0b','#8b5cf6','#10b981','#14b8a6'],
+                    borderRadius: 6
+                }]
+            },
+            options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false} }, scales:{ y:{beginAtZero:true,ticks:{stepSize:1}} } }
+        });
+    }
+    var ctx2 = document.getElementById('refactorCompareChart');
+    if (ctx2) {
+        new Chart(ctx2.getContext('2d'), {
+            type: 'radar',
+            data: {
+                labels: ['가독성','유지보수성','테스트용이성','확장성','결합도(낮을수록↑)'],
+                datasets: [{
+                    label: '리팩토링 전',
+                    data: [3, 2, 2, 3, 3],
+                    backgroundColor: 'rgba(239,68,68,0.15)',
+                    borderColor: '#ef4444',
+                    borderWidth: 2,
+                    pointBackgroundColor: '#ef4444'
+                },{
+                    label: '리팩토링 후',
+                    data: [9, 8, 9, 8, 8],
+                    backgroundColor: 'rgba(79,70,229,0.15)',
+                    borderColor: '#4f46e5',
+                    borderWidth: 2,
+                    pointBackgroundColor: '#4f46e5'
+                }]
+            },
+            options: { responsive:true, maintainAspectRatio:false, scales:{ r:{ min:0, max:10, ticks:{stepSize:2} } }, plugins:{ legend:{position:'bottom'} } }
+        });
+    }
+});
+</script>
+</body>
+</html>

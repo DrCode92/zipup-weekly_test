@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>디지털 권리장전 — KPC 정보관리기술사 ZIP-UP</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+body{font-family:'Noto Sans KR',sans-serif}
+.def-box{background:linear-gradient(135deg,#eef2ff 0%,#e0e7ff 100%);border-left:4px solid #4f46e5;border-radius:8px;padding:1.25rem;margin-bottom:1rem}
+.def-box p{color:#312e81;font-weight:500;margin:0;line-height:1.8}
+.insight-box{background-color:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:1rem;margin:1rem 0}
+.insight-box::before{content:'💡';margin-right:.5rem}
+.textbook-content h3{font-size:1.25rem;font-weight:700;color:#1e3a8a;margin-top:1.5rem;margin-bottom:.75rem;border-left:4px solid #4f46e5;padding-left:.75rem}
+.textbook-content h4{font-size:1.1rem;font-weight:600;color:#374151;margin-top:1rem;margin-bottom:.5rem}
+.textbook-content p{margin-bottom:1rem;line-height:1.8;color:#4b5563}
+.textbook-content ul{list-style-type:disc;padding-left:1.5rem;margin-bottom:1rem;color:#4b5563}
+.textbook-content li{margin-bottom:.5rem;line-height:1.7}
+.textbook-content table{width:100%;border-collapse:collapse;margin-bottom:1.5rem;font-size:.95rem}
+.textbook-content th,.textbook-content td{border:1px solid #e5e7eb;padding:.75rem;text-align:left}
+.textbook-content th{background-color:#f9fafb;font-weight:600;color:#1f2937}
+.textbook-content .highlight{background-color:#eef2ff;color:#4338ca;font-weight:600;padding:0 4px;border-radius:4px}
+.textbook-content pre{background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:1rem;overflow-x:auto;margin-bottom:1rem;font-size:.85rem;line-height:1.6}
+.textbook-content code{font-family:'Courier New',monospace}
+.nav-item.active{border-bottom:2px solid #4f46e5;color:#4f46e5;font-weight:700}
+.tech-block{transition:all .3s ease;cursor:pointer}
+.tech-block:hover{transform:translateY(-2px);box-shadow:0 4px 6px -1px rgba(0,0,0,.1)}
+.tech-block.selected{ring:2px;ring-color:#4f46e5;background-color:#eef2ff;border-color:#4f46e5}
+.chat-msg{border-radius:12px;padding:10px 14px;margin-bottom:10px;max-width:85%;font-size:.95rem}
+.chat-msg.user{background-color:#4f46e5;color:#fff;align-self:flex-end;margin-left:auto}
+.chat-msg.ai{background-color:#f3f4f6;color:#1f2937;align-self:flex-start;border:1px solid #e5e7eb}
+#chat-sidebar{transition:transform .3s ease-in-out}
+#chat-sidebar.closed{transform:translateX(100%)}
+#chat-sidebar.open{transform:translateX(0)}
+.typing-indicator span{display:inline-block;width:6px;height:6px;background-color:#4f46e5;border-radius:50%;animation:typing 1.4s infinite ease-in-out both;margin:0 2px}
+.typing-indicator span:nth-child(1){animation-delay:-.32s}
+.typing-indicator span:nth-child(2){animation-delay:-.16s}
+@keyframes typing{0%,80%,100%{transform:scale(0)}40%{transform:scale(1)}}
+.chart-container{position:relative;width:100%;max-width:600px;margin-left:auto;margin-right:auto;height:350px;max-height:400px}
+.no-scrollbar::-webkit-scrollbar{display:none}
+.no-scrollbar{-ms-overflow-style:none;scrollbar-width:none}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.animate-fade-in{animation:fadeIn .4s ease-out forwards}
+</style>
+</head>
+
+<body class="bg-stone-100 min-h-screen flex flex-col overflow-x-hidden">
+<header class="bg-white shadow-sm sticky top-0 z-40">
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+<div class="flex justify-between items-center pt-3 pb-1">
+<div class="flex flex-col justify-center min-w-0">
+<span class="text-[10px] sm:text-xs text-indigo-600 font-bold uppercase tracking-wider leading-tight">KPC 정보관리기술사 ZIP-UP 심화반</span>
+<div class="flex items-center gap-2">
+<span class="text-lg sm:text-xl font-bold text-gray-900 tracking-tight truncate">디지털 권리장전(Digital Bill of Rights)</span>
+<span class="text-[10px] sm:text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-bold flex-shrink-0">2026</span>
+</div>
+</div>
+</div>
+<nav class="flex space-x-1 sm:space-x-4 overflow-x-auto no-scrollbar pb-1 items-center">
+<button onclick="navTo('overview')" id="nav-overview" class="nav-item active px-1 pt-1 pb-2 text-xs sm:text-sm font-medium whitespace-nowrap">개요 및 개념</button>
+<button onclick="navTo('principles')" id="nav-principles" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium whitespace-nowrap">5대 원칙</button>
+<button onclick="navTo('provisions')" id="nav-provisions" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium whitespace-nowrap">핵심 조항 및 비교</button>
+<button onclick="navTo('compliance')" id="nav-compliance" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium whitespace-nowrap">실무 적용</button>
+<button onclick="navTo('textbook')" id="nav-textbook" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium whitespace-nowrap">원문 학습</button>
+<button onclick="navTo('script')" id="nav-script" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium whitespace-nowrap hidden">🎬 강의 스크립트</button>
+<button onclick="navTo('quiz')" id="nav-quiz" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium whitespace-nowrap">퀴즈 &amp; 암기</button>
+<span class="w-px h-4 bg-gray-300 flex-shrink-0"></span>
+<button onclick="toggleSettings()" class="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium text-indigo-600 hover:bg-indigo-50 border border-indigo-200 hover:border-indigo-400 transition-all whitespace-nowrap flex-shrink-0" title="API Key 설정">🔑 API</button>
+</nav>
+</div>
+</header>
+<main class="flex-grow max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12 pb-24">
+
+<section id="overview">
+<div class="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+<h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">📋 개요 및 개념</h2>
+
+<!-- 정의 박스 -->
+<div class="def-box mb-6">
+<p><strong>디지털 권리장전(Digital Bill of Rights)</strong>이란 디지털 환경에서 모든 시민이 누려야 할 기본적 권리와 원칙을 선언한 국가 수준의 규범 문서이다. 대한민국은 2023년 9월 25일, 국제사회 최초로 디지털 기본권을 포괄적으로 선언하였으며, <strong>자유·공정·안전·혁신·연대의 5대 원칙</strong>과 28개 조항으로 구성된다.</p>
+</div>
+
+<!-- 개념 해설 -->
+<div class="mb-8">
+<h3 class="text-lg font-bold text-gray-800 mb-3">개념 해설</h3>
+<p class="text-gray-700 leading-relaxed mb-4">쉽게 말해, 디지털 권리장전은 <strong>"디지털 시대의 인권선언"</strong>입니다. 1948년 세계인권선언(UDHR)이 물리적 세계에서의 기본권을 선언했다면, 디지털 권리장전은 AI, 데이터, 플랫폼으로 이루어진 디지털 세계에서의 기본권을 선언한 것입니다. 법률은 아니지만, 향후 AI 기본법 등 관련 법률 제·개정의 나침반 역할을 합니다.</p>
+</div>
+
+<!-- 제정 배경 카드 -->
+<h3 class="text-lg font-bold text-gray-800 mb-4">제정 배경 및 필요성</h3>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+<div class="bg-red-50 rounded-lg p-4 border border-red-200">
+<div class="font-bold text-red-800 mb-2 flex items-center gap-2">🤖 AI 기술 확산</div>
+<p class="text-sm text-gray-700">ChatGPT(2022.11) 등장 이후 생성형 AI 폭발적 확산, AI 편향·차별·프라이버시 침해 우려 증가</p>
+</div>
+<div class="bg-amber-50 rounded-lg p-4 border border-amber-200">
+<div class="font-bold text-amber-800 mb-2 flex items-center gap-2">📊 디지털 양극화</div>
+<p class="text-sm text-gray-700">디지털 문해력 격차로 정보 접근 불평등 심화 (고령층 디지털 역량 65.7점)</p>
+</div>
+<div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
+<div class="font-bold text-blue-800 mb-2 flex items-center gap-2">🏢 플랫폼 경제</div>
+<p class="text-sm text-gray-700">빅테크 시장 지배력 강화, 알고리즘에 의한 소비자·노동자 권리 침해</p>
+</div>
+<div class="bg-green-50 rounded-lg p-4 border border-green-200">
+<div class="font-bold text-green-800 mb-2 flex items-center gap-2">💾 데이터 경제</div>
+<p class="text-sm text-gray-700">개인정보의 경제적 가치 증대, 데이터 주권 및 자기결정권 강조 필요</p>
+</div>
+<div class="bg-purple-50 rounded-lg p-4 border border-purple-200">
+<div class="font-bold text-purple-800 mb-2 flex items-center gap-2">🌍 국제적 흐름</div>
+<p class="text-sm text-gray-700">EU AI Act(2024), EU DSA(2022), 미국 AI 행정명령(2023) 등 글로벌 디지털 규범 형성</p>
+</div>
+</div>
+
+<!-- 법체계 위상도 -->
+<h3 class="text-lg font-bold text-gray-800 mb-4">법체계 위상</h3>
+<div class="bg-gray-50 rounded-lg p-6 mb-6">
+<div class="max-w-lg mx-auto space-y-2 text-center">
+<div class="bg-indigo-100 border-2 border-indigo-400 rounded-lg p-3"><span class="font-bold text-indigo-800">헌법 (기본권 보장)</span></div>
+<div class="text-gray-400 text-lg">↕</div>
+<div class="bg-amber-100 border-2 border-amber-400 rounded-lg p-3 ring-2 ring-amber-500 ring-offset-2"><span class="font-bold text-amber-800">📜 디지털 권리장전 (선언문/정책 지침) ◀ 현재 위치</span></div>
+<div class="text-gray-400 text-lg">↕</div>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+<div class="bg-white rounded-lg p-2 border border-gray-300 text-xs font-medium">개인정보보호법<br>(2011/2020)</div>
+<div class="bg-white rounded-lg p-2 border border-gray-300 text-xs font-medium">정보통신망법<br>(2001/2020)</div>
+<div class="bg-white rounded-lg p-2 border border-gray-300 text-xs font-medium">AI 기본법<br>(추진 중)</div>
+<div class="bg-white rounded-lg p-2 border border-gray-300 text-xs font-medium">데이터기본법<br>(2021)</div>
+</div>
+</div>
+</div>
+
+<!-- 차트 -->
+<h3 class="text-lg font-bold text-gray-800 mb-4">디지털 권리장전 vs EU AI Act 원칙 비교</h3>
+<div class="chart-container mb-4">
+<canvas id="principleChart"></canvas>
+</div>
+<p class="text-xs text-gray-400 text-center">* 점수는 각 원칙의 상대적 강조도를 나타내는 예시 값입니다.</p>
+</div>
+</section>
+
+<section id="principles" class="hidden">
+<div class="bg-white rounded-xl shadow-sm p-6 sm:p-8 border-l-4 border-indigo-500">
+<h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">⚖️ 5대 원칙 상세 해설</h2>
+<p class="text-gray-600 mb-6">디지털 권리장전은 <strong>5대 대원칙, 28개 조항</strong>으로 구성되어 있습니다. 각 원칙을 클릭하여 상세 내용을 확인하세요.</p>
+
+<!-- 원칙 카드 클릭 확장 -->
+<div class="space-y-4">
+
+<!-- 제1원칙: 자유 -->
+<div class="tech-block bg-blue-50 rounded-lg p-5 border border-blue-200" onclick="this.querySelector('.principle-detail').classList.toggle('hidden')">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3"><span class="text-2xl">🕊️</span><div><span class="font-bold text-blue-800 text-lg">제1원칙: 자유(Freedom)</span><p class="text-sm text-gray-600 mt-1">디지털 환경에서의 표현·정보접근·활동의 자유 보장</p></div></div>
+<span class="text-gray-400">▼</span>
+</div>
+<div class="principle-detail hidden mt-4 pt-4 border-t border-blue-200">
+<p class="text-sm text-gray-700 mb-3"><strong>주요 조항:</strong></p>
+<ul class="text-sm text-gray-700 space-y-1 list-disc pl-5 mb-3">
+<li>디지털 환경에서의 표현의 자유 보장</li>
+<li>정보에 대한 자유로운 접근 권리</li>
+<li>디지털 기술의 자유로운 이용과 선택 권리</li>
+<li>알고리즘에 의한 부당한 차별로부터의 자유</li>
+</ul>
+<p class="text-sm text-gray-600"><strong>실무 적용:</strong> 플랫폼 사업자의 콘텐츠 검열, 알고리즘 기반 정보 필터링에 대한 투명성 요구</p>
+</div>
+</div>
+
+<!-- 제2원칙: 공정 -->
+<div class="tech-block bg-green-50 rounded-lg p-5 border border-green-200" onclick="this.querySelector('.principle-detail').classList.toggle('hidden')">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3"><span class="text-2xl">⚖️</span><div><span class="font-bold text-green-800 text-lg">제2원칙: 공정(Fairness)</span><p class="text-sm text-gray-600 mt-1">공정한 경쟁·접근·알고리즘 운용 보장</p></div></div>
+<span class="text-gray-400">▼</span>
+</div>
+<div class="principle-detail hidden mt-4 pt-4 border-t border-green-200">
+<p class="text-sm text-gray-700 mb-3"><strong>주요 조항:</strong></p>
+<ul class="text-sm text-gray-700 space-y-1 list-disc pl-5 mb-3">
+<li>디지털 시장에서의 공정한 경쟁 보장</li>
+<li>알고리즘의 투명성과 설명가능성 요구</li>
+<li>디지털 플랫폼의 공정한 운영 의무</li>
+<li>데이터 이동권 및 자기결정권 보장</li>
+</ul>
+<p class="text-sm text-gray-600"><strong>실무 적용:</strong> 플랫폼 자체선호(Self-preferencing) 금지, 앱스토어 수수료 정책 공정성</p>
+</div>
+</div>
+
+<!-- 제3원칙: 안전 -->
+<div class="tech-block bg-red-50 rounded-lg p-5 border border-red-200" onclick="this.querySelector('.principle-detail').classList.toggle('hidden')">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3"><span class="text-2xl">🛡️</span><div><span class="font-bold text-red-800 text-lg">제3원칙: 안전(Safety)</span><p class="text-sm text-gray-600 mt-1">개인정보 보호·사이버 보안·AI 안전성 보장</p></div></div>
+<span class="text-gray-400">▼</span>
+</div>
+<div class="principle-detail hidden mt-4 pt-4 border-t border-red-200">
+<p class="text-sm text-gray-700 mb-3"><strong>주요 조항:</strong></p>
+<ul class="text-sm text-gray-700 space-y-1 list-disc pl-5 mb-3">
+<li>개인정보의 안전한 처리 및 보호</li>
+<li>사이버 공간에서의 안전한 활동 보장</li>
+<li>AI 시스템의 안전성 및 신뢰성 확보</li>
+<li>디지털 환경에서 아동·청소년 보호</li>
+</ul>
+<p class="text-sm text-gray-600"><strong>실무 적용:</strong> AI 서비스의 위험 평가 의무화, 딥페이크 규제, 사이버 불링 방지</p>
+</div>
+</div>
+
+<!-- 제4원칙: 혁신 -->
+<div class="tech-block bg-purple-50 rounded-lg p-5 border border-purple-200" onclick="this.querySelector('.principle-detail').classList.toggle('hidden')">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3"><span class="text-2xl">💡</span><div><span class="font-bold text-purple-800 text-lg">제4원칙: 혁신(Innovation)</span><p class="text-sm text-gray-600 mt-1">기술 혁신 촉진, 책임 있는 혁신 추구</p></div></div>
+<span class="text-gray-400">▼</span>
+</div>
+<div class="principle-detail hidden mt-4 pt-4 border-t border-purple-200">
+<p class="text-sm text-gray-700 mb-3"><strong>주요 조항:</strong></p>
+<ul class="text-sm text-gray-700 space-y-1 list-disc pl-5 mb-3">
+<li>디지털 기술 연구·개발의 자유 보장</li>
+<li>혁신 친화적 규제 환경 조성</li>
+<li>과학기술 발전이 인간 존엄성을 해치지 않도록 보장</li>
+<li>디지털 기술의 윤리적 개발 및 활용</li>
+</ul>
+<p class="text-sm text-gray-600"><strong>실무 적용:</strong> 규제 샌드박스, AI 윤리 가이드라인, 책임 있는 AI(Responsible AI)</p>
+</div>
+</div>
+
+<!-- 제5원칙: 연대 -->
+<div class="tech-block bg-amber-50 rounded-lg p-5 border border-amber-200" onclick="this.querySelector('.principle-detail').classList.toggle('hidden')">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3"><span class="text-2xl">🤝</span><div><span class="font-bold text-amber-800 text-lg">제5원칙: 연대(Solidarity)</span><p class="text-sm text-gray-600 mt-1">디지털 양극화 해소·포용·국제 협력</p></div></div>
+<span class="text-gray-400">▼</span>
+</div>
+<div class="principle-detail hidden mt-4 pt-4 border-t border-amber-200">
+<p class="text-sm text-gray-700 mb-3"><strong>주요 조항:</strong></p>
+<ul class="text-sm text-gray-700 space-y-1 list-disc pl-5 mb-3">
+<li>디지털 격차 해소 및 디지털 포용 보장</li>
+<li>디지털 문해력 교육 지원</li>
+<li>디지털 환경에서의 취약계층 보호</li>
+<li>국제적 디지털 거버넌스 협력</li>
+</ul>
+<p class="text-sm text-gray-600"><strong>실무 적용:</strong> 고령층·장애인 디지털 접근성 보장, 디지털 교육 프로그램, 글로벌 AI 거버넌스 참여</p>
+</div>
+</div>
+
+</div>
+</div>
+</section>
+
+<section id="provisions" class="hidden">
+<div class="bg-white rounded-xl shadow-sm p-6 sm:p-8 border-l-4 border-purple-500">
+<h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">📜 핵심 조항 및 해외 비교</h2>
+
+<!-- AI 관련 핵심 조항 -->
+<h3 class="text-lg font-bold text-purple-700 mb-4 border-l-4 border-purple-400 pl-3">AI 관련 핵심 조항</h3>
+<div class="overflow-x-auto mb-8">
+<table class="w-full text-sm border-collapse">
+<thead><tr class="bg-purple-50"><th class="border border-gray-200 px-4 py-3 text-left font-bold text-purple-800">조항</th><th class="border border-gray-200 px-4 py-3 text-left font-bold text-purple-800">핵심 내용</th><th class="border border-gray-200 px-4 py-3 text-left font-bold text-purple-800">관련 원칙</th></tr></thead>
+<tbody>
+<tr><td class="border border-gray-200 px-4 py-2 font-medium">제10조</td><td class="border border-gray-200 px-4 py-2">AI에 의한 차별 금지, 편향 방지</td><td class="border border-gray-200 px-4 py-2"><span class="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs font-bold">자유</span></td></tr>
+<tr class="bg-gray-50"><td class="border border-gray-200 px-4 py-2 font-medium">제11조</td><td class="border border-gray-200 px-4 py-2">AI 시스템의 투명성·설명가능성 보장</td><td class="border border-gray-200 px-4 py-2"><span class="bg-green-100 text-green-800 px-2 py-0.5 rounded text-xs font-bold">공정</span></td></tr>
+<tr><td class="border border-gray-200 px-4 py-2 font-medium">제14조</td><td class="border border-gray-200 px-4 py-2">AI의 안전한 개발·운영 보장</td><td class="border border-gray-200 px-4 py-2"><span class="bg-red-100 text-red-800 px-2 py-0.5 rounded text-xs font-bold">안전</span></td></tr>
+<tr class="bg-gray-50"><td class="border border-gray-200 px-4 py-2 font-medium">제15조</td><td class="border border-gray-200 px-4 py-2">고위험 AI의 위험 평가 의무화</td><td class="border border-gray-200 px-4 py-2"><span class="bg-red-100 text-red-800 px-2 py-0.5 rounded text-xs font-bold">안전</span></td></tr>
+<tr><td class="border border-gray-200 px-4 py-2 font-medium">제20조</td><td class="border border-gray-200 px-4 py-2">AI 기술 연구·개발의 자유 보장</td><td class="border border-gray-200 px-4 py-2"><span class="bg-purple-100 text-purple-800 px-2 py-0.5 rounded text-xs font-bold">혁신</span></td></tr>
+</tbody>
+</table>
+</div>
+
+<!-- 데이터 관련 핵심 조항 -->
+<h3 class="text-lg font-bold text-purple-700 mb-4 border-l-4 border-purple-400 pl-3">데이터 관련 핵심 조항</h3>
+<div class="overflow-x-auto mb-8">
+<table class="w-full text-sm border-collapse">
+<thead><tr class="bg-purple-50"><th class="border border-gray-200 px-4 py-3 text-left font-bold text-purple-800">조항</th><th class="border border-gray-200 px-4 py-3 text-left font-bold text-purple-800">핵심 내용</th><th class="border border-gray-200 px-4 py-3 text-left font-bold text-purple-800">관련 원칙</th></tr></thead>
+<tbody>
+<tr><td class="border border-gray-200 px-4 py-2 font-medium">제7조</td><td class="border border-gray-200 px-4 py-2">개인정보 자기결정권 보장</td><td class="border border-gray-200 px-4 py-2"><span class="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs font-bold">자유</span></td></tr>
+<tr class="bg-gray-50"><td class="border border-gray-200 px-4 py-2 font-medium">제8조</td><td class="border border-gray-200 px-4 py-2">데이터 이동권 보장</td><td class="border border-gray-200 px-4 py-2"><span class="bg-green-100 text-green-800 px-2 py-0.5 rounded text-xs font-bold">공정</span></td></tr>
+<tr><td class="border border-gray-200 px-4 py-2 font-medium">제12조</td><td class="border border-gray-200 px-4 py-2">개인정보의 안전한 처리</td><td class="border border-gray-200 px-4 py-2"><span class="bg-red-100 text-red-800 px-2 py-0.5 rounded text-xs font-bold">안전</span></td></tr>
+<tr class="bg-gray-50"><td class="border border-gray-200 px-4 py-2 font-medium">제21조</td><td class="border border-gray-200 px-4 py-2">데이터 기반 혁신 지원</td><td class="border border-gray-200 px-4 py-2"><span class="bg-purple-100 text-purple-800 px-2 py-0.5 rounded text-xs font-bold">혁신</span></td></tr>
+</tbody>
+</table>
+</div>
+
+<!-- 해외 규범 비교 -->
+<h3 class="text-lg font-bold text-purple-700 mb-4 border-l-4 border-purple-400 pl-3">해외 디지털 규범 비교</h3>
+<div class="overflow-x-auto mb-6">
+<table class="w-full text-sm border-collapse">
+<thead><tr class="bg-purple-50">
+<th class="border border-gray-200 px-3 py-3 text-left font-bold text-purple-800">비교 기준</th>
+<th class="border border-gray-200 px-3 py-3 text-left font-bold text-purple-800">🇰🇷 디지털 권리장전</th>
+<th class="border border-gray-200 px-3 py-3 text-left font-bold text-purple-800">🇪🇺 EU AI Act</th>
+<th class="border border-gray-200 px-3 py-3 text-left font-bold text-purple-800">🇪🇺 EU DSA</th>
+<th class="border border-gray-200 px-3 py-3 text-left font-bold text-purple-800">🇺🇸 미국 AI 행정명령</th>
+</tr></thead>
+<tbody>
+<tr><td class="border border-gray-200 px-3 py-2 font-medium">형식</td><td class="border border-gray-200 px-3 py-2">선언문</td><td class="border border-gray-200 px-3 py-2">규정(Regulation)</td><td class="border border-gray-200 px-3 py-2">규정(Regulation)</td><td class="border border-gray-200 px-3 py-2">행정명령</td></tr>
+<tr class="bg-gray-50"><td class="border border-gray-200 px-3 py-2 font-medium">법적 구속력</td><td class="border border-gray-200 px-3 py-2">없음 (지침)</td><td class="border border-gray-200 px-3 py-2">있음 (직접 적용)</td><td class="border border-gray-200 px-3 py-2">있음 (직접 적용)</td><td class="border border-gray-200 px-3 py-2">있음 (연방기관)</td></tr>
+<tr><td class="border border-gray-200 px-3 py-2 font-medium">범위</td><td class="border border-gray-200 px-3 py-2">디지털 전반</td><td class="border border-gray-200 px-3 py-2">AI 시스템</td><td class="border border-gray-200 px-3 py-2">디지털 서비스/플랫폼</td><td class="border border-gray-200 px-3 py-2">AI 안전·보안</td></tr>
+<tr class="bg-gray-50"><td class="border border-gray-200 px-3 py-2 font-medium">접근 방식</td><td class="border border-gray-200 px-3 py-2">권리 중심</td><td class="border border-gray-200 px-3 py-2">위험 기반 규제</td><td class="border border-gray-200 px-3 py-2">플랫폼 책임</td><td class="border border-gray-200 px-3 py-2">안전·보안 중심</td></tr>
+<tr><td class="border border-gray-200 px-3 py-2 font-medium">시행 시기</td><td class="border border-gray-200 px-3 py-2">2023.9</td><td class="border border-gray-200 px-3 py-2">2024.8</td><td class="border border-gray-200 px-3 py-2">2024.2</td><td class="border border-gray-200 px-3 py-2">2023.10</td></tr>
+</tbody>
+</table>
+</div>
+
+<!-- 국내 법률 비교 -->
+<h3 class="text-lg font-bold text-purple-700 mb-4 border-l-4 border-purple-400 pl-3">국내 관련 법률 비교</h3>
+<div class="overflow-x-auto">
+<table class="w-full text-sm border-collapse">
+<thead><tr class="bg-purple-50">
+<th class="border border-gray-200 px-4 py-3 text-left font-bold text-purple-800">비교 기준</th>
+<th class="border border-gray-200 px-4 py-3 text-left font-bold text-purple-800">디지털 권리장전</th>
+<th class="border border-gray-200 px-4 py-3 text-left font-bold text-purple-800">개인정보보호법</th>
+<th class="border border-gray-200 px-4 py-3 text-left font-bold text-purple-800">데이터기본법</th>
+</tr></thead>
+<tbody>
+<tr><td class="border border-gray-200 px-4 py-2 font-medium">성격</td><td class="border border-gray-200 px-4 py-2">선언문(정책 지침)</td><td class="border border-gray-200 px-4 py-2">법률(구속력 有)</td><td class="border border-gray-200 px-4 py-2">법률(구속력 有)</td></tr>
+<tr class="bg-gray-50"><td class="border border-gray-200 px-4 py-2 font-medium">범위</td><td class="border border-gray-200 px-4 py-2">디지털 전반 (포괄적)</td><td class="border border-gray-200 px-4 py-2">개인정보 처리 (특정)</td><td class="border border-gray-200 px-4 py-2">데이터 산업 (특정)</td></tr>
+<tr><td class="border border-gray-200 px-4 py-2 font-medium">핵심 목적</td><td class="border border-gray-200 px-4 py-2">기본권 선언</td><td class="border border-gray-200 px-4 py-2">개인정보 보호</td><td class="border border-gray-200 px-4 py-2">데이터 활용 촉진</td></tr>
+<tr class="bg-gray-50"><td class="border border-gray-200 px-4 py-2 font-medium">규제 방식</td><td class="border border-gray-200 px-4 py-2">원칙 제시</td><td class="border border-gray-200 px-4 py-2">의무/벌칙 규정</td><td class="border border-gray-200 px-4 py-2">진흥/지원 규정</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+</section>
+
+<section id="compliance" class="hidden">
+<div class="bg-white rounded-xl shadow-sm p-6 sm:p-8 border-l-4 border-teal-500">
+<h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">🏢 실무 적용 및 컴플라이언스</h2>
+
+<!-- 적용 사례 -->
+<h3 class="text-lg font-bold text-teal-700 mb-4 border-l-4 border-teal-400 pl-3">적용 사례</h3>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+<div class="bg-indigo-50 rounded-lg p-5 border border-indigo-200 cursor-pointer hover:shadow-md transition-shadow" onclick="this.querySelector('.case-detail').classList.toggle('hidden')">
+<div class="flex items-center gap-2 mb-2"><span class="text-xl">🏛️</span><span class="font-bold text-indigo-800">과학기술정보통신부 AI 윤리 체계</span></div>
+<p class="text-sm text-gray-600">'안전' 원칙 기반, 2024년 AI 윤리기준 가이드라인 개정</p>
+<div class="case-detail hidden mt-3 pt-3 border-t border-indigo-200 text-sm text-gray-700 leading-relaxed">
+AI 개발 전 과정(기획→개발→운영→폐기)에서 윤리 원칙 적용 의무화. 공공부문 AI 시스템에 대한 영향평가를 의무화하는 내용을 포함.
+</div>
+</div>
+<div class="bg-green-50 rounded-lg p-5 border border-green-200 cursor-pointer hover:shadow-md transition-shadow" onclick="this.querySelector('.case-detail').classList.toggle('hidden')">
+<div class="flex items-center gap-2 mb-2"><span class="text-xl">📊</span><span class="font-bold text-green-800">네이버·카카오 알고리즘 투명성 보고서</span></div>
+<p class="text-sm text-gray-600">'공정' 원칙에 따라 2024년부터 공개</p>
+<div class="case-detail hidden mt-3 pt-3 border-t border-green-200 text-sm text-gray-700 leading-relaxed">
+네이버는 검색 알고리즘의 순위 결정 요인을 공개, 카카오는 추천 알고리즘의 편향성 점검 결과를 공표. 플랫폼 기업이 자율적으로 원칙을 이행한 사례.
+</div>
+</div>
+</div>
+
+<!-- 적용 대상 -->
+<h3 class="text-lg font-bold text-teal-700 mb-4 border-l-4 border-teal-400 pl-3">적용 대상 분류</h3>
+<div class="overflow-x-auto mb-8">
+<table class="w-full text-sm border-collapse">
+<thead><tr class="bg-teal-50"><th class="border border-gray-200 px-4 py-3 text-left font-bold text-teal-800">대상</th><th class="border border-gray-200 px-4 py-3 text-left font-bold text-teal-800">적용 내용</th><th class="border border-gray-200 px-4 py-3 text-left font-bold text-teal-800">예시</th></tr></thead>
+<tbody>
+<tr><td class="border border-gray-200 px-4 py-2 font-medium">정부·공공기관</td><td class="border border-gray-200 px-4 py-2">디지털 정책 수립 시 5대 원칙 반영</td><td class="border border-gray-200 px-4 py-2">AI 기본법 제정, 공공 AI 윤리기준</td></tr>
+<tr class="bg-gray-50"><td class="border border-gray-200 px-4 py-2 font-medium">플랫폼 기업</td><td class="border border-gray-200 px-4 py-2">알고리즘 투명성, 공정 경쟁, 이용자 보호</td><td class="border border-gray-200 px-4 py-2">네이버, 카카오, 구글 한국</td></tr>
+<tr><td class="border border-gray-200 px-4 py-2 font-medium">AI 개발 기업</td><td class="border border-gray-200 px-4 py-2">AI 안전성, 편향 방지, 설명가능성</td><td class="border border-gray-200 px-4 py-2">삼성전자, LG AI Research</td></tr>
+<tr class="bg-gray-50"><td class="border border-gray-200 px-4 py-2 font-medium">모든 시민</td><td class="border border-gray-200 px-4 py-2">디지털 기본권 향유 주체</td><td class="border border-gray-200 px-4 py-2">표현의 자유, 정보 접근권</td></tr>
+</tbody>
+</table>
+</div>
+
+<!-- 공공기관 체크리스트 -->
+<h3 class="text-lg font-bold text-teal-700 mb-4 border-l-4 border-teal-400 pl-3">공공기관용 컴플라이언스 체크리스트</h3>
+<div class="overflow-x-auto mb-8">
+<table class="w-full text-sm border-collapse">
+<thead><tr class="bg-teal-50"><th class="border border-gray-200 px-4 py-3 text-left font-bold text-teal-800">점검 항목</th><th class="border border-gray-200 px-4 py-3 text-left font-bold text-teal-800">관련 원칙</th><th class="border border-gray-200 px-4 py-3 text-left font-bold text-teal-800">점검 내용</th></tr></thead>
+<tbody>
+<tr><td class="border border-gray-200 px-4 py-2">AI 윤리 영향평가 실시</td><td class="border border-gray-200 px-4 py-2"><span class="bg-red-100 text-red-800 px-2 py-0.5 rounded text-xs font-bold">안전</span></td><td class="border border-gray-200 px-4 py-2">공공 AI 시스템 도입 시 윤리 영향평가 수행 여부</td></tr>
+<tr class="bg-gray-50"><td class="border border-gray-200 px-4 py-2">알고리즘 투명성 확보</td><td class="border border-gray-200 px-4 py-2"><span class="bg-green-100 text-green-800 px-2 py-0.5 rounded text-xs font-bold">공정</span></td><td class="border border-gray-200 px-4 py-2">AI 기반 행정 처분 시 알고리즘 설명 제공 여부</td></tr>
+<tr><td class="border border-gray-200 px-4 py-2">디지털 접근성 보장</td><td class="border border-gray-200 px-4 py-2"><span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-xs font-bold">연대</span></td><td class="border border-gray-200 px-4 py-2">웹 접근성(WCAG) 준수, 고령자·장애인 서비스 제공</td></tr>
+<tr class="bg-gray-50"><td class="border border-gray-200 px-4 py-2">데이터 자기결정권 보장</td><td class="border border-gray-200 px-4 py-2"><span class="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs font-bold">자유</span></td><td class="border border-gray-200 px-4 py-2">마이데이터 서비스 연계, 정보 이동권 지원</td></tr>
+<tr><td class="border border-gray-200 px-4 py-2">디지털 문해력 교육</td><td class="border border-gray-200 px-4 py-2"><span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-xs font-bold">연대</span></td><td class="border border-gray-200 px-4 py-2">디지털 역량 교육 프로그램 운영 여부</td></tr>
+</tbody>
+</table>
+</div>
+
+<!-- 연관 이론 -->
+<h3 class="text-lg font-bold text-teal-700 mb-4 border-l-4 border-teal-400 pl-3">연관 이론 연결</h3>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+<div class="bg-indigo-50 rounded-lg p-4 border border-indigo-200">
+<div class="font-bold text-indigo-800 text-sm mb-1">개인정보보호법 &amp; GDPR</div>
+<div class="text-xs text-gray-600">'자유'·'안전' 원칙 ↔ 개인정보 자기결정권, 잊힐 권리</div>
+</div>
+<div class="bg-purple-50 rounded-lg p-4 border border-purple-200">
+<div class="font-bold text-purple-800 text-sm mb-1">AI 윤리 &amp; XAI</div>
+<div class="text-xs text-gray-600">'공정' 원칙 → LIME, SHAP 등 설명가능한 AI 기법</div>
+</div>
+<div class="bg-teal-50 rounded-lg p-4 border border-teal-200">
+<div class="font-bold text-teal-800 text-sm mb-1">메타버스 거버넌스</div>
+<div class="text-xs text-gray-600">5대 원칙 → 가상 환경 재산권·인격권 확장 적용</div>
+</div>
+</div>
+</div>
+</section>
+
+<section id="textbook" class="hidden">
+<div class="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+<h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">📖 원문 학습</h2>
+<div class="textbook-content">
+
+<h3>제1장 개요 및 입법 배경</h3>
+
+<h4>1.1 디지털 권리장전의 정의</h4>
+<div class="def-box"><p>디지털 권리장전(Digital Bill of Rights)이란 디지털 환경에서 모든 시민이 누려야 할 기본적 권리와 원칙을 선언한 국가 수준의 규범 문서이다. 대한민국은 2023년 9월 25일, 국제사회 최초로 「디지털 권리장전」을 공식 선포하였다.</p></div>
+
+<h4>1.2 제정 배경 및 필요성</h4>
+<table>
+<thead><tr><th>배경 요인</th><th>상세 내용</th></tr></thead>
+<tbody>
+<tr><td>AI 기술 확산</td><td>ChatGPT(2022.11) 등장 이후 생성형 AI 폭발적 확산, AI 편향·차별·프라이버시 침해 우려 증가</td></tr>
+<tr><td>디지털 양극화</td><td>디지털 문해력 격차로 인한 정보 접근 불평등 심화 (고령층 디지털 역량 65.7점)</td></tr>
+<tr><td>플랫폼 경제 확대</td><td>빅테크 기업의 시장 지배력 강화, 알고리즘에 의한 소비자·노동자 권리 침해</td></tr>
+<tr><td>데이터 경제 성장</td><td>개인정보의 경제적 가치 증대, 데이터 주권 및 자기결정권 강조 필요</td></tr>
+<tr><td>국제적 흐름</td><td>EU AI Act(2024), EU DSA(2022), 미국 AI 행정명령(2023) 등 글로벌 디지털 규범 형성</td></tr>
+</tbody>
+</table>
+
+<h4>1.3 법적 위상 및 성격</h4>
+<p>디지털 권리장전은 <strong>법률이 아닌 선언문(Declaration)</strong>이다. 직접적인 법적 구속력은 없으나, 향후 관련 법률 제·개정의 방향성과 원칙을 제시하는 정책 지침(Policy Guideline) 역할을 한다. 이는 1948년 세계인권선언(UDHR)이 법률은 아니지만 이후 각국 헌법과 법률의 기초가 된 것과 유사한 위상이다.</p>
+
+<h3>제2장 5대 대원칙 상세 해설</h3>
+<p>디지털 권리장전은 <strong>5대 대원칙, 28개 조항</strong>으로 구성되어 있다. 5대 원칙은 "자유, 공정, 안전, 혁신, 연대"이다.</p>
+
+<h4>2.1 제1원칙: 자유(Freedom)</h4>
+<p><strong>핵심 내용</strong>: 디지털 환경에서 표현의 자유, 정보 접근의 자유, 디지털 공간에서의 이동과 활동의 자유를 보장한다.</p>
+<ul><li>디지털 환경에서의 표현의 자유 보장</li><li>정보에 대한 자유로운 접근 권리</li><li>알고리즘에 의한 부당한 차별로부터의 자유</li></ul>
+
+<h4>2.2 제2원칙: 공정(Fairness)</h4>
+<p><strong>핵심 내용</strong>: 디지털 환경에서 공정한 경쟁, 공정한 접근, 공정한 알고리즘 운용을 보장한다.</p>
+<ul><li>알고리즘의 투명성과 설명가능성 요구</li><li>데이터 이동권 및 자기결정권 보장</li></ul>
+
+<h4>2.3 제3원칙: 안전(Safety)</h4>
+<p><strong>핵심 내용</strong>: 디지털 환경에서의 개인정보 보호, 사이버 보안, AI 안전성을 보장한다.</p>
+<ul><li>AI 시스템의 안전성 및 신뢰성 확보</li><li>디지털 환경에서 아동·청소년 보호</li></ul>
+
+<h4>2.4 제4원칙: 혁신(Innovation)</h4>
+<p><strong>핵심 내용</strong>: 디지털 기술 혁신을 촉진하되, 책임 있는 혁신을 추구한다.</p>
+<ul><li>혁신 친화적 규제 환경 조성</li><li>디지털 기술의 윤리적 개발 및 활용</li></ul>
+
+<h4>2.5 제5원칙: 연대(Solidarity)</h4>
+<p><strong>핵심 내용</strong>: 디지털 양극화 해소, 디지털 포용, 국제 협력을 추구한다.</p>
+<ul><li>디지털 격차 해소 및 디지털 포용 보장</li><li>국제적 디지털 거버넌스 협력</li></ul>
+
+<h3>제3장 주요 조항 상세 해설</h3>
+
+<h4>3.1 AI 관련 핵심 조항</h4>
+<table>
+<thead><tr><th>조항</th><th>핵심 내용</th><th>관련 원칙</th></tr></thead>
+<tbody>
+<tr><td>제10조</td><td>AI에 의한 차별 금지, 편향 방지</td><td>자유</td></tr>
+<tr><td>제11조</td><td>AI 시스템의 투명성·설명가능성 보장</td><td>공정</td></tr>
+<tr><td>제14조</td><td>AI의 안전한 개발·운영 보장</td><td>안전</td></tr>
+<tr><td>제15조</td><td>고위험 AI의 위험 평가 의무화</td><td>안전</td></tr>
+<tr><td>제20조</td><td>AI 기술 연구·개발의 자유 보장</td><td>혁신</td></tr>
+</tbody>
+</table>
+
+<h4>3.2 데이터 관련 핵심 조항</h4>
+<table>
+<thead><tr><th>조항</th><th>핵심 내용</th><th>관련 원칙</th></tr></thead>
+<tbody>
+<tr><td>제7조</td><td>개인정보 자기결정권 보장</td><td>자유</td></tr>
+<tr><td>제8조</td><td>데이터 이동권 보장</td><td>공정</td></tr>
+<tr><td>제12조</td><td>개인정보의 안전한 처리</td><td>안전</td></tr>
+<tr><td>제21조</td><td>데이터 기반 혁신 지원</td><td>혁신</td></tr>
+</tbody>
+</table>
+
+<h3>제4장 적용 범위 및 대상</h3>
+<table>
+<thead><tr><th>대상</th><th>적용 내용</th><th>예시</th></tr></thead>
+<tbody>
+<tr><td>정부·공공기관</td><td>디지털 정책 수립 시 5대 원칙 반영 의무</td><td>AI 기본법 제정, 공공 AI 윤리기준</td></tr>
+<tr><td>플랫폼 기업</td><td>알고리즘 투명성, 공정 경쟁, 이용자 보호</td><td>네이버, 카카오, 구글 한국</td></tr>
+<tr><td>AI 개발 기업</td><td>AI 안전성, 편향 방지, 설명가능성 확보</td><td>삼성전자, LG AI Research</td></tr>
+<tr><td>모든 시민</td><td>디지털 기본권 향유 주체</td><td>표현의 자유, 정보 접근권</td></tr>
+</tbody>
+</table>
+
+<h3>제5장 유사 법률·제도와의 비교</h3>
+
+<h4>5.1 국내 관련 법률 비교</h4>
+<table>
+<thead><tr><th>비교 기준</th><th>디지털 권리장전</th><th>개인정보보호법</th><th>데이터기본법</th></tr></thead>
+<tbody>
+<tr><td>성격</td><td>선언문(정책 지침)</td><td>법률(구속력 有)</td><td>법률(구속력 有)</td></tr>
+<tr><td>범위</td><td>디지털 전반(포괄적)</td><td>개인정보 처리(특정)</td><td>데이터 산업(특정)</td></tr>
+<tr><td>핵심 목적</td><td>기본권 선언</td><td>개인정보 보호</td><td>데이터 활용 촉진</td></tr>
+<tr><td>규제 방식</td><td>원칙 제시</td><td>의무/벌칙 규정</td><td>진흥/지원 규정</td></tr>
+<tr><td>제정 시기</td><td>2023.9</td><td>2011(개정 2020)</td><td>2021</td></tr>
+</tbody>
+</table>
+
+<h4>5.2 해외 디지털 규범 비교</h4>
+<table>
+<thead><tr><th>비교 기준</th><th>한국 디지털 권리장전</th><th>EU AI Act</th><th>EU DSA</th><th>미국 AI 행정명령</th></tr></thead>
+<tbody>
+<tr><td>형식</td><td>선언문</td><td>규정(Regulation)</td><td>규정(Regulation)</td><td>행정명령</td></tr>
+<tr><td>법적 구속력</td><td>없음(지침)</td><td>있음(직접 적용)</td><td>있음(직접 적용)</td><td>있음(연방기관)</td></tr>
+<tr><td>범위</td><td>디지털 전반</td><td>AI 시스템</td><td>디지털 서비스/플랫폼</td><td>AI 안전·보안</td></tr>
+<tr><td>접근 방식</td><td>권리 중심</td><td>위험 기반 규제</td><td>플랫폼 책임</td><td>안전·보안 중심</td></tr>
+<tr><td>시행 시기</td><td>2023.9</td><td>2024.8</td><td>2024.2</td><td>2023.10</td></tr>
+</tbody>
+</table>
+
+<h3>제6장 실무 적용 사례</h3>
+
+<h4>6.1 과학기술정보통신부 AI 윤리 체계</h4>
+<p>과학기술정보통신부는 디지털 권리장전의 '안전' 원칙에 기반하여, 2024년 「국가 AI 윤리기준 실천 가이드라인」을 개정하였다. AI 개발 전 과정(기획→개발→운영→폐기)에서 준수해야 할 윤리 원칙을 구체화하였으며, 공공부문 AI 시스템에 대한 영향평가를 의무화하는 내용을 포함한다.</p>
+
+<h4>6.2 네이버·카카오의 알고리즘 투명성 보고서</h4>
+<p>디지털 권리장전의 '공정' 원칙에 따라, 네이버와 카카오는 2024년부터 알고리즘 투명성 보고서를 공개하고 있다. 네이버는 검색 알고리즘의 순위 결정 요인을 공개하였고, 카카오는 추천 알고리즘의 편향성 점검 결과를 공표하였다.</p>
+
+<h3>제7장 컴플라이언스 체크리스트</h3>
+
+<h4>7.1 공공기관용 체크리스트</h4>
+<table>
+<thead><tr><th>점검 항목</th><th>관련 원칙</th><th>점검 내용</th></tr></thead>
+<tbody>
+<tr><td>AI 윤리 영향평가 실시</td><td>안전</td><td>공공 AI 시스템 도입 시 윤리 영향평가 수행 여부</td></tr>
+<tr><td>알고리즘 투명성 확보</td><td>공정</td><td>AI 기반 행정 처분 시 알고리즘 설명 제공 여부</td></tr>
+<tr><td>디지털 접근성 보장</td><td>연대</td><td>웹 접근성(WCAG) 준수, 고령자·장애인 서비스 제공</td></tr>
+<tr><td>데이터 자기결정권 보장</td><td>자유</td><td>마이데이터 서비스 연계, 정보 이동권 지원</td></tr>
+<tr><td>디지털 문해력 교육</td><td>연대</td><td>디지털 역량 교육 프로그램 운영 여부</td></tr>
+</tbody>
+</table>
+
+<h4>7.2 민간 기업용 체크리스트</h4>
+<table>
+<thead><tr><th>점검 항목</th><th>관련 원칙</th><th>점검 내용</th></tr></thead>
+<tbody>
+<tr><td>AI 편향성 점검</td><td>자유</td><td>AI 모델의 성별·연령·인종 편향 테스트 수행</td></tr>
+<tr><td>설명가능한 AI 구현</td><td>공정</td><td>XAI 기법 적용, 의사결정 근거 설명 기능 제공</td></tr>
+<tr><td>고위험 AI 안전성 테스트</td><td>안전</td><td>자율주행, 의료 AI 등 고위험 시스템 안전성 검증</td></tr>
+<tr><td>혁신 친화 규제 대응</td><td>혁신</td><td>규제 샌드박스 참여, 신기술 실증 특례 활용</td></tr>
+<tr><td>취약계층 접근성</td><td>연대</td><td>장애인·고령자용 대안 서비스 제공</td></tr>
+</tbody>
+</table>
+
+<h3>제8장 연관 이론 연결</h3>
+
+<h4>8.1 개인정보보호법과 GDPR</h4>
+<p>디지털 권리장전의 '자유'와 '안전' 원칙은 개인정보보호법의 개인정보 자기결정권, EU GDPR의 잊힐 권리(Right to be Forgotten)와 직접 연결된다.</p>
+
+<h4>8.2 AI 윤리와 설명가능한 AI(XAI)</h4>
+<p>디지털 권리장전의 '공정' 원칙에서 요구하는 알고리즘 투명성·설명가능성은 기술적으로 XAI(eXplainable AI)와 직결된다. LIME, SHAP 등의 XAI 기법이 디지털 권리장전의 이념을 기술적으로 구현하는 수단이 된다.</p>
+
+<h4>8.3 디지털 트윈과 메타버스 거버넌스</h4>
+<p>디지털 권리장전의 5대 원칙은 메타버스, 디지털 트윈 등 새로운 디지털 환경에도 확장 적용된다. 메타버스 내에서의 재산권, 아바타의 인격권, 가상 경제의 공정성 등 새로운 권리 이슈에 대한 기본 원칙을 제공한다.</p>
+
+<h3>제9장 시험 출제 관점</h3>
+<h4>9.1 기출 연계 포인트</h4>
+<ul>
+<li><strong>1교시형</strong>: "디지털 권리장전의 5대 원칙을 설명하시오" → 제2장 중심</li>
+<li><strong>1교시형</strong>: "AI 시대의 디지털 기본권을 논하시오" → 제3장 + 제8장</li>
+<li><strong>2교시형 연계</strong>: "디지털 전환 시대의 거버넌스 체계" → 디지털 권리장전 + 관련 법률 비교</li>
+</ul>
+
+<h4>9.2 답안 구성 전략</h4>
+<p><strong>서론 (15%)</strong>: AI·데이터 시대의 디지털 기본권 필요성 + 디지털 권리장전 정의</p>
+<p><strong>본론 (75%)</strong>:</p>
+<ul>
+<li>5대 원칙 상세 설명 (35%)</li>
+<li>핵심 조항(AI 안전·투명성, 데이터 자기결정권) (15%)</li>
+<li>해외 규범 비교(EU AI Act, DSA) (15%)</li>
+<li>실무 적용 및 컴플라이언스 (10%)</li>
+</ul>
+<p><strong>결론 (10%)</strong>: AI 기본법 추진과의 연계 + 선언에서 법률로의 제도화 전망</p>
+
+</div>
+</div>
+</section>
+
+<section id="script" class="hidden">
+<div class="bg-white rounded-xl shadow-sm p-6 sm:p-8 border-l-4 border-amber-400">
+<div class="flex items-center gap-3 mb-4">
+<h2 class="text-xl font-bold text-gray-900">🎬 강의 스크립트</h2>
+<span class="bg-amber-100 text-amber-700 text-xs font-bold px-3 py-1 rounded-full border border-amber-300">🔒 멘토 전용</span>
+</div>
+<div class="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6 text-sm text-amber-800">
+ℹ️ 이 탭은 멘토 전용입니다. URL에 <code class="bg-amber-100 px-1 rounded">?mentor=true</code> 파라미터를 추가하면 표시됩니다.
+</div>
+<div class="textbook-content">
+
+<h4>🎬 도입부</h4>
+<p>안녕하세요, ZIP-UP 멘토링 수강생 여러분. 오늘은 디지털 권리장전에 대해 이야기해보겠습니다.</p>
+<p>이 토픽은 디지털서비스/정책 영역인데요, "법 같은 건 암기만 하면 되는 거 아닌가?"라고 생각하실 수 있어요. 근데 절대 그렇지 않아요. 채점관이 보고 싶은 건 "이 사람이 디지털 권리장전의 의의와 맥락을 이해하고, 실무와 기술에 어떻게 연결되는지 아는가"거든요.</p>
+
+<h4>🎬 제정 배경</h4>
+<p>2022년 11월에 ChatGPT가 나온 이후 AI가 우리 생활 전반에 침투하면서 새로운 문제들이 쏟아져 나온 거예요. AI 채용 차별, 딥페이크 가짜 뉴스, 필터 버블 문제 등이요. 기존 법률로는 이런 새로운 문제들을 다루기 어렵다 보니, 디지털 시대에 맞는 새로운 기본권 프레임워크가 필요해진 거예요.</p>
+<p>대한민국의 디지털 권리장전은 "국가 수준에서 디지털 기본권을 포괄적으로 선언한 국제 최초의 사례"라는 거예요. 이 "국제 최초"라는 점을 서론에 꼭 써주세요.</p>
+<p>디지털 권리장전은 법률이 아니에요. 선언문이에요. 1948년 세계인권선언(UDHR)도 법률은 아니었지만 이후 각국 헌법과 법률의 기초가 되었잖아요? 디지털 권리장전도 마찬가지예요.</p>
+
+<h4>🎬 5대 원칙: 자공안혁연</h4>
+<p>5대 원칙을 하나씩 살펴볼게요. <span class="highlight">"자공안혁연"</span>으로 외우세요. <span class="highlight">자</span>유, <span class="highlight">공</span>정, <span class="highlight">안</span>전, <span class="highlight">혁</span>신, <span class="highlight">연</span>대예요.</p>
+<p>첫째 <strong>자유</strong>는 디지털 환경에서의 표현의 자유, 정보 접근의 자유, 알고리즘 차별로부터의 자유예요. Amazon이 2018년 AI 채용 시스템을 폐기한 사례를 답안에 넣으면 좋아요.</p>
+<p>둘째 <strong>공정</strong>은 알고리즘의 투명성과 설명가능성이 핵심이에요. 데이터 이동권도 중요합니다.</p>
+<p>셋째 <strong>안전</strong>은 AI 시스템의 안전성 확보가 핵심이에요. EU AI Act의 위험 기반 접근법과 맥을 같이하지만, EU는 법률이고 우리는 선언 수준이라는 차이가 있어요.</p>
+<p>넷째 <strong>혁신</strong>은 "책임 있는 혁신"이 핵심이에요. 규제 샌드박스가 대표적입니다.</p>
+<p>다섯째 <strong>연대</strong>는 디지털 양극화 해소예요. 고령층 디지털 역량이 65.7점밖에 안 돼요. 이 통계를 답안에 넣으면 구체성이 올라갑니다.</p>
+
+<h4>🎬 해외 비교와 실무 적용</h4>
+<p>EU AI Act는 법률(Regulation)이라 직접적인 구속력이 있어요. 위험 기반 접근법으로 AI를 4단계로 분류합니다. 한국/EU/미국 비교표 하나가 답안 품질을 확 올려줍니다.</p>
+<p>실무 사례로 과학기술정보통신부의 AI 윤리기준 가이드라인 개정, 네이버·카카오의 알고리즘 투명성 보고서 공개가 있어요.</p>
+
+<h4>🎬 답안 작성 팁 및 마무리</h4>
+<p>분량 배분은 서론 15%, 5대 원칙 35%, AI·데이터 핵심 조항 15%, 해외 비교 15%, 실무 적용 10%, 결론 10%를 추천합니다. 해외 비교표는 반드시 넣으세요. 표 하나가 글 열 줄보다 효과적이거든요.</p>
+<p>마지막 정리: <span class="highlight">"자공안혁연"</span> — 자유, 공정, 안전, 혁신, 연대. 2023년 9월 국제 최초 선포. 법률이 아닌 선언문이지만 향후 입법의 나침반. 이 세 가지만 잡으시면 됩니다. 수고하셨습니다!</p>
+
+</div>
+</div>
+</section>
+
+<div id="quiz" class="hidden">
+<!-- AI 실전 퀴즈 영역 -->
+<div class="bg-indigo-50 rounded-xl p-6 border border-indigo-100 mb-8">
+    <div class="flex items-center justify-between mb-4">
+        <h3 class="font-bold text-indigo-900 text-lg flex items-center"><span class="mr-2">🧠</span> AI 실전 문제 생성</h3>
+        <button onclick="generateQuiz()" id="btn-quiz-gen" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm transition-colors flex items-center gap-2"><span>✨ 새로운 문제 생성</span></button>
+    </div>
+    <div id="quiz-loading" class="hidden py-8 text-center">
+        <div class="typing-indicator flex justify-center mb-2"><span></span><span></span><span></span></div>
+        <p class="text-indigo-600 text-sm">AI가 문제를 출제하고 있습니다...</p>
+    </div>
+    <div id="quiz-container" class="hidden space-y-4">
+        <div class="bg-white p-5 rounded-lg shadow-sm border border-indigo-100">
+            <div class="flex items-start gap-2 mb-4">
+                <span id="quiz-type-badge" class="bg-indigo-100 text-indigo-800 text-xs font-bold px-2 py-1 rounded whitespace-nowrap mt-1">객관식</span>
+                <p id="quiz-question" class="font-bold text-gray-800 text-lg"></p>
+            </div>
+            <div id="quiz-options" class="space-y-2"></div>
+            <div id="quiz-input-area" class="hidden mt-4">
+                <div class="flex gap-2">
+                    <input type="text" id="quiz-answer-input" placeholder="정답을 입력하세요" class="flex-grow border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <button onclick="checkShortAnswer()" id="btn-short-submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-bold">제출</button>
+                </div>
+            </div>
+        </div>
+        <div id="quiz-feedback" class="hidden bg-white p-5 rounded-lg border-l-4"></div>
+    </div>
+    <div id="quiz-placeholder" class="text-center py-8 text-gray-500 border-2 border-dashed border-indigo-200 rounded-lg">
+        <p>'새로운 문제 생성' 버튼을 눌러 실력을 점검해보세요.</p>
+    </div>
+</div>
+
+<!-- 암기 노트 ① 두문자어 -->
+<div class="bg-white rounded-xl shadow-sm p-6 sm:p-8 mb-6">
+<h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">📝 암기 노트 ① — 두문자어 암기법</h3>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div class="bg-indigo-50 rounded-lg p-5 border border-indigo-200 text-center">
+<div class="text-3xl font-black text-indigo-700 mb-2">"자공안혁연"</div>
+<div class="text-sm text-gray-700 font-medium">디지털 권리장전 5대 원칙</div>
+<div class="mt-2 text-xs text-gray-600"><span class="highlight">자</span>유, <span class="highlight">공</span>정, <span class="highlight">안</span>전, <span class="highlight">혁</span>신, <span class="highlight">연</span>대</div>
+</div>
+<div class="bg-purple-50 rounded-lg p-5 border border-purple-200 text-center">
+<div class="text-3xl font-black text-purple-700 mb-2">"선이팔"</div>
+<div class="text-sm text-gray-700 font-medium">디지털 권리장전 구성</div>
+<div class="mt-2 text-xs text-gray-600"><span class="highlight">선</span>언문, <span class="highlight">이</span>십<span class="highlight">팔</span>(28)개 조항</div>
+</div>
+</div>
+</div>
+
+<!-- 암기 노트 ② 골격 답안 -->
+<div class="bg-white rounded-xl shadow-sm p-6 sm:p-8 mb-6">
+<h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">📝 암기 노트 ② — 골격 답안 구조</h3>
+<div class="overflow-x-auto">
+<table class="w-full text-sm border-collapse">
+<thead><tr class="bg-gray-100"><th class="border px-4 py-3 text-left w-1/6">구간</th><th class="border px-4 py-3 text-left w-1/6">비율</th><th class="border px-4 py-3 text-left">내용</th></tr></thead>
+<tbody>
+<tr><td class="border px-4 py-2 font-bold">서론</td><td class="border px-4 py-2">15%</td><td class="border px-4 py-2">AI·데이터 시대 배경 → 디지털 기본권 필요성 → 2023.9 선포 의의</td></tr>
+<tr class="bg-gray-50"><td class="border px-4 py-2 font-bold" rowspan="4">본론</td><td class="border px-4 py-2">35%</td><td class="border px-4 py-2">5대 원칙 상세: 자유→공정→안전→혁신→연대</td></tr>
+<tr class="bg-gray-50"><td class="border px-4 py-2">15%</td><td class="border px-4 py-2">AI 차별금지, 투명성, 위험평가 + 데이터 자기결정권/이동권</td></tr>
+<tr class="bg-gray-50"><td class="border px-4 py-2">15%</td><td class="border px-4 py-2">vs EU AI Act(위험 기반) vs DSA(플랫폼 책임) vs 미국(안보 중심)</td></tr>
+<tr class="bg-gray-50"><td class="border px-4 py-2">10%</td><td class="border px-4 py-2">공공 AI 윤리 영향평가 + 기업 알고리즘 투명성 보고서</td></tr>
+<tr><td class="border px-4 py-2 font-bold">결론</td><td class="border px-4 py-2">10%</td><td class="border px-4 py-2">선언 → 법률 제도화 전망 + AI 기본법 연계</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<!-- 암기 노트 ③ 필수 도식 + 차별화 -->
+<div class="bg-white rounded-xl shadow-sm p-6 sm:p-8 mb-6">
+<h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">📝 암기 노트 ③ — 필수 도식 &amp; 차별화 포인트</h3>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div>
+<h4 class="font-bold text-gray-800 mb-3">📊 필수 도식/표 (4개)</h4>
+<ul class="space-y-2 text-sm text-gray-700">
+<li class="flex items-start gap-2"><span class="text-indigo-600 font-bold">1.</span> 5대 원칙 구조도 + 각 원칙의 핵심 키워드</li>
+<li class="flex items-start gap-2"><span class="text-indigo-600 font-bold">2.</span> 법체계 위상도: 헌법 → 디지털 권리장전 → 개별 법률</li>
+<li class="flex items-start gap-2"><span class="text-indigo-600 font-bold">3.</span> 해외 규범 비교표: 한국/EU/미국 (5~6개 기준)</li>
+<li class="flex items-start gap-2"><span class="text-indigo-600 font-bold">4.</span> 컴플라이언스 체크리스트: 공공/민간 점검항목</li>
+</ul>
+</div>
+<div>
+<h4 class="font-bold text-gray-800 mb-3">⭐ 차별화 포인트</h4>
+<ul class="space-y-2 text-sm text-gray-700">
+<li class="flex items-start gap-2"><span class="text-amber-500">💡</span> "국제사회 최초의 국가 수준 디지털 기본권 선언" 역사적 의의</li>
+<li class="flex items-start gap-2"><span class="text-amber-500">💡</span> EU AI Act의 위험 기반 접근과 비교 → 분석적 사고</li>
+<li class="flex items-start gap-2"><span class="text-amber-500">💡</span> 구체적 조항 번호(제10조, 제11조 등) 기재 → 정확성</li>
+<li class="flex items-start gap-2"><span class="text-amber-500">💡</span> 고령층 디지털 역량 65.7점 등 구체적 수치 활용</li>
+</ul>
+</div>
+</div>
+</div>
+
+<!-- 제2부 전체 -->
+<div class="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+<h3 class="text-lg font-bold text-gray-900 mb-2 flex items-center gap-2">📚 제2부 — 서술형 답안 암기 요약 (전체)</h3>
+<p class="text-sm text-gray-500 mb-6">시험 직전 최종 점검용 핵심 정리</p>
+<div class="textbook-content">
+
+<h4>한 줄 정의</h4>
+<div class="def-box"><p>디지털 권리장전은 2023년 9월 대한민국이 국제사회 최초로 선포한 디지털 환경의 기본권 선언문으로, 자유·공정·안전·혁신·연대의 5대 원칙과 28개 조항으로 구성된다.</p></div>
+
+<h4>핵심 키워드 맵</h4>
+<div class="bg-gray-50 rounded-lg p-4 mb-4">
+<div class="text-center font-bold text-indigo-700 mb-3">디지털 권리장전 (2023.9.25 선포)</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
+<div class="bg-white rounded p-3 border-l-4 border-indigo-400"><div class="font-bold text-indigo-700 mb-1">성격</div><div class="text-xs text-gray-600">선언문(법적 구속력 없음, 정책 지침)</div></div>
+<div class="bg-white rounded p-3 border-l-4 border-blue-400"><div class="font-bold text-blue-700 mb-1">5대 원칙</div><div class="text-xs text-gray-600">자유, 공정, 안전, 혁신, 연대 (28개 조항)</div></div>
+<div class="bg-white rounded p-3 border-l-4 border-green-400"><div class="font-bold text-green-700 mb-1">해외 비교</div><div class="text-xs text-gray-600">EU AI Act, DSA, 미국 AI 행정명령</div></div>
+<div class="bg-white rounded p-3 border-l-4 border-purple-400"><div class="font-bold text-purple-700 mb-1">AI 조항</div><div class="text-xs text-gray-600">차별금지, 투명성, 안전성, 위험평가</div></div>
+<div class="bg-white rounded p-3 border-l-4 border-teal-400"><div class="font-bold text-teal-700 mb-1">데이터 조항</div><div class="text-xs text-gray-600">자기결정권, 이동권, 안전처리</div></div>
+<div class="bg-white rounded p-3 border-l-4 border-amber-400"><div class="font-bold text-amber-700 mb-1">연관</div><div class="text-xs text-gray-600">개인정보보호법, AI 기본법, XAI</div></div>
+</div>
+</div>
+
+<h4>두문자어 암기법</h4>
+<ul>
+<li><strong>"자공안혁연"</strong> = 5대 원칙: <strong>자</strong>유, <strong>공</strong>정, <strong>안</strong>전, <strong>혁</strong>신, <strong>연</strong>대</li>
+<li><strong>"선이팔"</strong> = 구성: <strong>선</strong>언문, <strong>이</strong>십<strong>팔</strong>(28)개 조항</li>
+</ul>
+
+<h4>차별화 포인트</h4>
+<ul>
+<li>"국제사회 최초의 국가 수준 디지털 기본권 선언"이라는 <strong>역사적 의의</strong> 강조</li>
+<li><strong>EU AI Act의 위험 기반 접근</strong>과 비교하면 체계적 분석 능력 증명</li>
+<li>구체적 조항 번호(제10조, 제11조 등)를 기재하면 정확성 증명</li>
+</ul>
+
+</div>
+</div>
+</div>
+
+</main>
+
+<!-- AI 튜터 플로팅 버튼 -->
+<button onclick="toggleChat()" class="fixed bottom-6 right-6 z-50 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all p-4 flex items-center gap-2 group">
+<span class="text-2xl">💬</span><span class="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 whitespace-nowrap text-sm font-bold">AI 튜터</span>
+</button>
+
+<!-- 채팅 사이드바 -->
+<div id="chat-sidebar" class="fixed top-0 right-0 w-80 sm:w-96 h-full bg-white shadow-2xl z-50 flex flex-col closed">
+<div class="bg-indigo-600 text-white p-4 flex justify-between items-center">
+<div><h3 class="font-bold">💬 AI 튜터</h3><p class="text-xs text-indigo-200">디지털 권리장전 관련 질문을 해보세요</p></div>
+<button onclick="toggleChat()" class="text-white hover:text-indigo-200 text-2xl">&times;</button>
+</div>
+<div id="chat-messages" class="flex-grow overflow-y-auto p-4 flex flex-col gap-2">
+<div class="chat-msg ai">안녕하세요! 디지털 권리장전에 대해 궁금한 점을 물어보세요. 🎓</div>
+</div>
+<div class="p-3 border-t border-gray-200 bg-gray-50">
+<div class="flex gap-2">
+<input type="text" id="chat-input" placeholder="질문을 입력하세요..." class="flex-grow border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" onkeypress="if(event.key==='Enter')sendChat()">
+<button onclick="sendChat()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-bold">전송</button>
+</div>
+</div>
+</div>
+
+<!-- API 설정 모달 -->
+<div id="settings-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+<div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+<div class="flex justify-between items-center mb-4">
+<h3 class="text-lg font-bold text-gray-900">🔑 Gemini API Key 설정</h3>
+<button onclick="toggleSettings()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+</div>
+<p class="text-sm text-gray-600 mb-4">AI 퀴즈 생성 및 AI 튜터 기능을 사용하려면 Gemini API Key가 필요합니다.</p>
+<input type="password" id="api-key-input" placeholder="API Key를 입력하세요" class="w-full border border-gray-300 rounded-lg px-4 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+<div class="flex gap-2">
+<button onclick="saveApiKey()" class="flex-grow bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg font-bold text-sm">저장</button>
+<button onclick="toggleSettings()" class="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50">취소</button>
+</div>
+</div>
+</div>
+
+<footer class="bg-white mt-12 py-8 border-t border-gray-200">
+<div class="max-w-6xl mx-auto px-4 text-center">
+<div class="flex flex-col md:flex-row justify-center items-center gap-2 md:gap-6 text-sm text-gray-600 mb-3 font-medium">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-indigo-500"></span>
+<span>박교익PE (132회 정보관리기술사, dr.code92@gmail.com)</span>
+</div>
+</div>
+<p class="text-xs text-gray-400">Copyright &copy; KPC 정보관리기술사 ZIP-UP 심화반. All rights reserved.</p>
+</div>
+</footer>
+
+<script>
+// ── 멘토 모드 ──
+var isMentorMode = new URLSearchParams(window.location.search).get('mentor') === 'true';
+if (isMentorMode) { document.getElementById('nav-script').classList.remove('hidden'); }
+var sections = isMentorMode
+    ? ['overview','principles','provisions','compliance','textbook','script','quiz']
+    : ['overview','principles','provisions','compliance','textbook','quiz'];
+
+// ── 탭 네비게이션 ──
+function navTo(id) {
+    document.querySelectorAll('.nav-item').forEach(function(el){ el.classList.remove('active','text-indigo-600'); });
+    document.getElementById('nav-'+id).classList.add('active','text-indigo-600');
+    sections.forEach(function(s){ document.getElementById(s).classList.add('hidden'); });
+    document.getElementById(id).classList.remove('hidden');
+    window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// ── API Key 관리 ──
+function getApiKey() {
+    var urlKey = new URLSearchParams(window.location.search).get('key');
+    return urlKey || localStorage.getItem('geminiKey') || localStorage.getItem('gemini_api_key') || '';
+}
+function saveApiKey() {
+    var k = document.getElementById('api-key-input').value.trim();
+    if(k){ localStorage.setItem('geminiKey',k); localStorage.setItem('gemini_api_key',k); alert('API Key가 저장되었습니다.'); toggleSettings(); }
+    else { alert('API Key를 입력해주세요.'); }
+}
+function toggleSettings() {
+    var m = document.getElementById('settings-modal');
+    m.classList.toggle('hidden');
+    if(!m.classList.contains('hidden')){ document.getElementById('api-key-input').value = getApiKey(); }
+}
+
+// ── AI 튜터 채팅 ──
+function toggleChat() {
+    var sb = document.getElementById('chat-sidebar');
+    sb.classList.toggle('closed'); sb.classList.toggle('open');
+}
+async function sendChat() {
+    var input = document.getElementById('chat-input');
+    var msg = input.value.trim(); if(!msg) return; input.value = '';
+    var k = getApiKey();
+    if(!k){ alert('API Key를 먼저 설정해주세요.'); toggleSettings(); return; }
+    var mc = document.getElementById('chat-messages');
+    mc.innerHTML += '<div class="chat-msg user">'+msg+'</div>';
+    mc.innerHTML += '<div id="chat-typing" class="chat-msg ai"><div class="typing-indicator"><span></span><span></span><span></span></div></div>';
+    mc.scrollTop = mc.scrollHeight;
+    try {
+        var r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key='+k, {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({contents:[{parts:[{text:"당신은 정보관리기술사 시험 멘토입니다. '디지털 권리장전' 관련 질문에 전문적이고 명쾌하게 답변해주세요. 300자 이내로 핵심만 요약.\n\n질문: "+msg}]}]})
+        });
+        var d = await r.json();
+        var reply = d.candidates[0].content.parts[0].text;
+        document.getElementById('chat-typing').remove();
+        mc.innerHTML += '<div class="chat-msg ai">'+marked.parse(reply)+'</div>';
+    } catch(e) {
+        document.getElementById('chat-typing').remove();
+        mc.innerHTML += '<div class="chat-msg ai">⚠️ 응답 생성 중 오류가 발생했습니다.</div>';
+    }
+    mc.scrollTop = mc.scrollHeight;
+}
+
+// ── 퀴즈 ──
+var geminiKey = (typeof getApiKey === 'function') ? (getApiKey() || '') : (localStorage.getItem('geminiKey') || localStorage.getItem('gemini_api_key') || '');
+var quizTypeHistory = [];
+var currentQuizData = null;
+var quizTopics = [
+    { category: "디지털 권리장전 기초", keywords: "정의, 선포 시기, 국제 최초, 선언문 성격, 법적 위상, 28개 조항" },
+    { category: "5대 원칙", keywords: "자유, 공정, 안전, 혁신, 연대, 자공안혁연" },
+    { category: "자유와 공정 원칙", keywords: "표현의 자유, 알고리즘 차별 금지, 데이터 이동권, 알고리즘 투명성" },
+    { category: "안전과 혁신 원칙", keywords: "AI 안전성, 고위험 AI 위험 평가, 규제 샌드박스, 책임 있는 혁신" },
+    { category: "AI 관련 조항", keywords: "제10조 차별금지, 제11조 설명가능성, 제14조 AI 안전, 제15조 위험평가" },
+    { category: "해외 규범 비교", keywords: "EU AI Act, 디지털서비스법 DSA, 미국 AI 행정명령, 위험 기반 접근" },
+    { category: "실무 적용", keywords: "AI 윤리 영향평가, 알고리즘 투명성 보고서, 컴플라이언스 체크리스트" },
+    { category: "연관 이론", keywords: "개인정보보호법, GDPR, XAI 설명가능한 AI, 디지털 포용" }
+];
+
+async function generateQuiz() {
+    geminiKey = (typeof getApiKey === 'function') ? (getApiKey() || '') : geminiKey;
+    if (!geminiKey) { alert('API Key를 먼저 설정해주세요.'); toggleSettings(); return; }
+    document.getElementById('btn-quiz-gen').disabled = true;
+    document.getElementById('btn-quiz-gen').innerHTML = '<span>⏳ 생성 중...</span>';
+    document.getElementById('quiz-loading').classList.remove('hidden');
+    document.getElementById('quiz-container').classList.add('hidden');
+    document.getElementById('quiz-placeholder').classList.add('hidden');
+    document.getElementById('quiz-feedback').classList.add('hidden');
+    var isMC;
+    var recent = quizTypeHistory.slice(-2);
+    if (recent.length >= 2 && recent[0] === recent[1]) { isMC = !recent[1]; }
+    else { isMC = Math.random() > 0.5; }
+    quizTypeHistory.push(isMC);
+    var selected = quizTopics[Math.floor(Math.random() * quizTopics.length)];
+    var prompt;
+    if (isMC) {
+        prompt = "다음 카테고리에 대한 객관식 퀴즈 1문제를 만드세요.\n카테고리: " + selected.category + "\n관련 키워드: " + selected.keywords + "\n규칙: 반드시 위 카테고리와 키워드에 직접 관련된 문제를 출제하세요.\n4개의 선택지를 제공하고, 정답과 해설을 포함하세요.\nOutput JSON: {\"question\":\"문제\",\"options\":[\"A\",\"B\",\"C\",\"D\"],\"correctIndex\":0,\"explanation\":\"해설\"}";
+    } else {
+        prompt = "다음 카테고리에 대한 단답형 퀴즈 1문제를 만드세요.\n카테고리: " + selected.category + "\n관련 키워드: " + selected.keywords + "\n규칙: 반드시 위 카테고리와 키워드에 직접 관련된 문제를 출제하세요.\n정답은 1~3단어로 답할 수 있는 문제여야 합니다.\nOutput JSON: {\"question\":\"문제\",\"correctAnswer\":\"정답\",\"explanation\":\"해설\"}";
+    }
+    try {
+        var r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=' + geminiKey, {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ contents: [{parts:[{text: prompt}]}], generationConfig: { responseMimeType: "application/json" } })
+        });
+        var d = await r.json();
+        var t = d.candidates[0].content.parts[0].text;
+        t = t.replace(/```json\s*/gi,"").replace(/```\s*/g,"").trim();
+        var depth=0, start=-1, end=-1;
+        for(var i=0;i<t.length;i++){if(t[i]==='{'){if(depth===0)start=i;depth++;}else if(t[i]==='}'){depth--;if(depth===0&&start!==-1){end=i;break;}}}
+        if(start===-1||end===-1) throw new Error("No JSON found");
+        t=t.substring(start,end+1);
+        t=t.replace(/[\x00-\x1F\x7F]/g,function(c){return c==='\n'||c==='\r'||c==='\t'?' ':'';});
+        currentQuizData = JSON.parse(t);
+        renderQuiz(isMC);
+    } catch(e) {
+        alert('퀴즈 생성 중 오류: ' + e.message);
+        document.getElementById('quiz-placeholder').classList.remove('hidden');
+    }
+    document.getElementById('quiz-loading').classList.add('hidden');
+    document.getElementById('btn-quiz-gen').disabled = false;
+    document.getElementById('btn-quiz-gen').innerHTML = '<span>✨ 새로운 문제 생성</span>';
+}
+
+function renderQuiz(isMC) {
+    document.getElementById('quiz-container').classList.remove('hidden');
+    document.getElementById('quiz-question').textContent = currentQuizData.question;
+    document.getElementById('quiz-feedback').classList.add('hidden');
+    if (isMC) {
+        document.getElementById('quiz-type-badge').textContent = '객관식';
+        document.getElementById('quiz-type-badge').className = 'bg-indigo-100 text-indigo-800 text-xs font-bold px-2 py-1 rounded whitespace-nowrap mt-1';
+        document.getElementById('quiz-options').classList.remove('hidden');
+        document.getElementById('quiz-input-area').classList.add('hidden');
+        var optHtml = '';
+        currentQuizData.options.forEach(function(opt, idx) {
+            optHtml += '<button onclick="checkMultipleChoice('+idx+',this)" class="w-full text-left p-3 rounded-lg border border-gray-200 hover:border-indigo-400 hover:bg-indigo-50 transition-colors text-sm font-medium">'+String.fromCharCode(65+idx)+'. '+opt+'</button>';
+        });
+        document.getElementById('quiz-options').innerHTML = optHtml;
+    } else {
+        document.getElementById('quiz-type-badge').textContent = '단답형';
+        document.getElementById('quiz-type-badge').className = 'bg-green-100 text-green-800 text-xs font-bold px-2 py-1 rounded whitespace-nowrap mt-1';
+        document.getElementById('quiz-options').classList.add('hidden');
+        document.getElementById('quiz-input-area').classList.remove('hidden');
+        document.getElementById('quiz-answer-input').value = '';
+        document.getElementById('quiz-answer-input').focus();
+    }
+}
+
+function checkMultipleChoice(idx, btnEl) {
+    var correct = idx === currentQuizData.correctIndex;
+    document.querySelectorAll('#quiz-options button').forEach(function(b,i){
+        b.disabled = true; b.classList.remove('hover:border-indigo-400','hover:bg-indigo-50');
+        if(i===currentQuizData.correctIndex) b.classList.add('bg-green-100','border-green-500','text-green-800');
+        else if(i===idx&&!correct) b.classList.add('bg-red-100','border-red-500','text-red-800');
+    });
+    showQuizFeedback(correct, currentQuizData.options[currentQuizData.correctIndex], currentQuizData.explanation);
+}
+
+async function checkShortAnswer() {
+    geminiKey = (typeof getApiKey === 'function') ? (getApiKey() || '') : geminiKey;
+    var userAnswer = document.getElementById('quiz-answer-input').value.trim();
+    if (!userAnswer) { alert('정답을 입력해주세요.'); return; }
+    document.getElementById('btn-short-submit').textContent = '채점 중...';
+    document.getElementById('btn-short-submit').disabled = true;
+    try {
+        var gradingPrompt = "당신은 정보관리기술사 시험 채점관입니다. 아래 문제에 대해 사용자의 답안이 정답으로 인정될 수 있는지 판정하세요.\n\n문제: "+currentQuizData.question+"\n모범 정답: "+currentQuizData.correctAnswer+"\n사용자 답안: "+userAnswer+"\n\n판정 기준:\n- 핵심 의미가 동일하면 정답\n- 약어/풀네임 모두 인정\n- 영어/한글 혼용 인정\n- 띄어쓰기/조사 차이는 무시\n- 의미가 명확히 다르면 오답\n\nOutput JSON: {\"correct\":true,\"reason\":\"판정 이유\"}";
+        var r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key='+geminiKey,{
+            method:'POST',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({contents:[{parts:[{text:gradingPrompt}]}],generationConfig:{responseMimeType:"application/json"}})
+        });
+        var d = await r.json();
+        var t = d.candidates[0].content.parts[0].text;
+        t = t.replace(/```json\s*/gi,"").replace(/```\s*/g,"").trim();
+        var depth2=0,start2=-1,end2=-1;
+        for(var i2=0;i2<t.length;i2++){if(t[i2]==='{'){if(depth2===0)start2=i2;depth2++;}else if(t[i2]==='}'){depth2--;if(depth2===0&&start2!==-1){end2=i2;break;}}}
+        if(start2===-1||end2===-1) throw new Error("No JSON");
+        t=t.substring(start2,end2+1);
+        t=t.replace(/[\x00-\x1F\x7F]/g,function(c){return c==='\n'||c==='\r'||c==='\t'?' ':'';});
+        var result = JSON.parse(t);
+        showQuizFeedback(result.correct, currentQuizData.correctAnswer, currentQuizData.explanation + (result.reason ? '\n\nAI 채점: '+result.reason : ''));
+    } catch(e) {
+        var ua = userAnswer.replace(/\s/g,'').toLowerCase();
+        var ca = currentQuizData.correctAnswer.replace(/\s/g,'').toLowerCase();
+        var correct = ua===ca||ca.includes(ua)||ua.includes(ca);
+        showQuizFeedback(correct, currentQuizData.correctAnswer, currentQuizData.explanation);
+    }
+    document.getElementById('btn-short-submit').textContent = '제출';
+    document.getElementById('btn-short-submit').disabled = false;
+}
+
+function showQuizFeedback(correct, answer, explanation) {
+    var fb = document.getElementById('quiz-feedback');
+    fb.classList.remove('hidden','border-green-500','border-red-500');
+    fb.classList.add(correct?'border-green-500':'border-red-500');
+    fb.innerHTML = '<div class="flex items-center gap-2 mb-2"><span class="text-lg">'+(correct?'🎉':'😅')+'</span><span class="font-bold '+(correct?'text-green-700':'text-red-700')+'">'+(correct?'정답입니다!':'아쉽습니다!')+'</span></div>'+'<p class="text-sm text-gray-700 mb-1"><strong>정답:</strong> '+answer+'</p>'+'<p class="text-sm text-gray-600">'+explanation+'</p>';
+}
+
+// ── Chart.js ──
+document.addEventListener('DOMContentLoaded', function() {
+    var ctx = document.getElementById('principleChart');
+    if (ctx) {
+        new Chart(ctx.getContext('2d'), {
+            type: 'radar',
+            data: {
+                labels: ['자유', '공정', '안전', '혁신', '연대'],
+                datasets: [{
+                    label: '디지털 권리장전',
+                    data: [9, 8, 9, 7, 8],
+                    backgroundColor: 'rgba(79,70,229,0.15)',
+                    borderColor: '#4f46e5',
+                    borderWidth: 2,
+                    pointBackgroundColor: '#4f46e5'
+                },{
+                    label: 'EU AI Act',
+                    data: [6, 7, 10, 5, 6],
+                    backgroundColor: 'rgba(16,185,129,0.15)',
+                    borderColor: '#10b981',
+                    borderWidth: 2,
+                    pointBackgroundColor: '#10b981'
+                }]
+            },
+            options: { responsive:true, maintainAspectRatio:false, scales:{ r:{ min:0, max:10, ticks:{stepSize:2} } }, plugins:{ legend:{position:'bottom'} } }
+        });
+    }
+});
+</script>
+</body>
+</html>

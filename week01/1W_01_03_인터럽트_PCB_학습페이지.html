@@ -1,0 +1,1229 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>인터럽트(Interrupt) 처리 메커니즘과 PCB</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+        body { font-family: 'Noto Sans KR', sans-serif; background-color: #f5f5f4; color: #1f2937; }
+        .def-box { background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%); border-left: 4px solid #4f46e5; border-radius: 8px; padding: 1.25rem; margin-bottom: 1rem; }
+        .def-box p { color: #312e81; font-weight: 500; margin: 0; line-height: 1.8; }
+        .insight-box { background-color: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 1rem; margin: 1rem 0; }
+        .insight-box::before { content: '💡'; margin-right: 0.5rem; }
+        .chart-container { position: relative; width: 100%; max-width: 600px; margin-left: auto; margin-right: auto; height: 350px; max-height: 400px; }
+        .nav-item.active { border-bottom: 2px solid #4f46e5; color: #4f46e5; font-weight: 700; }
+        .tech-block { transition: all 0.3s ease; cursor: pointer; }
+        .tech-block:hover { transform: translateY(-2px); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        .tech-block.selected { ring: 2px; ring-color: #4f46e5; background-color: #eef2ff; border-color: #4f46e5; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        #chat-sidebar { transition: transform 0.3s ease-in-out; }
+        #chat-sidebar.closed { transform: translateX(100%); }
+        #chat-sidebar.open { transform: translateX(0); }
+        .typing-indicator span { display: inline-block; width: 6px; height: 6px; background-color: #4f46e5; border-radius: 50%; animation: typing 1.4s infinite ease-in-out both; margin: 0 2px; }
+        .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+        .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes typing { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+        .prose h1,.prose h2,.prose h3 { font-weight: bold; margin-top: 1em; margin-bottom: 0.5em; color: #312e81; font-size: 1.1em; }
+        .prose ul { list-style-type: disc; padding-left: 1.5em; margin-bottom: 1em; }
+        .prose strong { color: #4338ca; }
+        .prose p { margin-bottom: 0.8em; }
+        .chat-msg { border-radius: 12px; padding: 10px 14px; margin-bottom: 10px; max-width: 85%; font-size: 0.95rem; }
+        .chat-msg.user { background-color: #4f46e5; color: white; align-self: flex-end; margin-left: auto; }
+        .chat-msg.ai { background-color: #f3f4f6; color: #1f2937; align-self: flex-start; border: 1px solid #e5e7eb; }
+        .textbook-content h3 { font-size: 1.25rem; font-weight: 700; color: #1e3a8a; margin-top: 1.5rem; margin-bottom: 0.75rem; border-left: 4px solid #4f46e5; padding-left: 0.75rem; }
+        .textbook-content h4 { font-size: 1.1rem; font-weight: 600; color: #374151; margin-top: 1rem; margin-bottom: 0.5rem; }
+        .textbook-content p { margin-bottom: 1rem; line-height: 1.8; color: #4b5563; }
+        .textbook-content ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 1rem; color: #4b5563; }
+        .textbook-content li { margin-bottom: 0.5rem; line-height: 1.7; }
+        .textbook-content table { width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; font-size: 0.95rem; }
+        .textbook-content th,.textbook-content td { border: 1px solid #e5e7eb; padding: 0.75rem; text-align: left; }
+        .textbook-content th { background-color: #f9fafb; font-weight: 600; color: #1f2937; }
+        .textbook-content .highlight { background-color: #eef2ff; color: #4338ca; font-weight: 600; padding: 0 4px; border-radius: 4px; }
+        .textbook-content pre { background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem; overflow-x: auto; margin-bottom: 1rem; font-size: 0.85rem; line-height: 1.6; }
+        .textbook-content code { font-family: 'Courier New', monospace; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
+    </style>
+</head>
+<body class="bg-stone-100 min-h-screen flex flex-col overflow-x-hidden">
+
+    <header class="bg-white shadow-sm sticky top-0 z-40">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center pt-3 pb-1">
+                <div class="flex flex-col justify-center min-w-0">
+                    <span class="text-[10px] sm:text-xs text-indigo-600 font-bold uppercase tracking-wider leading-tight">KPC 정보관리기술사 ZIP-UP 심화반</span>
+                    <div class="flex items-center gap-2">
+                        <span class="text-lg sm:text-xl font-bold text-gray-900 tracking-tight truncate">인터럽트(Interrupt) 처리 메커니즘과 PCB</span>
+                        <span class="text-[10px] sm:text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-bold flex-shrink-0">2026</span>
+                    </div>
+                </div>
+            </div>
+            <nav class="flex space-x-1 sm:space-x-4 overflow-x-auto no-scrollbar pb-1 items-center">
+                <button onclick="navTo('overview')" id="nav-overview" class="nav-item active px-1 pt-1 pb-2 text-xs sm:text-sm font-medium text-indigo-600 hover:text-indigo-800 whitespace-nowrap">개요 및 개념</button>
+                <button onclick="navTo('process')" id="nav-process" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium text-gray-500 hover:text-indigo-800 whitespace-nowrap">인터럽트 처리 과정</button>
+                <button onclick="navTo('pcb')" id="nav-pcb" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium text-gray-500 hover:text-indigo-800 whitespace-nowrap">PCB와 문맥 교환</button>
+                <button onclick="navTo('performance')" id="nav-performance" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium text-gray-500 hover:text-indigo-800 whitespace-nowrap">성능 및 연관 이론</button>
+                <button onclick="navTo('textbook')" id="nav-textbook" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium text-gray-500 hover:text-indigo-800 whitespace-nowrap">원문 학습</button>
+                <button onclick="navTo('script')" id="nav-script" class="hidden nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium text-amber-600 hover:text-amber-800 whitespace-nowrap">🎬 강의 스크립트</button>
+                <button onclick="navTo('quiz')" id="nav-quiz" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium text-gray-500 hover:text-indigo-800 whitespace-nowrap">퀴즈 &amp; 암기</button>
+                <span class="w-px h-4 bg-gray-300 flex-shrink-0"></span>
+                <button onclick="toggleSettings()" class="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium text-indigo-600 hover:bg-indigo-50 border border-indigo-200 hover:border-indigo-400 transition-all whitespace-nowrap flex-shrink-0" title="API Key 설정">🔑 API</button>
+            </nav>
+        </div>
+    </header>
+    <main class="flex-grow max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12 pb-24">
+
+    <!-- ===== 탭1: 개요 및 개념 ===== -->
+    <div id="overview">
+        <div class="bg-white rounded-xl shadow-sm p-6 sm:p-8 animate-fade-in">
+            <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-6">개요 및 개념</h2>
+
+            <!-- 정의 박스 -->
+            <div class="def-box">
+                <p><strong>인터럽트(Interrupt)</strong>란 CPU가 현재 실행 중인 명령어 처리를 일시 중단하고, 긴급하거나 우선적인 처리가 필요한 사건(Event)에 대응하기 위해 제어권을 특정 서비스 루틴(ISR)으로 이전하는 <strong>비동기적 이벤트 처리 메커니즘</strong>이다.</p>
+            </div>
+            <div class="def-box">
+                <p><strong>PCB(Process Control Block)</strong>는 운영체제가 각 프로세스를 관리하기 위해 유지하는 <strong>프로세스별 메타데이터 자료구조</strong>로, 문맥 교환(Context Switching) 시 프로세스의 실행 상태를 완전히 보존하고 복원하는 핵심 단위이다.</p>
+            </div>
+
+            <!-- 개념 해설 -->
+            <div class="mt-6 mb-6">
+                <h3 class="text-lg font-bold text-gray-800 mb-3">왜 인터럽트가 필요한가?</h3>
+                <p class="text-gray-600 leading-relaxed mb-4">인터럽트가 없는 시스템에서는 CPU가 I/O 장치의 작업 완료를 반복적으로 확인하는 <strong>폴링(Polling)</strong> 방식을 사용해야 합니다. 이는 CPU 자원을 극도로 낭비합니다. 인터럽트 방식은 I/O 장치가 작업 완료 시 CPU에 신호를 보내는 방식으로, CPU는 그 사이 다른 유용한 작업을 수행할 수 있습니다.</p>
+            </div>
+
+            <!-- 폴링 vs 인터럽트 비교 카드 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div class="bg-red-50 rounded-xl p-5 border border-red-200">
+                    <h4 class="font-bold text-red-700 mb-2">❌ 폴링(Polling) 방식</h4>
+                    <p class="text-sm text-red-600 leading-relaxed">CPU가 "끝났어? 끝났어?" 반복 확인. CPU 시간의 최대 <strong>90%</strong>를 I/O 대기에 소모. CPU 자원 극도로 낭비.</p>
+                </div>
+                <div class="bg-green-50 rounded-xl p-5 border border-green-200">
+                    <h4 class="font-bold text-green-700 mb-2">✅ 인터럽트(Interrupt) 방식</h4>
+                    <p class="text-sm text-green-600 leading-relaxed">I/O 장치가 "끝났어!" 신호 전송. CPU 대기 시간 <strong>2~5%</strong>로 감소. 현대 OS의 멀티태스킹 기반.</p>
+                </div>
+            </div>
+
+            <!-- 인터럽트 분류 -->
+            <h3 class="text-lg font-bold text-gray-800 mb-4">인터럽트 분류 3축 — <span class="text-indigo-600">"하소동비복"</span></h3>
+            <div class="overflow-x-auto mb-6">
+                <table class="w-full text-sm border-collapse">
+                    <thead><tr class="bg-gray-50">
+                        <th class="border border-gray-200 px-3 py-2 text-left font-bold">분류 기준</th>
+                        <th class="border border-gray-200 px-3 py-2 text-left font-bold">유형</th>
+                        <th class="border border-gray-200 px-3 py-2 text-left font-bold">설명</th>
+                        <th class="border border-gray-200 px-3 py-2 text-left font-bold">예시</th>
+                    </tr></thead>
+                    <tbody>
+                        <tr><td class="border border-gray-200 px-3 py-2 font-medium" rowspan="2">발생 원인</td><td class="border border-gray-200 px-3 py-2 text-indigo-700 font-medium">하드웨어 (External)</td><td class="border border-gray-200 px-3 py-2">CPU 외부 장치가 발생</td><td class="border border-gray-200 px-3 py-2">키보드, 디스크 I/O, 타이머</td></tr>
+                        <tr><td class="border border-gray-200 px-3 py-2 text-purple-700 font-medium">소프트웨어 (Internal)</td><td class="border border-gray-200 px-3 py-2">CPU 내부 명령어 실행 중 발생</td><td class="border border-gray-200 px-3 py-2">0 나누기, 오버플로우, 시스템 콜</td></tr>
+                        <tr><td class="border border-gray-200 px-3 py-2 font-medium" rowspan="2">처리 시점</td><td class="border border-gray-200 px-3 py-2 text-blue-700 font-medium">동기적 (Synchronous)</td><td class="border border-gray-200 px-3 py-2">명령어 실행의 직접적 결과</td><td class="border border-gray-200 px-3 py-2">트랩, 폴트, 시스템 콜</td></tr>
+                        <tr><td class="border border-gray-200 px-3 py-2 text-teal-700 font-medium">비동기적 (Asynchronous)</td><td class="border border-gray-200 px-3 py-2">현재 실행과 무관한 외부 발생</td><td class="border border-gray-200 px-3 py-2">I/O 완료, 타이머, HW 오류</td></tr>
+                        <tr><td class="border border-gray-200 px-3 py-2 font-medium" rowspan="2">복귀 가능성</td><td class="border border-gray-200 px-3 py-2 text-green-700 font-medium">복귀 가능 (Recoverable)</td><td class="border border-gray-200 px-3 py-2">원인 해결 후 중단점 복귀 가능</td><td class="border border-gray-200 px-3 py-2">페이지 폴트 → 로드 후 재실행</td></tr>
+                        <tr><td class="border border-gray-200 px-3 py-2 text-red-700 font-medium">복귀 불가 (Non-recoverable)</td><td class="border border-gray-200 px-3 py-2">시스템 중단 또는 프로세스 종료</td><td class="border border-gray-200 px-3 py-2">HW 오류, 보호 위반</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- CPU 레지스터 & HW 구성 -->
+            <h3 class="text-lg font-bold text-gray-800 mb-4">CPU 내부 주요 레지스터</h3>
+            <div class="overflow-x-auto mb-6">
+                <table class="w-full text-sm border-collapse">
+                    <thead><tr class="bg-gray-50">
+                        <th class="border border-gray-200 px-3 py-2 text-left font-bold">레지스터</th>
+                        <th class="border border-gray-200 px-3 py-2 text-left font-bold">명칭</th>
+                        <th class="border border-gray-200 px-3 py-2 text-left font-bold">역할</th>
+                        <th class="border border-gray-200 px-3 py-2 text-left font-bold">인터럽트 시 동작</th>
+                    </tr></thead>
+                    <tbody>
+                        <tr><td class="border border-gray-200 px-3 py-2 font-medium text-indigo-700">PC</td><td class="border border-gray-200 px-3 py-2">프로그램 카운터</td><td class="border border-gray-200 px-3 py-2">다음 실행 명령어 주소</td><td class="border border-gray-200 px-3 py-2">ISR 시작 주소로 변경</td></tr>
+                        <tr><td class="border border-gray-200 px-3 py-2 font-medium text-indigo-700">SP</td><td class="border border-gray-200 px-3 py-2">스택 포인터</td><td class="border border-gray-200 px-3 py-2">스택 최상위 주소</td><td class="border border-gray-200 px-3 py-2">커널 스택 포인터로 전환</td></tr>
+                        <tr><td class="border border-gray-200 px-3 py-2 font-medium text-indigo-700">PSW</td><td class="border border-gray-200 px-3 py-2">프로그램 상태 워드</td><td class="border border-gray-200 px-3 py-2">CPU 상태 플래그</td><td class="border border-gray-200 px-3 py-2">커널 모드 전환, 인터럽트 비활성화</td></tr>
+                        <tr><td class="border border-gray-200 px-3 py-2 font-medium text-indigo-700">GPR</td><td class="border border-gray-200 px-3 py-2">범용 레지스터</td><td class="border border-gray-200 px-3 py-2">연산 데이터 임시 저장</td><td class="border border-gray-200 px-3 py-2">PCB에 백업 저장</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 레이더 차트: 폴링 vs 인터럽트 비교 -->
+            <h3 class="text-lg font-bold text-gray-800 mb-4">폴링 vs 인터럽트 특성 비교</h3>
+            <div class="chart-container mb-2">
+                <canvas id="overviewRadar"></canvas>
+            </div>
+            <p class="text-xs text-gray-400 text-center">* 점수는 상대적 비교를 위한 예시 값입니다.</p>
+        </div>
+    </div>
+
+    <!-- ===== 탭2: 인터럽트 처리 과정 ===== -->
+    <div id="process" class="hidden">
+        <div class="bg-white rounded-xl shadow-sm p-6 sm:p-8 animate-fade-in">
+            <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-6">인터럽트 처리 8단계 — <span class="text-indigo-600">"발완인저전컨실복"</span></h2>
+
+            <!-- 8단계 시각화 흐름도 -->
+            <div class="bg-gradient-to-b from-slate-50 to-white rounded-xl p-4 sm:p-6 mb-6 border border-slate-200">
+                <div class="max-w-lg mx-auto space-y-0">
+                    <!-- 시작 -->
+                    <div class="flex justify-center mb-2">
+                        <div class="bg-gray-100 border border-gray-300 rounded-full px-4 py-1.5 text-sm font-bold text-gray-600">프로세스 A 실행 중</div>
+                    </div>
+                    <div class="flex justify-center"><div class="w-px h-3 bg-gray-300"></div></div>
+
+                    <!-- H/W 구간 라벨 -->
+                    <div class="flex justify-center mb-1"><span class="text-[10px] font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded">── H/W 자동 수행 구간 ──</span></div>
+
+                    <!-- 1단계 -->
+                    <div class="flex justify-center"><div class="bg-red-50 border-2 border-red-300 rounded-lg px-4 py-2 text-center w-full max-w-xs shadow-sm"><p class="text-sm font-bold text-red-700">① 발생</p><p class="text-[10px] text-red-500">IRQ 신호 → PIC → CPU INT 핀</p></div></div>
+                    <div class="flex justify-center"><div class="w-px h-2 bg-gray-300"></div></div>
+                    <!-- 2단계 -->
+                    <div class="flex justify-center"><div class="bg-red-50 border-2 border-red-300 rounded-lg px-4 py-2 text-center w-full max-w-xs shadow-sm"><p class="text-sm font-bold text-red-700">② 완료 대기</p><p class="text-[10px] text-red-500">현재 명령어 원자적 완료 보장</p></div></div>
+                    <div class="flex justify-center"><div class="w-px h-2 bg-gray-300"></div></div>
+                    <!-- 3단계 -->
+                    <div class="flex justify-center"><div class="bg-red-50 border-2 border-red-300 rounded-lg px-4 py-2 text-center w-full max-w-xs shadow-sm"><p class="text-sm font-bold text-red-700">③ 인식 (INTA)</p><p class="text-[10px] text-red-500">IF=1 확인 → PIC에 INTA → 벡터 번호 수신</p></div></div>
+                    <div class="flex justify-center"><div class="w-px h-2 bg-gray-300"></div></div>
+                    <!-- 4단계 -->
+                    <div class="flex justify-center"><div class="bg-red-50 border-2 border-red-400 rounded-lg px-4 py-2 text-center w-full max-w-xs shadow-sm ring-2 ring-red-200"><p class="text-sm font-bold text-red-800">④ 저장 (PSW, PC)</p><p class="text-[10px] text-red-600">CPU 마이크로코드가 자동으로 커널 스택에 push</p></div></div>
+                    <div class="flex justify-center"><div class="w-px h-2 bg-gray-300"></div></div>
+                    <!-- 5단계 -->
+                    <div class="flex justify-center"><div class="bg-red-50 border-2 border-red-300 rounded-lg px-4 py-2 text-center w-full max-w-xs shadow-sm"><p class="text-sm font-bold text-red-700">⑤ 전환</p><p class="text-[10px] text-red-500">User→Kernel 모드, IF=0, IDT→ISR 주소 로드</p></div></div>
+                    <div class="flex justify-center"><div class="w-px h-3 bg-gray-300"></div></div>
+
+                    <!-- S/W 구간 라벨 -->
+                    <div class="flex justify-center mb-1"><span class="text-[10px] font-bold text-blue-500 bg-blue-50 px-2 py-0.5 rounded">── S/W (OS 커널) 수행 구간 ──</span></div>
+
+                    <!-- 6단계 -->
+                    <div class="flex justify-center"><div class="bg-blue-50 border-2 border-blue-400 rounded-lg px-4 py-2 text-center w-full max-w-xs shadow-sm ring-2 ring-blue-200"><p class="text-sm font-bold text-blue-800">⑥ 컨텍스트 저장</p><p class="text-[10px] text-blue-600">GPR, SP, FPU → PCB에 저장 (PUSH/MOV 명령)</p></div></div>
+                    <div class="flex justify-center"><div class="w-px h-2 bg-gray-300"></div></div>
+                    <!-- 7단계 -->
+                    <div class="flex justify-center"><div class="bg-blue-50 border-2 border-blue-300 rounded-lg px-4 py-2 text-center w-full max-w-xs shadow-sm"><p class="text-sm font-bold text-blue-700">⑦ ISR 실행</p><p class="text-[10px] text-blue-500">인터럽트 원인 처리 (I/O 완료, 타이머 등)</p></div></div>
+                    <div class="flex justify-center"><div class="w-px h-2 bg-gray-300"></div></div>
+                    <!-- 8단계 -->
+                    <div class="flex justify-center"><div class="bg-blue-50 border-2 border-blue-300 rounded-lg px-4 py-2 text-center w-full max-w-xs shadow-sm"><p class="text-sm font-bold text-blue-700">⑧ 복원</p><p class="text-[10px] text-blue-500">스케줄러 → PCB에서 복원 → IRET → 실행 재개</p></div></div>
+                    <div class="flex justify-center"><div class="w-px h-3 bg-gray-300"></div></div>
+
+                    <!-- 종료 -->
+                    <div class="flex justify-center">
+                        <div class="bg-green-100 border border-green-300 rounded-full px-4 py-1.5 text-sm font-bold text-green-700">프로세스 실행 재개</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 핵심 포인트: H/W vs S/W 구분 -->
+            <div class="insight-box">
+                <span>답안 핵심: <strong>④단계(PSW/PC)는 하드웨어가 자동 저장</strong>, <strong>⑥단계(GPR→PCB)는 소프트웨어(OS 커널)가 저장</strong>. 이 구분을 명확히 쓰면 "CPU 마이크로 수준 동작을 정확히 이해하고 있다"는 인상을 줄 수 있다.</span>
+            </div>
+
+            <!-- 클릭 확장 카드: 각 단계 상세 -->
+            <h3 class="text-lg font-bold text-gray-800 mt-8 mb-4">단계별 상세 설명 (클릭하여 펼치기)</h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                <div class="tech-block bg-white border-2 border-red-200 rounded-xl p-3 text-center" id="block-step1" onclick="updateStepDetail('step1')">
+                    <div class="text-xl mb-1">⚡</div>
+                    <h4 class="font-bold text-red-700 text-sm">①② 발생·대기</h4>
+                </div>
+                <div class="tech-block bg-white border-2 border-red-200 rounded-xl p-3 text-center" id="block-step2" onclick="updateStepDetail('step2')">
+                    <div class="text-xl mb-1">🔍</div>
+                    <h4 class="font-bold text-red-700 text-sm">③ 인식(INTA)</h4>
+                </div>
+                <div class="tech-block bg-white border-2 border-red-200 rounded-xl p-3 text-center" id="block-step3" onclick="updateStepDetail('step3')">
+                    <div class="text-xl mb-1">💾</div>
+                    <h4 class="font-bold text-red-700 text-sm">④⑤ 저장·전환</h4>
+                </div>
+                <div class="tech-block bg-white border-2 border-blue-200 rounded-xl p-3 text-center" id="block-step4" onclick="updateStepDetail('step4')">
+                    <div class="text-xl mb-1">🔄</div>
+                    <h4 class="font-bold text-blue-700 text-sm">⑥⑦⑧ 컨텍스트</h4>
+                </div>
+            </div>
+            <div id="step-detail-content" class="bg-gray-50 rounded-xl p-5 border border-gray-200 min-h-[150px] transition-all">
+                <p class="text-gray-400 text-sm">위 카드를 클릭하면 단계별 상세 설명이 표시됩니다.</p>
+            </div>
+
+            <!-- H/W 저장 vs S/W 저장 비교표 -->
+            <h3 class="text-lg font-bold text-gray-800 mt-8 mb-4">하드웨어 vs 소프트웨어 저장 비교</h3>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm border-collapse">
+                    <thead><tr class="bg-gray-50">
+                        <th class="border border-gray-200 px-3 py-2 text-left font-bold">구분</th>
+                        <th class="border border-gray-200 px-3 py-2 text-left font-bold text-red-700">④ H/W 자동 저장</th>
+                        <th class="border border-gray-200 px-3 py-2 text-left font-bold text-blue-700">⑥ S/W 저장</th>
+                    </tr></thead>
+                    <tbody>
+                        <tr><td class="border border-gray-200 px-3 py-2 font-medium">저장 항목</td><td class="border border-gray-200 px-3 py-2">PSW, PC (Program Counter)</td><td class="border border-gray-200 px-3 py-2">GPR (R0~R15), SP, FPU 레지스터</td></tr>
+                        <tr><td class="border border-gray-200 px-3 py-2 font-medium">저장 위치</td><td class="border border-gray-200 px-3 py-2">커널 스택</td><td class="border border-gray-200 px-3 py-2">PCB의 레지스터 영역</td></tr>
+                        <tr><td class="border border-gray-200 px-3 py-2 font-medium">수행 주체</td><td class="border border-gray-200 px-3 py-2">CPU 마이크로코드 (자동)</td><td class="border border-gray-200 px-3 py-2">OS 커널 (PUSH/MOV 명령)</td></tr>
+                        <tr><td class="border border-gray-200 px-3 py-2 font-medium">목적</td><td class="border border-gray-200 px-3 py-2">복귀 주소 + CPU 상태 보존</td><td class="border border-gray-200 px-3 py-2">완전한 프로세스 상태 보존</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 탭3: PCB와 문맥 교환 ===== -->
+    <div id="pcb" class="hidden">
+        <div class="bg-white rounded-xl shadow-sm p-6 sm:p-8 animate-fade-in">
+            <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-6">PCB와 문맥 교환(Context Switching)</h2>
+
+            <!-- PCB 정의 -->
+            <div class="def-box mb-6">
+                <p><strong>PCB(Process Control Block)</strong>는 프로세스의 "이력서"이다. 이 프로세스가 누군지(PID), 지금 뭘 하고 있었는지(PC, 레지스터), 현재 상태(Running/Ready/Blocked), 메모리 어디를 쓰고 있는지 등 모든 정보가 담겨 있다. PCB 없이는 멀티태스킹이 불가능하다.</p>
+            </div>
+
+            <!-- PCB 필드 구성 표 — "식레상메스" -->
+            <h3 class="text-lg font-bold text-gray-800 mb-4">PCB 핵심 필드 — <span class="text-indigo-600">"식레상메스"</span></h3>
+            <div class="overflow-x-auto mb-6">
+                <table class="w-full text-sm border-collapse">
+                    <thead><tr class="bg-gray-50">
+                        <th class="border border-gray-200 px-3 py-2 text-left font-bold">필드 그룹</th>
+                        <th class="border border-gray-200 px-3 py-2 text-left font-bold">필드명</th>
+                        <th class="border border-gray-200 px-3 py-2 text-left font-bold">설명</th>
+                        <th class="border border-gray-200 px-3 py-2 text-left font-bold">예시</th>
+                    </tr></thead>
+                    <tbody>
+                        <tr><td class="border border-gray-200 px-3 py-2 font-medium text-indigo-700" rowspan="2">식별 정보</td><td class="border border-gray-200 px-3 py-2">PID</td><td class="border border-gray-200 px-3 py-2">프로세스 고유 식별자</td><td class="border border-gray-200 px-3 py-2">1234</td></tr>
+                        <tr><td class="border border-gray-200 px-3 py-2">PPID / UID</td><td class="border border-gray-200 px-3 py-2">부모 PID, 소유자 ID</td><td class="border border-gray-200 px-3 py-2">1 (init), 1000</td></tr>
+                        <tr><td class="border border-gray-200 px-3 py-2 font-medium text-green-700" rowspan="2">레지스터</td><td class="border border-gray-200 px-3 py-2">PC / SP / PSW</td><td class="border border-gray-200 px-3 py-2">프로그램 카운터, 스택 포인터, 상태 워드</td><td class="border border-gray-200 px-3 py-2">0x00401234</td></tr>
+                        <tr><td class="border border-gray-200 px-3 py-2">GPR (범용)</td><td class="border border-gray-200 px-3 py-2">R0~R15 등 연산 레지스터</td><td class="border border-gray-200 px-3 py-2">각 레지스터별 저장</td></tr>
+                        <tr><td class="border border-gray-200 px-3 py-2 font-medium text-purple-700">상태</td><td class="border border-gray-200 px-3 py-2">State / Priority</td><td class="border border-gray-200 px-3 py-2">프로세스 상태, 우선순위</td><td class="border border-gray-200 px-3 py-2">Running, 120</td></tr>
+                        <tr><td class="border border-gray-200 px-3 py-2 font-medium text-amber-700">메모리</td><td class="border border-gray-200 px-3 py-2">페이지 테이블 포인터</td><td class="border border-gray-200 px-3 py-2">가상 메모리 매핑 (CR3)</td><td class="border border-gray-200 px-3 py-2">CR3 레지스터 값</td></tr>
+                        <tr><td class="border border-gray-200 px-3 py-2 font-medium text-teal-700">스케줄링</td><td class="border border-gray-200 px-3 py-2">CPU 시간 / 대기 시간</td><td class="border border-gray-200 px-3 py-2">누적 CPU burst, Ready 대기</td><td class="border border-gray-200 px-3 py-2">150ms / 30ms</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 문맥 교환 시각화 -->
+            <h3 class="text-lg font-bold text-gray-800 mb-4">문맥 교환 과정</h3>
+            <div class="bg-gradient-to-r from-indigo-50 to-green-50 rounded-xl p-4 sm:p-6 mb-6 border border-gray-200">
+                <div class="grid grid-cols-3 gap-2 items-center text-center max-w-lg mx-auto">
+                    <!-- P1 -->
+                    <div class="bg-indigo-100 border-2 border-indigo-400 rounded-lg p-3">
+                        <p class="text-sm font-bold text-indigo-700">P₁ 실행 중</p>
+                        <p class="text-[10px] text-indigo-500">Running</p>
+                    </div>
+                    <div class="text-gray-400 text-lg">→</div>
+                    <div class="bg-amber-100 border-2 border-amber-400 rounded-lg p-3">
+                        <p class="text-sm font-bold text-amber-700">인터럽트!</p>
+                        <p class="text-[10px] text-amber-500">타이머/I/O</p>
+                    </div>
+
+                    <div class="col-span-3 flex items-center justify-center gap-2 py-2">
+                        <div class="bg-indigo-50 border border-indigo-300 rounded px-2 py-1 text-[10px] font-bold text-indigo-600">P₁ CPU 상태 → PCB₁ 저장</div>
+                        <span class="text-gray-300">→</span>
+                        <div class="bg-gray-100 border border-gray-300 rounded px-2 py-1 text-[10px] font-bold text-gray-600">스케줄러: P₂ 선택</div>
+                        <span class="text-gray-300">→</span>
+                        <div class="bg-green-50 border border-green-300 rounded px-2 py-1 text-[10px] font-bold text-green-600">PCB₂ → CPU 복원</div>
+                    </div>
+
+                    <div class="bg-gray-100 border-2 border-gray-300 rounded-lg p-3">
+                        <p class="text-sm font-bold text-gray-600">P₁ 대기</p>
+                        <p class="text-[10px] text-gray-400">Ready Queue</p>
+                    </div>
+                    <div class="text-gray-400 text-lg">→</div>
+                    <div class="bg-green-100 border-2 border-green-400 rounded-lg p-3">
+                        <p class="text-sm font-bold text-green-700">P₂ 실행 재개</p>
+                        <p class="text-[10px] text-green-500">Running</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 문맥 교환 비용 — "레TL캐파" -->
+            <h3 class="text-lg font-bold text-gray-800 mb-4">문맥 교환 비용 4요소 — <span class="text-indigo-600">"레TL캐파"</span></h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div class="bg-red-50 rounded-xl p-4 border border-red-200">
+                    <h4 class="font-bold text-red-700 mb-1">레지스터 저장/복원</h4>
+                    <p class="text-sm text-red-600">GPR, FPU 등 수십 개 레지스터 I/O → 직접 시간 비용 (~1μs)</p>
+                </div>
+                <div class="bg-orange-50 rounded-xl p-4 border border-orange-200">
+                    <h4 class="font-bold text-orange-700 mb-1">TLB 플러시 (TLB Flush)</h4>
+                    <p class="text-sm text-orange-600">프로세스 전환 시 TLB 무효화 → 이후 메모리 접근 지연 (수십 μs 누적)</p>
+                </div>
+                <div class="bg-amber-50 rounded-xl p-4 border border-amber-200">
+                    <h4 class="font-bold text-amber-700 mb-1">캐시 오염 (Cache Pollution)</h4>
+                    <p class="text-sm text-amber-600">L1/L2 캐시 유효 데이터 대체 → Cold Start 캐시 미스 증가</p>
+                </div>
+                <div class="bg-purple-50 rounded-xl p-4 border border-purple-200">
+                    <h4 class="font-bold text-purple-700 mb-1">파이프라인 플러시</h4>
+                    <p class="text-sm text-purple-600">진행 중인 명령어 폐기 → 파이프라인 재충전 비용</p>
+                </div>
+            </div>
+
+            <!-- 비용 차트 -->
+            <h3 class="text-lg font-bold text-gray-800 mb-4">문맥 교환 비용 요소 비교</h3>
+            <div class="chart-container mb-2">
+                <canvas id="contextCostChart"></canvas>
+            </div>
+            <p class="text-xs text-gray-400 text-center">* 영향도는 상대적 비교를 위한 예시 값입니다.</p>
+        </div>
+    </div>
+
+    <!-- ===== 탭4: 성능 및 연관 이론 ===== -->
+    <div id="performance" class="hidden">
+        <div class="bg-white rounded-xl shadow-sm p-6 sm:p-8 animate-fade-in">
+            <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-6">성능 분석 및 연관 이론</h2>
+
+            <!-- 인터럽트 지연 시간 -->
+            <h3 class="text-lg font-bold text-gray-800 mb-4">인터럽트 지연 시간 (Interrupt Latency)</h3>
+            <p class="text-gray-600 leading-relaxed mb-4">인터럽트 발생부터 ISR 첫 번째 명령어 실행까지의 시간. RTOS에서는 이 지연 시간 보장이 핵심 요구사항이다.</p>
+            <div class="overflow-x-auto mb-6">
+                <table class="w-full text-sm border-collapse">
+                    <thead><tr class="bg-gray-50">
+                        <th class="border border-gray-200 px-3 py-2 text-left font-bold">구간</th>
+                        <th class="border border-gray-200 px-3 py-2 text-left font-bold">소요 시간</th>
+                        <th class="border border-gray-200 px-3 py-2 text-left font-bold">결정 요인</th>
+                    </tr></thead>
+                    <tbody>
+                        <tr><td class="border border-gray-200 px-3 py-2">인터럽트 인식</td><td class="border border-gray-200 px-3 py-2">수 ns ~ 수십 ns</td><td class="border border-gray-200 px-3 py-2">PIC/APIC 처리 속도</td></tr>
+                        <tr><td class="border border-gray-200 px-3 py-2">명령어 완료 대기</td><td class="border border-gray-200 px-3 py-2">0 ~ 수백 ns</td><td class="border border-gray-200 px-3 py-2">현재 명령어 복잡도</td></tr>
+                        <tr><td class="border border-gray-200 px-3 py-2">PSW/PC 자동 저장</td><td class="border border-gray-200 px-3 py-2">수십 ns</td><td class="border border-gray-200 px-3 py-2">스택 메모리 접근 속도</td></tr>
+                        <tr><td class="border border-gray-200 px-3 py-2">ISR 진입</td><td class="border border-gray-200 px-3 py-2">수십 ~ 수백 ns</td><td class="border border-gray-200 px-3 py-2">IDT 참조, 분기 예측</td></tr>
+                        <tr class="bg-indigo-50 font-medium"><td class="border border-gray-200 px-3 py-2">전체 지연</td><td class="border border-gray-200 px-3 py-2 text-indigo-700">0.5 ~ 10 μs</td><td class="border border-gray-200 px-3 py-2">시스템 아키텍처에 따라 차이</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 최적화 기법 — strategy-card -->
+            <h3 class="text-lg font-bold text-gray-800 mb-4">최적화 기법 (클릭하여 펼치기)</h3>
+            <div class="space-y-3 mb-8">
+                <div class="bg-white rounded-xl border-2 border-indigo-200 p-4 cursor-pointer hover:shadow-md transition-all" onclick="toggleStrategy(this)">
+                    <div class="strategy-summary flex justify-between items-center">
+                        <div><span class="text-indigo-700 font-bold">Top Half / Bottom Half 분리</span><span class="text-xs text-gray-400 ml-2">— ISR을 긴급/지연 처리로 분리</span></div>
+                        <span class="text-gray-400">▼</span>
+                    </div>
+                    <div class="strategy-detail hidden mt-3 pt-3 border-t border-gray-200 text-sm text-gray-600 leading-relaxed">
+                        <p>ISR을 긴급 처리(Top Half)와 지연 처리(Bottom Half)로 분리한다. Top Half는 최소한의 긴급 작업만 수행하고, 나머지는 Bottom Half로 미룬다. Linux에서 softirq, tasklet, workqueue가 이 Bottom Half 메커니즘이다. 인터럽트 비활성화 시간을 최소화하여 시스템 응답성을 높인다.</p>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl border-2 border-green-200 p-4 cursor-pointer hover:shadow-md transition-all" onclick="toggleStrategy(this)">
+                    <div class="strategy-summary flex justify-between items-center">
+                        <div><span class="text-green-700 font-bold">Threaded Interrupt</span><span class="text-xs text-gray-400 ml-2">— ISR을 커널 스레드로 실행</span></div>
+                        <span class="text-gray-400">▼</span>
+                    </div>
+                    <div class="strategy-detail hidden mt-3 pt-3 border-t border-gray-200 text-sm text-gray-600 leading-relaxed">
+                        <p>ISR을 커널 스레드로 실행하여 선점 가능하게 만든다. 우선순위가 높은 다른 인터럽트에 의해 중단될 수 있어, 실시간 시스템에서 유연한 우선순위 제어가 가능하다.</p>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl border-2 border-purple-200 p-4 cursor-pointer hover:shadow-md transition-all" onclick="toggleStrategy(this)">
+                    <div class="strategy-summary flex justify-between items-center">
+                        <div><span class="text-purple-700 font-bold">Interrupt Coalescing</span><span class="text-xs text-gray-400 ml-2">— 다수 인터럽트를 묶어 처리</span></div>
+                        <span class="text-gray-400">▼</span>
+                    </div>
+                    <div class="strategy-detail hidden mt-3 pt-3 border-t border-gray-200 text-sm text-gray-600 leading-relaxed">
+                        <p>NIC(네트워크 카드)에서 패킷마다 인터럽트를 걸면 초당 수만 번의 인터럽트가 발생한다. Coalescing은 일정 수의 패킷 또는 일정 시간 단위로 묶어서 한 번에 처리하여 인터럽트 빈도를 획기적으로 줄인다.</p>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl border-2 border-amber-200 p-4 cursor-pointer hover:shadow-md transition-all" onclick="toggleStrategy(this)">
+                    <div class="strategy-summary flex justify-between items-center">
+                        <div><span class="text-amber-700 font-bold">NAPI (Linux)</span><span class="text-xs text-gray-400 ml-2">— 인터럽트 + 폴링 혼합 방식</span></div>
+                        <span class="text-gray-400">▼</span>
+                    </div>
+                    <div class="strategy-detail hidden mt-3 pt-3 border-t border-gray-200 text-sm text-gray-600 leading-relaxed">
+                        <p>New API. 평상시에는 인터럽트 방식을 사용하다가, 고부하 시 폴링 방식으로 전환하여 인터럽트 스톰(Interrupt Storm)을 방지한다. Linux 네트워크 서브시스템의 핵심 최적화 기법이다.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 연관 이론 -->
+            <h3 class="text-lg font-bold text-gray-800 mb-4">연관 이론 연결</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-blue-50 rounded-xl p-5 border border-blue-200">
+                    <h4 class="font-bold text-blue-700 mb-2">DMA와의 관계</h4>
+                    <p class="text-sm text-blue-600 leading-relaxed">DMA 컨트롤러는 CPU 개입 없이 I/O↔메모리 직접 전송. 전송 완료 시 CPU에 인터럽트 발생. 두 개념은 상호 보완적.</p>
+                </div>
+                <div class="bg-teal-50 rounded-xl p-5 border border-teal-200">
+                    <h4 class="font-bold text-teal-700 mb-2">시스템 콜과의 관계</h4>
+                    <p class="text-sm text-teal-600 leading-relaxed">시스템 콜은 소프트웨어 인터럽트(Trap)로 구현. INT 0x80 또는 SYSCALL → 동일한 모드 전환, 컨텍스트 저장 메커니즘 작동.</p>
+                </div>
+                <div class="bg-purple-50 rounded-xl p-5 border border-purple-200">
+                    <h4 class="font-bold text-purple-700 mb-2">프로세스 상태 전이</h4>
+                    <p class="text-sm text-purple-600 leading-relaxed">타이머 인터럽트 → Running→Ready (선점). I/O 완료 인터럽트 → Blocked→Ready. 인터럽트는 프로세스 스케줄링의 물리적 기반.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 탭5: 원문 학습 ===== -->
+    <div id="textbook" class="hidden">
+        <div class="bg-white rounded-xl shadow-sm p-6 sm:p-8 animate-fade-in textbook-content">
+            <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-6" style="border:none;padding:0;">원문 학습</h2>
+
+            <!-- ========== 제1부 상세 해설 ========== -->
+            <div class="bg-indigo-50 rounded-lg px-4 py-2 mb-6 inline-block"><span class="text-sm font-bold text-indigo-700">제1부 — 상세 해설</span></div>
+
+            <h3>제1장 개요 및 배경</h3>
+            <h4>1.1 인터럽트의 정의와 필요성</h4>
+            <p>인터럽트(Interrupt)란 CPU가 현재 실행 중인 명령어 처리를 일시 중단하고, 긴급하거나 우선적인 처리가 필요한 사건(Event)에 대응하기 위해 제어권을 특정 서비스 루틴으로 이전하는 메커니즘이다. 인터럽트는 운영체제 커널의 핵심 동작 원리이자, 현대 컴퓨터 시스템의 <strong>비동기적 이벤트 처리(Asynchronous Event Handling)</strong>를 가능하게 하는 근본 메커니즘이다.</p>
+            <p>인터럽트가 없는 시스템에서는 CPU가 I/O 장치의 작업 완료를 지속적으로 확인하는 <strong>폴링(Polling)</strong> 방식을 사용해야 한다. 이 방식은 CPU가 I/O 완료 여부를 반복적으로 검사하므로 CPU 자원을 극도로 낭비한다. Intel의 벤치마크에 따르면, 폴링 방식은 CPU 시간의 최대 90%를 I/O 대기에 소모할 수 있으며, 인터럽트 방식은 이를 2~5% 수준으로 감소시킨다.</p>
+
+            <h4>1.2 인터럽트의 분류</h4>
+            <p>인터럽트는 발생 원인과 특성에 따라 다음과 같이 분류된다.</p>
+            <table>
+                <thead><tr><th>분류 기준</th><th>유형</th><th>설명</th><th>예시</th></tr></thead>
+                <tbody>
+                    <tr><td rowspan="2">발생 원인</td><td>하드웨어 인터럽트 (External)</td><td>CPU 외부의 하드웨어 장치가 발생시키는 신호</td><td>키보드 입력, 디스크 I/O 완료, 타이머 만료, 네트워크 패킷 도착</td></tr>
+                    <tr><td>소프트웨어 인터럽트 (Internal)</td><td>CPU 내부에서 명령어 실행 중 발생하는 사건</td><td>0으로 나누기, 오버플로우, 시스템 콜(INT 0x80)</td></tr>
+                    <tr><td rowspan="2">처리 시점</td><td>동기적 (Synchronous)</td><td>명령어 실행의 직접적 결과로 발생</td><td>트랩(Trap), 폴트(Fault), 시스템 콜</td></tr>
+                    <tr><td>비동기적 (Asynchronous)</td><td>현재 실행과 무관하게 외부에서 발생</td><td>I/O 완료, 타이머, 하드웨어 오류</td></tr>
+                    <tr><td rowspan="2">복귀 가능성</td><td>복귀 가능 (Recoverable)</td><td>원인 해결 후 중단 지점으로 복귀 가능</td><td>페이지 폴트 → 페이지 로드 후 재실행</td></tr>
+                    <tr><td>복귀 불가 (Non-recoverable)</td><td>시스템 중단 또는 프로세스 종료</td><td>하드웨어 오류, 보호 위반(Protection Fault)</td></tr>
+                </tbody>
+            </table>
+            <div class="insight-box"><span>답안 작성 핵심: 인터럽트를 단순히 "하드웨어/소프트웨어"로만 구분하면 합격권이다. 동기/비동기, 복귀 가능/불가능까지 함께 분류하면 깊이가 달라진다. 두문자어 <strong>"하소동비복"</strong>으로 3가지 분류 축을 암기한다.</span></div>
+
+            <h3>제2장 동작 환경 — CPU와 인터럽트 하드웨어 구성</h3>
+            <h4>2.1 CPU 내부 주요 레지스터</h4>
+            <p>인터럽트 처리 과정을 이해하려면, CPU 내부의 핵심 레지스터를 정확히 알아야 한다.</p>
+            <table>
+                <thead><tr><th>레지스터</th><th>명칭</th><th>역할</th><th>인터럽트 시 동작</th></tr></thead>
+                <tbody>
+                    <tr><td>PC</td><td>프로그램 카운터</td><td>다음에 실행할 명령어의 메모리 주소 저장</td><td>ISR 시작 주소로 변경됨</td></tr>
+                    <tr><td>SP</td><td>스택 포인터</td><td>현재 스택의 최상위 주소 저장</td><td>커널 스택 포인터로 전환됨</td></tr>
+                    <tr><td>PSW</td><td>프로그램 상태 워드</td><td>CPU 상태 플래그(인터럽트 허용, 모드 비트, 조건 코드)</td><td>커널 모드로 전환, 인터럽트 비활성화</td></tr>
+                    <tr><td>GPR</td><td>범용 레지스터</td><td>연산 데이터 임시 저장 (R0~R15 등)</td><td>PCB에 백업 저장됨</td></tr>
+                    <tr><td>MAR/MBR</td><td>메모리 주소/버퍼 레지스터</td><td>메모리 접근 시 주소와 데이터 저장</td><td>컨텍스트의 일부로 저장</td></tr>
+                </tbody>
+            </table>
+            <h4>2.2 인터럽트 하드웨어 구성요소</h4>
+            <table>
+                <thead><tr><th>구성요소</th><th>역할</th><th>동작</th></tr></thead>
+                <tbody>
+                    <tr><td>인터럽트 요청 라인 (IRQ)</td><td>장치 → CPU로 인터럽트 신호 전달</td><td>장치가 IRQ 핀에 전기 신호 인가</td></tr>
+                    <tr><td>PIC (Programmable Interrupt Controller)</td><td>다수의 IRQ를 우선순위에 따라 관리</td><td>Intel 8259A (레거시), APIC (현대)</td></tr>
+                    <tr><td>IDT (Interrupt Descriptor Table)</td><td>인터럽트 번호 → ISR 주소 매핑 테이블</td><td>x86: 최대 256개 엔트리</td></tr>
+                    <tr><td>IVT (Interrupt Vector Table)</td><td>인터럽트 벡터 → ISR 주소 매핑 (레거시)</td><td>리얼 모드에서 사용</td></tr>
+                </tbody>
+            </table>
+
+            <h3>제3장 인터럽트 처리 과정 (단계별 시간순)</h3>
+            <p>인터럽트 발생부터 처리 완료까지의 전체 과정을 8단계로 정리한다. 이 과정은 <strong>하드웨어 자동 처리 단계</strong>와 <strong>소프트웨어(OS 커널) 처리 단계</strong>로 구분된다.</p>
+
+            <h4>3.1 전체 처리 흐름도</h4>
+            <!-- 흐름도를 HTML/CSS 시각화로 표현 -->
+            <div class="bg-slate-50 rounded-xl p-4 mb-4 border border-slate-200">
+                <div class="max-w-md mx-auto space-y-1 text-center">
+                    <div class="bg-gray-100 border border-gray-300 rounded-full px-3 py-1 text-xs font-bold text-gray-600 inline-block">프로세스 A 실행 중</div>
+                    <div class="text-gray-300 text-xs">↓</div>
+                    <div class="text-[10px] text-red-500 font-bold">── H/W 자동 수행 ──</div>
+                    <div class="bg-red-50 border border-red-200 rounded px-3 py-1 text-xs">① 인터럽트 발생 (IRQ 신호)</div>
+                    <div class="text-gray-300 text-xs">↓</div>
+                    <div class="bg-red-50 border border-red-200 rounded px-3 py-1 text-xs">② CPU: 현재 명령어 완료 대기</div>
+                    <div class="text-gray-300 text-xs">↓</div>
+                    <div class="bg-red-50 border border-red-200 rounded px-3 py-1 text-xs">③ CPU: 인터럽트 인식 및 확인 (INTA)</div>
+                    <div class="text-gray-300 text-xs">↓</div>
+                    <div class="bg-red-50 border border-red-300 rounded px-3 py-1 text-xs font-medium">④ CPU: PSW, PC를 커널 스택에 자동 저장</div>
+                    <div class="text-gray-300 text-xs">↓</div>
+                    <div class="bg-red-50 border border-red-200 rounded px-3 py-1 text-xs">⑤ CPU: 모드 전환 (User→Kernel), 인터럽트 비활성화</div>
+                    <div class="text-gray-300 text-xs">↓</div>
+                    <div class="text-[10px] text-blue-500 font-bold">── S/W (OS 커널) 수행 ──</div>
+                    <div class="bg-blue-50 border border-blue-300 rounded px-3 py-1 text-xs font-medium">⑥ OS: 나머지 컨텍스트(GPR 등) PCB에 저장</div>
+                    <div class="text-gray-300 text-xs">↓</div>
+                    <div class="bg-blue-50 border border-blue-200 rounded px-3 py-1 text-xs">⑦ OS: ISR(Interrupt Service Routine) 실행</div>
+                    <div class="text-gray-300 text-xs">↓</div>
+                    <div class="bg-blue-50 border border-blue-200 rounded px-3 py-1 text-xs">⑧ OS: 스케줄러 호출 → 다음 프로세스 결정</div>
+                    <div class="text-gray-300 text-xs">↓</div>
+                    <div class="bg-blue-50 border border-blue-200 rounded px-3 py-1 text-xs">⑨ OS: 선택된 프로세스의 PCB에서 컨텍스트 복원</div>
+                    <div class="text-gray-300 text-xs">↓</div>
+                    <div class="bg-green-100 border border-green-300 rounded-full px-3 py-1 text-xs font-bold text-green-700 inline-block">⑩ 복원된 프로세스 실행 재개</div>
+                </div>
+            </div>
+
+            <h4>3.2 각 단계 상세</h4>
+            <p><strong>[1단계] 인터럽트 발생</strong></p>
+            <p>하드웨어 장치가 인터럽트 요청 라인(IRQ)에 전기 신호를 인가한다. PIC(Programmable Interrupt Controller)가 이 신호를 수신하여 우선순위를 판별한 후, CPU의 INT 핀에 인터럽트 신호를 전달한다. 현대 x86 시스템에서는 APIC(Advanced PIC)가 이 역할을 수행하며, MSI(Message Signaled Interrupt) 방식으로 메모리 쓰기를 통해 인터럽트를 전달하기도 한다.</p>
+            <p><strong>[2단계] 현재 명령어 완료 대기</strong></p>
+            <p>CPU는 현재 실행 중인 명령어를 완료한 후에야 인터럽트를 처리한다. 이는 CPU의 원자적(Atomic) 명령어 실행 보장을 위함이다. 단, NMI(Non-Maskable Interrupt)는 이 규칙의 예외로, 하드웨어 치명적 오류 시 즉시 처리된다.</p>
+            <p><strong>[3단계] 인터럽트 인식 및 확인 (INTA)</strong></p>
+            <p>CPU는 PSW의 인터럽트 허용 비트(IF, Interrupt Flag)를 검사한다. IF=1이면 인터럽트를 수용하고, PIC에 INTA(Interrupt Acknowledge) 신호를 보낸다. PIC는 인터럽트 벡터 번호를 데이터 버스에 실어 CPU에 전달한다.</p>
+            <p><strong>[4단계] PSW, PC 자동 저장 (하드웨어 수행)</strong></p>
+            <p>CPU는 <strong>하드웨어적으로(자동으로)</strong> 현재의 PSW와 PC 값을 커널 스택에 push한다. 이 단계는 소프트웨어의 개입 없이 CPU 마이크로코드에 의해 수행되며, 인터럽트 처리의 원자성을 보장하는 핵심 메커니즘이다.</p>
+            <table>
+                <thead><tr><th>저장 항목</th><th>저장 위치</th><th>목적</th></tr></thead>
+                <tbody>
+                    <tr><td>PC (Program Counter)</td><td>커널 스택</td><td>복귀 주소 보존 (중단된 명령어의 다음 주소)</td></tr>
+                    <tr><td>PSW (Program Status Word)</td><td>커널 스택</td><td>CPU 상태(모드 비트, 조건 코드, IF) 보존</td></tr>
+                </tbody>
+            </table>
+            <p><strong>[5단계] 모드 전환 및 인터럽트 비활성화</strong></p>
+            <p>CPU는 PSW의 모드 비트를 커널 모드(Supervisor Mode)로 전환하고, 인터럽트 허용 플래그(IF)를 0으로 설정하여 추가 인터럽트를 일시적으로 차단한다. 동시에 IDT(Interrupt Descriptor Table)에서 인터럽트 벡터 번호에 해당하는 ISR의 시작 주소를 읽어 PC에 로드한다.</p>
+            <p><strong>[6단계] 나머지 컨텍스트 저장 (소프트웨어/OS 수행)</strong></p>
+            <p>ISR의 초입부에서 운영체제 커널이 <strong>소프트웨어적으로</strong> 범용 레지스터(GPR), 스택 포인터(SP) 등 나머지 CPU 레지스터 값을 현재 프로세스의 PCB(Process Control Block)에 저장한다. 이 과정이 <strong>문맥 저장(Context Save)</strong>이다.</p>
+            <table>
+                <thead><tr><th>저장 항목</th><th>저장 위치</th><th>방법</th></tr></thead>
+                <tbody>
+                    <tr><td>범용 레지스터 (R0~R15)</td><td>PCB의 레지스터 영역</td><td>PUSH/MOV 명령어 (소프트웨어)</td></tr>
+                    <tr><td>스택 포인터 (SP)</td><td>PCB의 SP 필드</td><td>MOV 명령어</td></tr>
+                    <tr><td>부동소수점 레지스터</td><td>PCB의 FPU 영역</td><td>FXSAVE 명령어 (x86)</td></tr>
+                    <tr><td>기타 제어 레지스터</td><td>PCB의 제어 영역</td><td>MOV 명령어</td></tr>
+                </tbody>
+            </table>
+            <p><strong>[7단계] ISR(Interrupt Service Routine) 실행</strong></p>
+            <p>인터럽트의 원인에 해당하는 서비스 루틴이 실행된다. 예를 들어, 디스크 I/O 완료 인터럽트라면 DMA 전송 완료를 확인하고, 대기 중인 프로세스를 Ready Queue로 이동시킨다. 타이머 인터럽트라면 시간 퀀텀(Time Quantum) 만료를 확인하고 스케줄러를 호출한다.</p>
+            <p><strong>[8단계] 스케줄러 호출 및 컨텍스트 복원 (문맥 교환)</strong></p>
+            <p>ISR 처리 완료 후, 스케줄러가 호출되어 다음에 실행할 프로세스를 결정한다. 선택된 프로세스의 PCB에서 레지스터 값들을 CPU에 복원하고(Context Restore), IRET(Interrupt Return) 명령어로 PSW와 PC를 복원하면 해당 프로세스가 실행을 재개한다.</p>
+
+            <h3>제4장 PCB(Process Control Block) 상세</h3>
+            <h4>4.1 PCB의 정의와 역할</h4>
+            <p>PCB(Process Control Block)는 운영체제가 각 프로세스를 관리하기 위해 유지하는 <strong>프로세스별 메타데이터 자료구조</strong>이다. 프로세스의 생성 시 할당되고, 종료 시 해제된다. PCB는 커널 메모리 영역에 저장되며, 사용자 프로세스는 직접 접근할 수 없다.</p>
+            <p>PCB의 핵심 역할은 <strong>문맥 교환(Context Switching)</strong> 시 프로세스의 실행 상태를 완전히 보존하고 복원하는 것이다. PCB 없이는 멀티태스킹이 불가능하다.</p>
+
+            <h4>4.2 PCB 필드 구성</h4>
+            <table>
+                <thead><tr><th>필드 그룹</th><th>필드명</th><th>설명</th><th>예시 값</th></tr></thead>
+                <tbody>
+                    <tr><td rowspan="3">프로세스 식별</td><td>PID (Process ID)</td><td>프로세스 고유 식별자</td><td>1234</td></tr>
+                    <tr><td>PPID (Parent PID)</td><td>부모 프로세스 식별자</td><td>1 (init)</td></tr>
+                    <tr><td>UID/GID</td><td>소유자/그룹 식별자</td><td>1000/1000</td></tr>
+                    <tr><td rowspan="4">CPU 레지스터</td><td>PC (Program Counter)</td><td>다음 실행 명령어 주소</td><td>0x00401234</td></tr>
+                    <tr><td>SP (Stack Pointer)</td><td>스택 최상위 주소</td><td>0x7FFF0000</td></tr>
+                    <tr><td>PSW/FLAGS</td><td>CPU 상태 플래그</td><td>IF=1, ZF=0, SF=0</td></tr>
+                    <tr><td>범용 레지스터 (GPR)</td><td>R0~R15 등 연산 레지스터 값</td><td>각 레지스터별 저장</td></tr>
+                    <tr><td rowspan="2">프로세스 상태</td><td>State</td><td>프로세스 현재 상태</td><td>Running/Ready/Blocked</td></tr>
+                    <tr><td>Priority</td><td>스케줄링 우선순위</td><td>120 (Linux nice 0)</td></tr>
+                    <tr><td rowspan="2">메모리 관리</td><td>페이지 테이블 포인터</td><td>프로세스의 가상 메모리 매핑</td><td>CR3 레지스터 값</td></tr>
+                    <tr><td>메모리 한계(Base/Limit)</td><td>할당된 메모리 영역</td><td>Base=0x1000, Limit=4MB</td></tr>
+                    <tr><td rowspan="2">스케줄링</td><td>CPU 사용 시간</td><td>누적 CPU burst 시간</td><td>150ms</td></tr>
+                    <tr><td>대기 시간</td><td>Ready Queue 대기 시간</td><td>30ms</td></tr>
+                    <tr><td rowspan="2">I/O 정보</td><td>열린 파일 목록</td><td>프로세스가 사용 중인 파일 디스크립터</td><td>fd 0,1,2,3</td></tr>
+                    <tr><td>I/O 장치 할당 정보</td><td>사용 중인 I/O 장치</td><td>/dev/sda1, eth0</td></tr>
+                    <tr><td>계정 정보</td><td>시작 시간, CPU 누적 시간</td><td>자원 사용 통계</td><td>Start: 14:30:00</td></tr>
+                </tbody>
+            </table>
+
+            <h4>4.3 PCB와 문맥 교환(Context Switching)</h4>
+            <p>문맥 교환은 CPU가 현재 프로세스(P₁)의 실행을 중단하고 다른 프로세스(P₂)의 실행을 재개하는 과정이다. 이 과정에서 PCB가 핵심 역할을 수행한다.</p>
+            <!-- 문맥 교환 도식 — HTML/CSS 시각화 -->
+            <div class="bg-slate-50 rounded-xl p-4 mb-4 border border-slate-200">
+                <div class="max-w-md mx-auto space-y-1 text-center">
+                    <div class="flex justify-between">
+                        <span class="bg-indigo-100 border border-indigo-300 rounded px-2 py-1 text-xs font-bold text-indigo-700">P₁ 실행 중</span>
+                        <span class="bg-gray-100 border border-gray-300 rounded px-2 py-1 text-xs text-gray-500">P₂ 대기 중</span>
+                    </div>
+                    <div class="text-gray-300 text-xs">↓ 인터럽트 발생</div>
+                    <div class="bg-indigo-50 border border-indigo-200 rounded px-3 py-1 text-xs">P₁의 CPU 상태 → PCB₁에 저장</div>
+                    <div class="text-gray-300 text-xs">↓</div>
+                    <div class="bg-gray-100 border border-gray-300 rounded px-3 py-1 text-xs font-medium">스케줄러: P₂ 선택</div>
+                    <div class="text-gray-300 text-xs">↓</div>
+                    <div class="bg-green-50 border border-green-200 rounded px-3 py-1 text-xs">PCB₂에서 CPU 상태 → CPU에 복원</div>
+                    <div class="text-gray-300 text-xs">↓</div>
+                    <div class="flex justify-between">
+                        <span class="bg-gray-100 border border-gray-300 rounded px-2 py-1 text-xs text-gray-500">P₁ Ready 대기</span>
+                        <span class="bg-green-100 border border-green-300 rounded px-2 py-1 text-xs font-bold text-green-700">P₂ 실행 재개</span>
+                    </div>
+                </div>
+            </div>
+            <p><strong>문맥 교환 비용</strong>: 문맥 교환은 순수한 오버헤드(Pure Overhead)이다. 문맥 교환이 진행되는 동안 CPU는 유용한 작업을 수행하지 않는다. 일반적으로 문맥 교환에 소요되는 시간은 <strong>1~10마이크로초(μs)</strong> 수준이며, 이는 프로세서 속도, PCB 크기, 캐시 무효화(Cache Invalidation) 비용에 따라 달라진다.</p>
+            <table>
+                <thead><tr><th>문맥 교환 비용 요소</th><th>설명</th><th>영향</th></tr></thead>
+                <tbody>
+                    <tr><td>레지스터 저장/복원</td><td>GPR, FPU 등 수십 개 레지스터 I/O</td><td>직접적 시간 비용 (~1μs)</td></tr>
+                    <tr><td>TLB 플러시 (TLB Flush)</td><td>프로세스 전환 시 TLB 무효화</td><td>이후 메모리 접근 지연 (수십 μs 누적)</td></tr>
+                    <tr><td>캐시 오염 (Cache Pollution)</td><td>L1/L2 캐시의 유효 데이터가 새 프로세스 데이터로 대체</td><td>Cold Start로 인한 캐시 미스 증가</td></tr>
+                    <tr><td>파이프라인 플러시</td><td>CPU 파이프라인의 진행 중인 명령어 폐기</td><td>파이프라인 재충전 비용</td></tr>
+                </tbody>
+            </table>
+
+            <h3>제5장 성능 분석 및 최적화</h3>
+            <h4>5.1 인터럽트 지연 시간 (Interrupt Latency)</h4>
+            <p>인터럽트 지연 시간은 인터럽트 발생부터 ISR 첫 번째 명령어 실행까지의 시간이다. 실시간 운영체제(RTOS)에서는 이 지연 시간의 보장이 핵심 요구사항이다.</p>
+            <table>
+                <thead><tr><th>구간</th><th>소요 시간 (일반적)</th><th>결정 요인</th></tr></thead>
+                <tbody>
+                    <tr><td>인터럽트 인식</td><td>수 ns ~ 수십 ns</td><td>PIC/APIC 처리 속도</td></tr>
+                    <tr><td>명령어 완료 대기</td><td>0 ~ 수백 ns</td><td>현재 실행 중인 명령어 복잡도</td></tr>
+                    <tr><td>PSW/PC 자동 저장</td><td>수십 ns</td><td>스택 메모리 접근 속도</td></tr>
+                    <tr><td>ISR 진입</td><td>수십 ~ 수백 ns</td><td>IDT 참조, 분기 예측</td></tr>
+                    <tr><td><strong>전체 지연</strong></td><td><strong>0.5 ~ 10 μs</strong></td><td>시스템에 따라 차이</td></tr>
+                </tbody>
+            </table>
+            <p><strong>RTOS vs 범용 OS 비교</strong>: Linux의 인터럽트 지연은 수십 μs 수준이나, VxWorks 같은 RTOS는 수 μs 이내를 보장한다. PREEMPT_RT 패치를 적용한 Linux는 50μs 이내의 최악 지연 시간(Worst-case Latency)을 달성할 수 있다.</p>
+
+            <h4>5.2 최적화 기법</h4>
+            <table>
+                <thead><tr><th>최적화 기법</th><th>원리</th><th>효과</th></tr></thead>
+                <tbody>
+                    <tr><td>Top Half / Bottom Half 분리</td><td>ISR을 긴급 처리(Top Half)와 지연 처리(Bottom Half)로 분리</td><td>인터럽트 비활성화 시간 최소화</td></tr>
+                    <tr><td>Threaded Interrupt</td><td>ISR을 커널 스레드로 실행</td><td>선점 가능, 우선순위 제어 가능</td></tr>
+                    <tr><td>Interrupt Coalescing</td><td>다수의 인터럽트를 묶어서 한 번에 처리</td><td>인터럽트 빈도 감소 (NIC에서 주로 사용)</td></tr>
+                    <tr><td>NAPI (Linux)</td><td>인터럽트 + 폴링 혼합 방식</td><td>고부하 시 인터럽트 스톰 방지</td></tr>
+                </tbody>
+            </table>
+
+            <h3>제6장 연관 이론 연결</h3>
+            <h4>6.1 DMA(Direct Memory Access)와의 관계</h4>
+            <p>DMA 컨트롤러는 CPU 개입 없이 I/O 장치와 메모리 간 데이터를 직접 전송한다. 전송 완료 시 DMA 컨트롤러가 CPU에 인터럽트를 발생시켜 완료를 알린다. 따라서 DMA는 인터럽트 처리 메커니즘을 전제로 동작하며, 두 개념은 상호 보완적이다.</p>
+            <h4>6.2 시스템 콜(System Call)과의 관계</h4>
+            <p>시스템 콜은 사용자 프로그램이 커널 서비스를 요청하는 메커니즘으로, <strong>소프트웨어 인터럽트(Trap)</strong>를 통해 구현된다. Linux에서 INT 0x80 또는 SYSCALL 명령어가 트랩을 발생시키면, 인터럽트와 동일한 메커니즘으로 모드 전환, 컨텍스트 저장, 커널 코드 실행이 수행된다.</p>
+            <h4>6.3 프로세스 상태 전이도와의 관계</h4>
+            <p>인터럽트는 프로세스 상태 전이의 주요 트리거이다. 타이머 인터럽트는 Running → Ready 전이를 유발하고(선점), I/O 완료 인터럽트는 Blocked → Ready 전이를 유발한다. 따라서 인터럽트 처리 메커니즘은 프로세스 스케줄링의 물리적 기반이다.</p>
+
+            <h3>제7장 시험 출제 관점</h3>
+            <p><strong>기출 연계 포인트</strong>: 인터럽트 처리와 PCB는 1교시 단독 출제는 물론, 문맥 교환, 프로세스 스케줄링, I/O 관리 등과 결합하여 2교시에서도 출제된다.</p>
+            <p><strong>차별화 전략</strong>: ① 하드웨어 자동 저장(PSW, PC)과 소프트웨어 저장(GPR → PCB)의 구분을 명확히 하고, ② 문맥 교환 비용의 구체적 요소(TLB 플러시, 캐시 오염)를 서술하며, ③ Top Half/Bottom Half 분리 같은 최적화 기법까지 언급하면 합격권을 넘는 답안이 된다.</p>
+            <p><strong>분량 비중 가이드 (1교시 답안 기준)</strong>: 서론 15% / 본론 75% / 결론 10%</p>
+
+        </div>
+    </div>
+
+    <!-- ===== 탭6: 강의 스크립트 (멘토 전용) ===== -->
+    <div id="script" class="hidden">
+        <div class="bg-white rounded-xl shadow-sm p-6 sm:p-8 animate-fade-in textbook-content">
+            <div class="bg-amber-50 border border-amber-300 rounded-xl p-4 mb-6">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="bg-amber-200 text-amber-800 text-xs font-bold px-2 py-1 rounded-full">&#x1f512; 멘토 전용</span>
+                    <span class="text-sm font-bold text-amber-700">강의 스크립트</span>
+                </div>
+                <p class="text-xs text-amber-600">이 탭은 URL에 <code class="bg-amber-100 px-1 rounded">?mentor=true</code> 파라미터가 있을 때만 표시됩니다.</p>
+            </div>
+            <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-6" style="border:none;padding:0;">&#x1f3ac; 멘토 총평 영상 스크립트 (약 20분)</h2>
+
+            <h4>&#x1f3ac; [도입부 — 약 3분]</h4>
+            <p>안녕하세요, 여러분. 오늘 다룰 토픽은 "인터럽트 처리 메커니즘과 PCB"입니다.</p>
+            <p>이 토픽, 좀 어렵게 느껴지시죠? CPU 내부 동작이니까. 근데 사실 이 토픽은 운영체제를 이해하는 열쇠 같은 거예요. 인터럽트가 없으면 멀티태스킹이 안 돼요. 우리가 컴퓨터 쓸 때 여러 프로그램을 동시에 돌리잖아요? 그게 다 인터럽트 덕분이에요. 타이머 인터럽트가 주기적으로 CPU를 빼앗아서 다른 프로세스에 넘겨주는 거거든요.</p>
+            <p>출제의도를 보면 "문맥 교환 과정에서의 마이크로적인 레지스터 백업 과정을 서술할 수 있는지"를 묻고 있어요. 단순히 "인터럽트가 발생하면 ISR을 실행한다" 수준이 아니라, CPU 내부에서 어떤 레지스터가 어떤 순서로 저장되는지까지 알아야 한다는 거예요. 이게 좀 디테일한 부분이긴 한데, 오늘 확실히 정리해드릴게요.</p>
+
+            <h4>&#x1f3ac; [핵심 설명 — 인터럽트 처리 과정 (약 7분)]</h4>
+            <p><strong>인터럽트가 왜 필요한가</strong></p>
+            <p>자, 먼저 인터럽트가 왜 필요한지부터 봅시다. 인터럽트가 없으면 CPU가 I/O 장치에 "끝났어? 끝났어? 끝났어?" 이렇게 계속 물어봐야 해요. 이걸 폴링이라고 하는데요, CPU가 대기하면서 아무 일도 못 하거든요. Intel 벤치마크에 따르면 CPU 시간의 최대 90%를 이런 대기에 쓸 수 있어요. 말도 안 되는 낭비잖아요?</p>
+            <p>인터럽트 방식은 이걸 뒤집어요. I/O 장치가 일 끝나면 "나 끝났어!"라고 CPU한테 신호를 보내는 거예요. CPU는 그때까지 다른 일을 하다가, 신호가 오면 그때 처리하면 됩니다. 이러면 CPU 대기 시간이 2~5%로 줄어요. 엄청난 차이죠.</p>
+
+            <p><strong>8단계 처리 과정 — 순서대로 따라가 봅시다</strong></p>
+            <p>자, 인터럽트 처리 과정을 8단계로 쪼개서 순서대로 따라가 봅시다. 이걸 <span class="highlight">"발완인저전컨실복"</span>으로 외우세요.</p>
+            <p>1단계, <strong>발</strong>생. 하드웨어 장치가 IRQ 라인에 전기 신호를 보내요. 키보드를 누르면 키보드 컨트롤러가 IRQ1에 신호를 보내는 식이죠. PIC가 이 신호를 받아서 우선순위를 판단하고 CPU에 전달해요.</p>
+            <p>2단계, <strong>완</strong>료 대기. CPU는 현재 실행 중인 명령어를 끝까지 마무리해요. 명령어 하나를 반쯤 실행하다가 그냥 중단할 수는 없거든요. 원자성이 보장되어야 하니까요.</p>
+            <p>3단계, <strong>인</strong>식. CPU가 PSW의 인터럽트 플래그(IF)를 확인해요. IF=1이면 "좋아, 인터럽트 받겠어" 하고 PIC한테 INTA 신호를 보내요. PIC가 벡터 번호를 알려주죠.</p>
+            <p>4단계, 여기가 핵심이에요. <strong>저</strong>장. CPU가 하드웨어적으로, 자동으로, PSW와 PC를 커널 스택에 push해요. 소프트웨어가 개입하는 게 아니라 CPU 마이크로코드가 하는 거예요. 이게 왜 중요하냐면, 이 두 값이 안 저장되면 원래 실행하던 프로그램으로 돌아갈 수 없거든요.</p>
+            <p>5단계, <strong>전</strong>환. 사용자 모드에서 커널 모드로 전환되고, IF를 0으로 만들어서 추가 인터럽트를 일시적으로 차단해요. 그리고 IDT에서 ISR 주소를 읽어서 PC에 넣어요.</p>
+            <p>6단계, <strong>컨</strong>텍스트 저장. 여기서부터는 소프트웨어, 즉 OS 커널이 하는 일이에요. 범용 레지스터, 스택 포인터, 부동소수점 레지스터 같은 나머지 CPU 상태를 PCB에 저장해요. 답안에서 꼭 강조해야 할 게, <strong>4단계는 하드웨어가, 6단계는 소프트웨어가</strong> 한다는 거예요. 이 구분을 명확하게 쓰면 채점관 눈에 확 들어옵니다.</p>
+            <p>7단계, ISR <strong>실</strong>행. 실제 인터럽트 원인을 처리하는 거죠. 디스크 I/O 완료면 데이터 전송 확인, 타이머 만료면 스케줄러 호출.</p>
+            <p>8단계, <strong>복</strong>원. 스케줄러가 다음 프로세스를 정하고, 그 프로세스의 PCB에서 레지스터 값을 CPU에 복원해요. IRET 명령어로 PSW, PC를 복원하면 끝. 해당 프로세스가 마치 중단된 적이 없는 것처럼 실행을 재개하는 거예요.</p>
+
+            <h4>&#x1f3ac; [핵심 설명 — PCB와 문맥 교환 (약 7분)]</h4>
+            <p><strong>PCB가 뭔가</strong></p>
+            <p>자, 이제 PCB 이야기를 합시다. PCB는 Process Control Block, 프로세스 제어 블록이에요.</p>
+            <p>쉽게 비유하면 프로세스의 "이력서"라고 생각하시면 돼요. 이 프로세스가 누군지(PID), 부모가 누군지(PPID), 지금 뭐 하고 있었는지(PC, 레지스터 값들), 현재 상태가 뭔지(Running/Ready/Blocked), 메모리는 어디를 쓰고 있는지, 파일은 뭘 열어놨는지. 이 모든 정보가 PCB에 다 들어있어요. 프로세스가 생성되면 PCB가 만들어지고, 프로세스가 끝나면 PCB도 해제됩니다.</p>
+            <p>PCB가 왜 중요하냐면, 이게 없으면 문맥 교환이 안 돼요. 문맥 교환이 안 되면 멀티태스킹이 안 되고, 멀티태스킹이 안 되면 현대 운영체제가 존재할 수 없어요. 그만큼 핵심적인 자료구조라는 거죠.</p>
+            <p>답안에 PCB 필드를 쓸 때는 반드시 표로 정리하세요. 크게 다섯 그룹으로 나누면 돼요. <span class="highlight">"식레상메스"</span>로 외우세요. 식별정보(PID, PPID), 레지스터(PC, SP, PSW, GPR), 상태(State, Priority), 메모리(페이지 테이블 포인터), 스케줄링(CPU 사용시간, 대기시간). 이 다섯 그룹을 행으로 놓고 각각의 구체적 필드를 적어주면 깔끔한 표가 됩니다.</p>
+            <p>여기서 주의할 점이 있어요. 많이들 PCB 필드 중에서 레지스터 부분만 강조하는데, 사실 메모리 관리 필드도 중요해요. 특히 "페이지 테이블 포인터"가 있잖아요? x86에서는 CR3 레지스터가 이 역할을 하는데, 문맥 교환 시 CR3를 바꾸면 가상 메모리 공간 전체가 바뀌는 거예요. 이게 TLB 플러시를 유발하는 원인이기도 하고요. 이 연결 관계를 이해하면 문맥 교환의 비용 구조가 확 이해됩니다.</p>
+
+            <p><strong>문맥 교환의 비용</strong></p>
+            <p>문맥 교환 이야기를 좀 더 해볼게요. 문맥 교환은 순수한 오버헤드예요. 문맥 교환하는 동안에는 유용한 일을 아무것도 못 하거든요. 보통 1~10마이크로초 걸린다고 하는데, 진짜 비용은 그게 아니에요.</p>
+            <p>진짜 비용은 뭐냐면, TLB 플러시와 캐시 오염이에요. 프로세스가 바뀌면 TLB(Translation Lookaside Buffer)를 무효화해야 하잖아요? 가상 메모리 매핑이 다르니까요. 그러면 새 프로세스가 시작할 때 TLB 미스가 잔뜩 나요. 캐시도 마찬가지예요. L1, L2 캐시에 이전 프로세스 데이터가 가득 차 있는데, 새 프로세스는 그 데이터가 소용없잖아요? 결국 캐시 미스가 연쇄적으로 발생하는 거죠. 이걸 캐시 워밍업, 또는 콜드 스타트라고 해요.</p>
+            <p>이 부분을 답안에 쓰면 확실히 차별화가 됩니다. 대부분의 수험생이 "문맥 교환은 레지스터 저장/복원이다" 정도만 쓰거든요. TLB 플러시, 캐시 오염, 파이프라인 플러시까지 쓰면 깊이가 달라져요.</p>
+            <p>그러면 이 비용을 줄이려면 어떻게 해야 할까요? 현대 OS에서는 몇 가지 최적화를 써요. 첫째, Top Half와 Bottom Half 분리예요. 인터럽트 처리 루틴을 두 부분으로 나누는 거예요. Top Half는 정말 급한 것만 빨리 처리하고, 나머지는 Bottom Half로 미루는 거죠. Linux에서 softirq, tasklet, workqueue가 이 Bottom Half 메커니즘이에요. 이렇게 하면 인터럽트가 비활성화되어 있는 시간을 최소화할 수 있어요.</p>
+            <p>둘째, Interrupt Coalescing이라는 기법이 있어요. 네트워크 카드에서 패킷이 올 때마다 인터럽트를 걸면, 초당 수만 번의 인터럽트가 발생하잖아요? 이걸 모아서 한 번에 처리하는 거예요. 인터럽트 빈도를 획기적으로 줄일 수 있죠. 이런 최적화 기법을 답안 결론부에 한 줄이라도 쓰면 실무적 관점이 인정됩니다.</p>
+
+            <h4>&#x1f3ac; [답안 작성 팁 — 약 2분]</h4>
+            <p><strong>실전에서 이렇게 쓰세요</strong></p>
+            <p>서론에서는 인터럽트 정의를 쓰고, 폴링과 인터럽트 방식을 간략히 비교하세요. "CPU 자원 활용의 효율성을 위해 인터럽트 방식이 사용된다" 정도로 연결하면 됩니다.</p>
+            <p>본론에서는 흐름도를 반드시 그리세요. 8단계를 수직으로 나열하고, 하드웨어 수행 단계와 소프트웨어 수행 단계를 점선으로 구분해주세요. 그 다음에 PCB 필드를 표로 정리하고, 문맥 교환 과정을 P₁→P₂ 전환 다이어그램으로 보여주면 완벽합니다.</p>
+            <p>결론에서는 DMA와 시스템 콜과의 관계를 간략히 언급하고, Top Half/Bottom Half 분리 같은 최적화 기법을 한 줄이라도 쓰면 시의성이 확보됩니다.</p>
+
+            <h4>&#x1f3ac; [마무리 — 약 2분]</h4>
+            <p>자, 오늘 내용 정리합니다.</p>
+            <p>암기 포인트 다시 한번 갈게요. 인터럽트 처리 8단계는 <span class="highlight">"발완인저전컨실복"</span>. 발생, 완료대기, 인식, 저장, 전환, 컨텍스트, ISR실행, 복원. PCB 핵심 필드 그룹은 <span class="highlight">"식레상메스"</span>. 식별, 레지스터, 상태, 메모리, 스케줄링. 문맥 교환 비용 4요소는 <span class="highlight">"레TL캐파"</span>. 레지스터 저장/복원, TLB 플러시, 캐시 오염, 파이프라인 플러시.</p>
+            <p>그리고 이 토픽에서 가장 중요한 포인트 하나만 더 강조할게요. <strong>PSW/PC는 하드웨어가 자동으로 저장하고, GPR은 소프트웨어(OS 커널)가 저장한다.</strong> 이 구분을 명확하게 쓰면 "CPU의 마이크로 수준 동작을 정확히 이해하고 있다"는 인상을 줄 수 있어요. 이게 출제의도가 묻는 핵심이기도 하고요.</p>
+            <p>이 토픽은 프로세스 스케줄링, I/O 관리, DMA와 직접 연결됩니다. 특히 이번 주 모의고사에 나오는 스케줄링 문제랑 연계가 돼요. 타이머 인터럽트가 선점 스케줄링의 물리적 기반이거든요. 타이머 인터럽트 없이는 RR, MLFQ 같은 선점형 알고리즘이 동작할 수 없어요. 이런 식으로 토픽 간 연결고리를 의식하면서 공부하시면 훨씬 효과적입니다.</p>
+            <p>여러분, 인터럽트가 어려워 보여도 결국은 "저장하고 처리하고 복원한다"는 단순한 흐름이에요. 이 뼈대를 잡아놓고 디테일을 채워나가면 반드시 정복할 수 있습니다.</p>
+            <p>마지막으로 한 가지 더 말씀드리면, 이 토픽은 실무에서도 정말 중요해요. 임베디드 시스템 개발이나 OS 커널 튜닝에서 인터럽트 지연시간을 줄이는 게 핵심 과제거든요. 최근에는 RTOS(Real-Time OS)에서 인터럽트 응답 시간을 마이크로초 단위로 보장하는 게 자율주행이나 의료기기 같은 안전 필수 시스템의 핵심 요구사항이에요. 이런 현대적 맥락까지 알아두시면 시험에서도 실무에서도 큰 도움이 될 겁니다.</p>
+            <p>오늘도 수고 많으셨고, 다음 강의에서 뵙겠습니다. 감사합니다.</p>
+        </div>
+    </div>
+
+    <!-- ===== 탭7: 퀴즈 & 암기 ===== -->
+    <div id="quiz" class="hidden">
+        <div class="bg-white rounded-xl shadow-sm p-6 sm:p-8 animate-fade-in">
+            <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-6">퀴즈 &amp; 암기</h2>
+
+            <!-- AI 실전 퀴즈 -->
+            <section class="mb-10 border-t-4 border-indigo-600 bg-white rounded-b-xl shadow-sm p-6">
+                <h3 class="text-lg font-bold text-gray-800 mb-4">&#x1f3af; AI 실전 퀴즈</h3>
+                <p class="text-sm text-gray-500 mb-4">Gemini API를 활용하여 랜덤 퀴즈를 생성합니다. 객관식과 단답형이 교대로 출제됩니다.</p>
+                <button onclick="generateQuiz()" class="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition-all font-medium text-sm mb-4">&#x1f504; 새 문제 생성</button>
+
+                <!-- 퀴즈 플레이스홀더 -->
+                <div id="quiz-placeholder" class="text-center py-8 text-gray-400">
+                    <p class="text-4xl mb-2">&#x1f4dd;</p>
+                    <p>위 버튼을 눌러 퀴즈를 시작하세요</p>
+                </div>
+                <!-- 퀴즈 로딩 -->
+                <div id="quiz-loading" class="hidden text-center py-8">
+                    <div class="typing-indicator inline-flex items-center gap-1">
+                        <span></span><span></span><span></span>
+                    </div>
+                    <p class="text-gray-400 mt-2 text-sm">문제를 생성하고 있습니다...</p>
+                </div>
+                <!-- 퀴즈 컨테이너 -->
+                <div id="quiz-container" class="hidden"></div>
+            </section>
+
+            <!-- 암기 노트: 교재 제2부 전체 재현 -->
+            <section class="textbook-content">
+                <h3 style="margin-top: 3rem; padding-top: 2rem; border-top: 2px solid #e5e7eb;">제2부 — 암기 요약 자료</h3>
+                <p class="text-xs text-gray-400 mb-4">서술형 답안지 작성을 위한 핵심 암기 포인트</p>
+
+                <h4>1. 한 줄 정의</h4>
+                <table>
+                    <thead><tr><th>토픽</th><th>한 줄 정의</th></tr></thead>
+                    <tbody>
+                        <tr><td><strong>인터럽트</strong></td><td>CPU가 현재 실행을 중단하고 긴급 사건에 대응하기 위해 ISR로 제어를 이전하는 비동기적 이벤트 처리 메커니즘</td></tr>
+                        <tr><td><strong>PCB</strong></td><td>운영체제가 프로세스 관리를 위해 유지하는 프로세스별 메타데이터 자료구조로, 문맥 교환 시 실행 상태를 보존/복원하는 핵심 단위</td></tr>
+                    </tbody>
+                </table>
+
+                <h4>2. 핵심 키워드 맵</h4>
+                <div class="insight-box">
+                    <span class="text-gray-800"><strong>인터럽트 키워드:</strong> IRQ / PIC(8259A) / APIC / IDT / ISR / INTA / 폴링 vs 인터럽트 / NMI / 트랩(Trap) / 폴트(Fault) / 모드 전환(User→Kernel)</span>
+                </div>
+                <div class="insight-box">
+                    <span class="text-gray-800"><strong>PCB 키워드:</strong> PID / PC / SP / PSW / GPR / 프로세스 상태(Running/Ready/Blocked) / 문맥 교환(Context Switching) / TLB Flush / 캐시 오염 / IRET</span>
+                </div>
+
+                <h4>3. 두문자어 암기법</h4>
+                <ul>
+                    <li>인터럽트 분류 3축: <strong class="highlight">"하소동비복"</strong> (하드웨어/소프트웨어, 동기/비동기, 복귀 가능/불가능)</li>
+                    <li>인터럽트 처리 8단계 핵심: <strong class="highlight">"발완인저전컨실복"</strong> (발생-완료대기-인식-저장-전환-컨텍스트-ISR실행-복원)</li>
+                    <li>PCB 핵심 필드: <strong class="highlight">"식레상메스"</strong> (식별정보-레지스터-상태-메모리-스케줄링)</li>
+                    <li>문맥 교환 비용 4요소: <strong class="highlight">"레TL캐파"</strong> (레지스터-TLB플러시-캐시오염-파이프라인플러시)</li>
+                </ul>
+
+                <h4>4. 골격 답안 구조</h4>
+                <p><strong>문제 유형: 인터럽트 처리 메커니즘과 PCB를 설명하시오</strong></p>
+                <table>
+                    <thead><tr><th>구분</th><th>핵심 내용</th><th>분량 비중</th></tr></thead>
+                    <tbody>
+                        <tr><td><strong>서론</strong></td><td>인터럽트 정의 + 폴링 vs 인터럽트 비교 + 멀티태스킹의 기반</td><td>15%</td></tr>
+                        <tr><td><strong>본론 1</strong></td><td>인터럽트 분류(3축) + 하드웨어 구성(IRQ/PIC/IDT)</td><td>20%</td></tr>
+                        <tr><td><strong>본론 2</strong></td><td>단계별 처리 과정(흐름도 필수) + 하드웨어/소프트웨어 저장 구분</td><td>30%</td></tr>
+                        <tr><td><strong>본론 3</strong></td><td>PCB 구성 필드(표) + 문맥 교환 과정 + 비용 분석</td><td>25%</td></tr>
+                        <tr><td><strong>결론</strong></td><td>DMA/시스템콜과의 관계 + Top Half/Bottom Half 최적화</td><td>10%</td></tr>
+                    </tbody>
+                </table>
+
+                <h4>5. 필수 도식</h4>
+                <p><strong>도식 1: 인터럽트 처리 과정 흐름도</strong></p>
+                <pre><code>[답안지에 수직 흐름도로 표현]
+- ① 인터럽트 발생 → ② 현재 명령어 완료 → ③ INTA
+  → ④ PSW/PC 자동 저장(H/W) → ⑤ 모드 전환
+  → ⑥ GPR→PCB 저장(S/W) → ⑦ ISR 실행
+  → ⑧ 컨텍스트 복원 → 실행 재개
+- H/W 수행 단계와 S/W 수행 단계를 점선으로 구분 표시</code></pre>
+
+                <p><strong>도식 2: 문맥 교환 타이밍 다이어그램</strong></p>
+                <pre><code>[답안지에 2개 프로세스 간 전환을 시간축으로 표현]
+P₁ Running → 인터럽트 → P₁ PCB 저장 → 스케줄러
+  → P₂ PCB 복원 → P₂ Running</code></pre>
+
+                <h4>6. 차별화 포인트</h4>
+                <p><strong>합격권 답안을 넘는 서술 포인트</strong></p>
+                <ul>
+                    <li>PSW/PC의 하드웨어 자동 저장과 GPR의 소프트웨어 저장을 명확히 구분하면 "CPU 동작을 마이크로 수준으로 이해하고 있다"는 인상을 준다.</li>
+                    <li>문맥 교환 비용에서 TLB 플러시와 캐시 오염을 구체적으로 언급하면 합격권을 넘는 깊이를 확보할 수 있다.</li>
+                    <li>Top Half/Bottom Half 분리를 Linux 커널의 실제 구현(softirq, tasklet, workqueue)과 연결하면 실무적 관점이 강화된다.</li>
+                    <li>DMA, 시스템 콜과의 관계를 제시하면 인터럽트가 OS 전체 아키텍처에서 차지하는 위치를 보여줄 수 있다.</li>
+                </ul>
+            </section>
+        </div>
+    </div>
+
+    </main>
+
+    <!-- AI 채팅 플로팅 버튼 -->
+    <button onclick="toggleChat()" class="fixed bottom-6 right-6 bg-indigo-600 text-white w-14 h-14 rounded-full shadow-lg hover:bg-indigo-700 transition-all z-50 flex items-center justify-center text-2xl" title="AI 튜터">&#x1f4ac;</button>
+
+    <!-- 채팅 사이드바 -->
+    <div id="chat-sidebar" class="closed fixed top-0 right-0 w-80 sm:w-96 h-full bg-white shadow-2xl z-50 flex flex-col">
+        <div class="flex items-center justify-between p-4 border-b bg-indigo-600 text-white">
+            <h3 class="font-bold text-sm">&#x1f916; AI 튜터 (인터럽트 &amp; PCB)</h3>
+            <button onclick="toggleChat()" class="text-white hover:text-gray-200 text-xl">&times;</button>
+        </div>
+        <div id="chatMessages" class="flex-grow overflow-y-auto p-4 flex flex-col space-y-2" style="background:#fafafa;">
+            <div class="chat-msg ai"><div class="prose text-sm">안녕하세요! 인터럽트와 PCB에 대해 질문해 주세요. &#x1f60a;</div></div>
+        </div>
+        <div id="typingIndicator" class="hidden px-4 py-2"><div class="typing-indicator"><span></span><span></span><span></span></div></div>
+        <div class="p-3 border-t flex gap-2">
+            <input id="chatInput" type="text" class="flex-grow border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" placeholder="질문을 입력하세요..." onkeydown="if(event.key==='Enter')sendChat()">
+            <button onclick="sendChat()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-indigo-700">전송</button>
+        </div>
+    </div>
+
+    <!-- API 설정 모달 -->
+    <div id="settings-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">&#x1f511; Gemini API Key 설정</h3>
+            <p class="text-sm text-gray-500 mb-3">AI 퀴즈와 튜터 기능을 사용하려면 Gemini API Key가 필요합니다.</p>
+            <input id="apiKeyInput" type="password" class="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-300" placeholder="API Key를 입력하세요">
+            <div class="flex gap-2 justify-end">
+                <button onclick="toggleSettings()" class="px-4 py-2 text-sm text-gray-600 hover:text-gray-800">취소</button>
+                <button onclick="saveSettings()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-indigo-700">저장</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 푸터 -->
+    <footer class="bg-white mt-12 py-8 border-t border-gray-200">
+        <div class="max-w-6xl mx-auto px-4 text-center">
+            <div class="flex flex-col md:flex-row justify-center items-center gap-2 md:gap-6 text-sm text-gray-600 mb-3 font-medium">
+                <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
+                    <span>박교익PE (132회 정보관리기술사, dr.code92@gmail.com)</span>
+                </div>
+            </div>
+            <p class="text-xs text-gray-400">Copyright &copy; KPC 정보관리기술사 ZIP-UP 심화반. All rights reserved.</p>
+        </div>
+    </footer>
+
+<script>
+// ─── 멘토 모드 ───
+var isMentorMode = new URLSearchParams(window.location.search).get('mentor') === 'true';
+if (isMentorMode) {
+    document.getElementById('nav-script').classList.remove('hidden');
+}
+var sections = isMentorMode
+    ? ['overview','process','pcb','performance','textbook','script','quiz']
+    : ['overview','process','pcb','performance','textbook','quiz'];
+
+// ─── 탭 네비게이션 ───
+function navTo(id) {
+    document.querySelectorAll('.nav-item').forEach(function(el) {
+        el.classList.remove('active','text-indigo-600');
+    });
+    var navEl = document.getElementById('nav-' + id);
+    if (navEl) navEl.classList.add('active','text-indigo-600');
+    sections.forEach(function(s) {
+        var sec = document.getElementById(s);
+        if (sec) sec.classList.add('hidden');
+    });
+    var target = document.getElementById(id);
+    if (target) target.classList.remove('hidden');
+    window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// ─── 클릭 확장: 인터럽트 처리 단계 상세 ───
+var stepDetails = {
+    'step1': {
+        title: '\u2460\u2461 발생 \u00b7 완료 대기',
+        color: 'text-red-700',
+        content: '<p class="text-sm text-gray-600 leading-relaxed mb-2">하드웨어 장치가 IRQ 라인에 전기 신호를 인가합니다. PIC(Programmable Interrupt Controller)가 신호를 수신하여 우선순위를 판별한 후, CPU의 INT 핀에 인터럽트 신호를 전달합니다.</p><p class="text-sm text-gray-600 leading-relaxed">CPU는 현재 실행 중인 명령어를 완료한 후에야 인터럽트를 처리합니다. 원자적(Atomic) 명령어 실행을 보장하기 위함입니다. 단, NMI(Non-Maskable Interrupt)는 예외입니다.</p>'
+    },
+    'step2': {
+        title: '\u2462 인식 (INTA)',
+        color: 'text-red-700',
+        content: '<p class="text-sm text-gray-600 leading-relaxed">CPU는 PSW의 인터럽트 허용 비트(IF)를 검사합니다. IF=1이면 인터럽트를 수용하고, PIC에 INTA(Interrupt Acknowledge) 신호를 보냅니다. PIC는 인터럽트 벡터 번호를 데이터 버스에 실어 CPU에 전달합니다.</p>'
+    },
+    'step3': {
+        title: '\u2463\u2464 저장 \u00b7 전환',
+        color: 'text-red-700',
+        content: '<p class="text-sm text-gray-600 leading-relaxed mb-2"><strong>\u2463 PSW/PC 자동 저장 (H/W)</strong>: CPU 마이크로코드가 자동으로 PSW와 PC를 커널 스택에 push합니다. 소프트웨어 개입 없이 수행되며, 인터럽트 처리의 원자성을 보장합니다.</p><p class="text-sm text-gray-600 leading-relaxed"><strong>\u2464 모드 전환</strong>: User Mode \u2192 Kernel Mode로 전환, IF=0으로 설정하여 추가 인터럽트를 차단합니다. IDT에서 ISR 시작 주소를 PC에 로드합니다.</p>'
+    },
+    'step4': {
+        title: '\u2465\u2466\u2467 컨텍스트 \u00b7 ISR \u00b7 복원',
+        color: 'text-blue-700',
+        content: '<p class="text-sm text-gray-600 leading-relaxed mb-2"><strong>\u2465 컨텍스트 저장 (S/W)</strong>: OS 커널이 범용 레지스터(GPR), SP, FPU 등을 PCB에 저장합니다.</p><p class="text-sm text-gray-600 leading-relaxed mb-2"><strong>\u2466 ISR 실행</strong>: 인터럽트 원인을 처리합니다. (I/O 완료 확인, 타이머 처리 등)</p><p class="text-sm text-gray-600 leading-relaxed"><strong>\u2467 복원</strong>: 스케줄러가 다음 프로세스를 선택하고, PCB에서 레지스터를 복원합니다. IRET 명령어로 PSW/PC를 복원하여 실행을 재개합니다.</p>'
+    }
+};
+function updateStepDetail(key) {
+    document.querySelectorAll('.tech-block').forEach(function(el) { el.classList.remove('selected'); });
+    var block = document.getElementById('block-' + key);
+    if (block) block.classList.add('selected');
+    var d = stepDetails[key];
+    if (d) {
+        document.getElementById('step-detail-content').innerHTML =
+            '<h4 class="text-lg font-bold mb-3 ' + d.color + '">' + d.title + '</h4>' + d.content;
+    }
+}
+
+// ─── strategy-card 토글 ───
+function toggleStrategy(el) {
+    var d = el.querySelector('.strategy-detail');
+    var s = el.querySelector('.strategy-summary');
+    if (d.classList.contains('hidden')) {
+        document.querySelectorAll('.strategy-detail').forEach(function(x){x.classList.add('hidden');});
+        document.querySelectorAll('.strategy-summary').forEach(function(x){x.classList.remove('hidden');});
+        d.classList.remove('hidden');
+        s.classList.add('hidden');
+    } else {
+        d.classList.add('hidden');
+        s.classList.remove('hidden');
+    }
+}
+
+// ─── API Key 관리 ───
+var geminiKey = localStorage.getItem('geminiKey') || new URLSearchParams(window.location.search).get('key') || '';
+function toggleSettings() {
+    var m = document.getElementById('settings-modal');
+    m.classList.toggle('hidden');
+    if (!m.classList.contains('hidden')) {
+        document.getElementById('apiKeyInput').value = geminiKey;
+    }
+}
+function saveSettings() {
+    geminiKey = document.getElementById('apiKeyInput').value.trim();
+    if (geminiKey) localStorage.setItem('geminiKey', geminiKey);
+    toggleSettings();
+}
+
+// ─── AI 튜터 채팅 ───
+var chatOpen = false;
+function toggleChat() {
+    chatOpen = !chatOpen;
+    var sb = document.getElementById('chat-sidebar');
+    sb.classList.toggle('open', chatOpen);
+    sb.classList.toggle('closed', !chatOpen);
+}
+function appendChat(role, html) {
+    var box = document.getElementById('chatMessages');
+    var div = document.createElement('div');
+    div.className = 'chat-msg ' + role;
+    if (role === 'ai') {
+        div.innerHTML = '<div class="prose text-sm">' + html + '</div>';
+    } else {
+        div.textContent = html;
+    }
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
+}
+function showTyping() { document.getElementById('typingIndicator').classList.remove('hidden'); }
+function hideTyping() { document.getElementById('typingIndicator').classList.add('hidden'); }
+async function sendChat() {
+    if (!geminiKey) { alert('API Key\ub97c \uba3c\uc800 \uc124\uc815\ud574\uc8fc\uc138\uc694.'); toggleSettings(); return; }
+    var input = document.getElementById('chatInput');
+    var msg = input.value.trim();
+    if (!msg) return;
+    input.value = '';
+    appendChat('user', msg);
+    showTyping();
+    try {
+        var r = await fetch(
+            'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=' + geminiKey,
+            { method:'POST', headers:{'Content-Type':'application/json'},
+              body: JSON.stringify({
+                  contents:[{parts:[{text:"\ub2f9\uc2e0\uc740 \uc815\ubcf4\uad00\ub9ac\uae30\uc220\uc0ac \uc2dc\ud5d8 \uba58\ud1a0\uc785\ub2c8\ub2e4. '\uc778\ud130\ub7fd\ud2b8(Interrupt) \ucc98\ub9ac \uba54\ucee4\ub2c8\uc998\uacfc PCB' \uad00\ub828 \uc9c8\ubb38\uc5d0 \uc804\ubb38\uc801\uc774\uace0 \uba85\ucf8c\ud558\uac8c \ub2f5\ubcc0\ud574\uc8fc\uc138\uc694. 300\uc790 \uc774\ub0b4\ub85c \ud575\uc2ec\ub9cc \uc694\uc57d.\n\n\uc9c8\ubb38: " + msg}]}]
+              })
+            }
+        );
+        var d = await r.json();
+        hideTyping();
+        var answer = d.candidates[0].content.parts[0].text;
+        appendChat('ai', marked.parse(answer));
+    } catch(e) {
+        hideTyping();
+        appendChat('ai', '\uc624\ub958\uac00 \ubc1c\uc0dd\ud588\uc2b5\ub2c8\ub2e4: ' + e.message);
+    }
+}
+
+// ─── AI 퀴즈 ───
+var quizTypeHistory = [];
+var currentQuizData = null;
+var quizTopics = [
+    {category:"\uc778\ud130\ub7fd\ud2b8 \uac1c\ub150 \ubc0f \ubd84\ub958",keywords:"IRQ, PIC, APIC, IDT, ISR, \ud3f4\ub9c1, \ud558\uc18c\ub3d9\ube44\ubcf5, \ud2b8\ub7a9, \ud3f4\ud2b8, NMI"},
+    {category:"\uc778\ud130\ub7fd\ud2b8 \ucc98\ub9ac 8\ub2e8\uacc4",keywords:"\ubc1c\uc644\uc778\uc800\uc804\ucee8\uc2e4\ubcf5, INTA, PSW, PC, \ucee4\ub110 \uc2a4\ud0dd, \ubaa8\ub4dc \uc804\ud658, ISR"},
+    {category:"PCB \ud544\ub4dc \uad6c\uc131",keywords:"PID, PPID, PC, SP, PSW, GPR, \ud504\ub85c\uc138\uc2a4 \uc0c1\ud0dc, \ud398\uc774\uc9c0 \ud14c\uc774\ube14, \uc2dd\ub808\uc0c1\uba54\uc2a4"},
+    {category:"\ubb38\ub9e5 \uad50\ud658(Context Switching)",keywords:"PCB \uc800\uc7a5/\ubcf5\uc6d0, TLB \ud50c\ub7ec\uc2dc, \uce90\uc2dc \uc624\uc5fc, \ud30c\uc774\ud504\ub77c\uc778, \ub808TL\uce90\ud30c, IRET"},
+    {category:"H/W vs S/W \uc800\uc7a5 \uad6c\ubd84",keywords:"PSW/PC \ud558\ub4dc\uc6e8\uc5b4 \uc790\ub3d9, GPR \uc18c\ud504\ud2b8\uc6e8\uc5b4, CPU \ub9c8\uc774\ud06c\ub85c\ucf54\ub4dc, OS \ucee4\ub110"},
+    {category:"\uc131\ub2a5 \ucd5c\uc801\ud654",keywords:"Top Half, Bottom Half, softirq, tasklet, Threaded Interrupt, Interrupt Coalescing, NAPI"},
+    {category:"\uc5f0\uad00 \uc774\ub860",keywords:"DMA, \uc2dc\uc2a4\ud15c \ucf5c, \ud504\ub85c\uc138\uc2a4 \uc0c1\ud0dc \uc804\uc774, Running, Ready, Blocked"},
+    {category:"CPU \ub808\uc9c0\uc2a4\ud130 \ubc0f HW \uad6c\uc131",keywords:"PC, SP, PSW, GPR, MAR, MBR, IRQ, PIC, IDT, IVT, APIC"}
+];
+
+async function generateQuiz() {
+    if (!geminiKey) { alert('API Key\ub97c \uba3c\uc800 \uc124\uc815\ud574\uc8fc\uc138\uc694.'); toggleSettings(); return; }
+    document.getElementById('quiz-placeholder').classList.add('hidden');
+    document.getElementById('quiz-container').classList.add('hidden');
+    document.getElementById('quiz-loading').classList.remove('hidden');
+
+    var isMC;
+    var recent = quizTypeHistory.slice(-2);
+    if (recent.length >= 2 && recent[0] === recent[1]) {
+        isMC = !recent[1];
+    } else {
+        isMC = Math.random() > 0.5;
+    }
+    quizTypeHistory.push(isMC);
+
+    var selected = quizTopics[Math.floor(Math.random() * quizTopics.length)];
+    var quizType = isMC ? '\uac1d\uad00\uc2dd (4\uc9c0\uc120\ub2e4)' : '\ub2e8\ub2f5\ud615';
+    var format = isMC
+        ? '{"question":"\ubb38\uc81c","options":["A","B","C","D"],"correctIndex":0,"explanation":"\ud574\uc124"}'
+        : '{"question":"\ubb38\uc81c","correctAnswer":"\uc815\ub2f5","explanation":"\ud574\uc124"}';
+    var prompt = "\ub2e4\uc74c \uce74\ud14c\uace0\ub9ac\uc5d0 \ub300\ud55c " + quizType + " \ud034\uc988 1\ubb38\uc81c\ub97c \ub9cc\ub4dc\uc138\uc694.\n"
+        + "\uce74\ud14c\uace0\ub9ac: " + selected.category + "\n"
+        + "\uad00\ub828 \ud0a4\uc6cc\ub4dc: " + selected.keywords + "\n"
+        + "\uaddc\uce59: \ubc18\ub4dc\uc2dc \uc704 \uce74\ud14c\uace0\ub9ac\uc640 \ud0a4\uc6cc\ub4dc\uc5d0 \uc9c1\uc811 \uad00\ub828\ub41c \ubb38\uc81c\ub97c \ucd9c\uc81c\ud558\uc138\uc694.\n"
+        + "JSON \ud615\uc2dd\uc73c\ub85c \uc751\ub2f5: " + format;
+
+    try {
+        var r = await fetch(
+            'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=' + geminiKey,
+            { method:'POST', headers:{'Content-Type':'application/json'},
+              body: JSON.stringify({
+                  contents:[{parts:[{text:prompt}]}],
+                  generationConfig:{responseMimeType:"application/json"}
+              })
+            }
+        );
+        var d = await r.json();
+        var t = d.candidates[0].content.parts[0].text;
+        t = t.replace(/```json\s*/gi,"").replace(/```\s*/g,"").trim();
+        var depth=0,start=-1,end=-1;
+        for(var i=0;i<t.length;i++){
+            if(t[i]==='{'){if(depth===0)start=i;depth++;}
+            else if(t[i]==='}'){depth--;if(depth===0&&start!==-1){end=i;break;}}
+        }
+        if(start===-1||end===-1)throw new Error("No JSON found");
+        t=t.substring(start,end+1);
+        t=t.replace(/[\x00-\x1F\x7F]/g,function(c){return c==='\n'||c==='\r'||c==='\t'?' ':'';});
+        currentQuizData = JSON.parse(t);
+        document.getElementById('quiz-loading').classList.add('hidden');
+        renderQuiz();
+    } catch(e) {
+        document.getElementById('quiz-loading').classList.add('hidden');
+        document.getElementById('quiz-placeholder').classList.remove('hidden');
+        alert('\ud034\uc988 \uc0dd\uc131 \uc624\ub958: ' + e.message);
+    }
+}
+
+function renderQuiz() {
+    var c = document.getElementById('quiz-container');
+    c.classList.remove('hidden');
+    if (currentQuizData.options) {
+        // 객관식
+        var labels = ['A','B','C','D'];
+        var html = '<div class="mb-4"><p class="font-bold text-gray-800 mb-4">' + currentQuizData.question + '</p>';
+        html += '<div class="space-y-2">';
+        currentQuizData.options.forEach(function(opt, idx) {
+            html += '<button onclick="checkMultipleChoice(' + idx + ',this)" class="w-full text-left px-4 py-3 rounded-lg border-2 border-gray-200 hover:border-indigo-400 hover:bg-indigo-50 transition-all flex items-center gap-3">'
+                + '<span class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center font-bold text-gray-600 text-sm flex-shrink-0">' + labels[idx] + '</span>'
+                + '<span class="text-sm text-gray-700">' + opt + '</span></button>';
+        });
+        html += '</div></div><div id="quiz-feedback"></div>';
+        c.innerHTML = html;
+    } else {
+        // 단답형
+        var html = '<div class="mb-4"><p class="font-bold text-gray-800 mb-4">' + currentQuizData.question + '</p>'
+            + '<div class="flex gap-2"><input id="shortAnswerInput" type="text" class="flex-grow border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" placeholder="\ub2f5\uc548\uc744 \uc785\ub825\ud558\uc138\uc694..." onkeydown="if(event.key===&#39;Enter&#39;)checkShortAnswer()">'
+            + '<button id="shortAnswerBtn" onclick="checkShortAnswer()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-indigo-700">\uc81c\ucd9c</button></div></div>'
+            + '<div id="quiz-feedback"></div>';
+        c.innerHTML = html;
+    }
+}
+
+function checkMultipleChoice(idx, btnEl) {
+    var correct = idx === currentQuizData.correctIndex;
+    // disable all buttons
+    document.querySelectorAll('#quiz-container button').forEach(function(b){ b.disabled = true; b.classList.add('opacity-60','cursor-not-allowed'); });
+    if (correct) {
+        btnEl.classList.remove('border-gray-200');
+        btnEl.classList.add('border-green-500','bg-green-50');
+    } else {
+        btnEl.classList.remove('border-gray-200');
+        btnEl.classList.add('border-red-500','bg-red-50');
+        // highlight correct
+        var buttons = document.querySelectorAll('#quiz-container button');
+        if (buttons[currentQuizData.correctIndex]) {
+            buttons[currentQuizData.correctIndex].classList.remove('border-gray-200');
+            buttons[currentQuizData.correctIndex].classList.add('border-green-500','bg-green-50');
+        }
+    }
+    showQuizFeedback(correct, currentQuizData.explanation);
+}
+
+async function checkShortAnswer() {
+    var input = document.getElementById('shortAnswerInput');
+    var btn = document.getElementById('shortAnswerBtn');
+    var userAnswer = input.value.trim();
+    if (!userAnswer) return;
+    input.disabled = true;
+    btn.disabled = true;
+    btn.textContent = '\ucc44\uc810 \uc911...';
+
+    try {
+        var gradingPrompt = "\ub2f9\uc2e0\uc740 \uc815\ubcf4\uad00\ub9ac\uae30\uc220\uc0ac \uc2dc\ud5d8 \ucc44\uc810\uad00\uc785\ub2c8\ub2e4. "
+            + "\uc544\ub798 \ubb38\uc81c\uc5d0 \ub300\ud574 \uc0ac\uc6a9\uc790\uc758 \ub2f5\uc548\uc774 \uc815\ub2f5\uc73c\ub85c \uc778\uc815\ub420 \uc218 \uc788\ub294\uc9c0 \ud310\uc815\ud558\uc138\uc694.\n\n"
+            + "\ubb38\uc81c: " + currentQuizData.question + "\n"
+            + "\ubaa8\ubc94 \uc815\ub2f5: " + currentQuizData.correctAnswer + "\n"
+            + "\uc0ac\uc6a9\uc790 \ub2f5\uc548: " + userAnswer + "\n\n"
+            + "\ud310\uc815 \uae30\uc900:\n- \ud575\uc2ec \uc758\ubbf8\uac00 \ub3d9\uc77c\ud558\uba74 \uc815\ub2f5\n- \uc57d\uc5b4/\ud480\ub124\uc784 \ubaa8\ub450 \uc778\uc815\n- \uc601\uc5b4/\ud55c\uae00 \ud63c\uc6a9 \uc778\uc815\n- \ub744\uc5b4\uc4f0\uae30/\uc870\uc0ac \ucc28\uc774\ub294 \ubb34\uc2dc\n- \uc758\ubbf8\uac00 \uba85\ud655\ud788 \ub2e4\ub974\uba74 \uc624\ub2f5\n\n"
+            + "Output JSON: {\"correct\":true/false,\"reason\":\"\ud310\uc815 \uc774\uc720\"}";
+        var r = await fetch(
+            'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=' + geminiKey,
+            { method:'POST', headers:{'Content-Type':'application/json'},
+              body: JSON.stringify({
+                  contents:[{parts:[{text:gradingPrompt}]}],
+                  generationConfig:{responseMimeType:"application/json"}
+              })
+            }
+        );
+        var d = await r.json();
+        var t = d.candidates[0].content.parts[0].text;
+        t = t.replace(/```json\s*/gi,"").replace(/```\s*/g,"").trim();
+        var depth2=0,start2=-1,end2=-1;
+        for(var i=0;i<t.length;i++){
+            if(t[i]==='{'){if(depth2===0)start2=i;depth2++;}
+            else if(t[i]==='}'){depth2--;if(depth2===0&&start2!==-1){end2=i;break;}}
+        }
+        if(start2===-1||end2===-1)throw new Error("No JSON");
+        t=t.substring(start2,end2+1);
+        t=t.replace(/[\x00-\x1F\x7F]/g,function(c){return c==='\n'||c==='\r'||c==='\t'?' ':'';});
+        var result = JSON.parse(t);
+        showQuizFeedback(result.correct, currentQuizData.explanation, currentQuizData.correctAnswer, result.reason);
+    } catch(e) {
+        // 폴백: 로컬 비교
+        var normalize = function(s){return s.replace(/\s/g,'').toLowerCase();};
+        var correct = normalize(currentQuizData.correctAnswer).includes(normalize(userAnswer))
+                   || normalize(userAnswer).includes(normalize(currentQuizData.correctAnswer));
+        showQuizFeedback(correct, currentQuizData.explanation, currentQuizData.correctAnswer, '(\ub85c\uceec \ucc44\uc810)');
+    }
+}
+
+function showQuizFeedback(correct, explanation, correctAnswer, reason) {
+    var fb = document.getElementById('quiz-feedback');
+    var color = correct ? 'green' : 'red';
+    var icon = correct ? '\u2705' : '\u274c';
+    var label = correct ? '\uc815\ub2f5\uc785\ub2c8\ub2e4!' : '\uc624\ub2f5\uc785\ub2c8\ub2e4.';
+    var html = '<div class="mt-4 border-l-4 border-' + color + '-500 bg-' + color + '-50 rounded-r-xl p-4 animate-fade-in">'
+        + '<p class="font-bold text-' + color + '-700 mb-2">' + icon + ' ' + label + '</p>';
+    if (correctAnswer) html += '<p class="text-sm text-gray-700 mb-1"><strong>\ubaa8\ubc94 \uc815\ub2f5:</strong> ' + correctAnswer + '</p>';
+    if (reason) html += '<p class="text-sm text-gray-500 mb-1"><strong>\ud310\uc815:</strong> ' + reason + '</p>';
+    html += '<p class="text-sm text-gray-600"><strong>\ud574\uc124:</strong> ' + explanation + '</p></div>';
+    fb.innerHTML = html;
+}
+
+// ─── Chart.js ───
+window.addEventListener('DOMContentLoaded', function() {
+    // 레이더 차트: 폴링 vs 인터럽트
+    var ctx1 = document.getElementById('overviewRadar');
+    if (ctx1) {
+        new Chart(ctx1.getContext('2d'), {
+            type: 'radar',
+            data: {
+                labels: ['CPU \ud6a8\uc728\uc131','\uc751\ub2f5\uc18d\ub3c4','\uad6c\ud604 \ubcf5\uc7a1\ub3c4','\uc2e4\uc2dc\uac04 \uc801\ud569\uc131','\ud655\uc7a5\uc131'],
+                datasets: [
+                    { label:'\ud3f4\ub9c1',data:[2,5,2,3,2],borderColor:'#ef4444',backgroundColor:'rgba(239,68,68,0.1)',pointBackgroundColor:'#ef4444' },
+                    { label:'\uc778\ud130\ub7fd\ud2b8',data:[9,8,7,8,9],borderColor:'#4f46e5',backgroundColor:'rgba(79,70,229,0.1)',pointBackgroundColor:'#4f46e5' }
+                ]
+            },
+            options: { responsive:true, maintainAspectRatio:false, scales:{r:{beginAtZero:true,max:10,ticks:{stepSize:2}}} }
+        });
+    }
+    // 바 차트: 문맥 교환 비용
+    var ctx2 = document.getElementById('contextCostChart');
+    if (ctx2) {
+        new Chart(ctx2.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: ['\ub808\uc9c0\uc2a4\ud130 I/O','TLB \ud50c\ub7ec\uc2dc','\uce90\uc2dc \uc624\uc5fc','\ud30c\uc774\ud504\ub77c\uc778'],
+                datasets: [{
+                    label:'\uc601\ud5a5\ub3c4 (\uc0c1\ub300\uc801)',
+                    data:[3,8,9,4],
+                    backgroundColor:['rgba(239,68,68,0.7)','rgba(249,115,22,0.7)','rgba(245,158,11,0.7)','rgba(139,92,246,0.7)'],
+                    borderColor:['#ef4444','#f97316','#f59e0b','#8b5cf6'],
+                    borderWidth:1
+                }]
+            },
+            options: { responsive:true, maintainAspectRatio:false, scales:{y:{beginAtZero:true,max:10}}, plugins:{legend:{display:false}} }
+        });
+    }
+});
+</script>
+</body>
+</html>

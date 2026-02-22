@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NoSQL의 CAP 이론과 PACELC 이론</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+body{font-family:'Noto Sans KR',sans-serif;background-color:#f5f5f4;color:#1f2937}
+.chart-container{position:relative;width:100%;max-width:600px;margin-left:auto;margin-right:auto;height:350px;max-height:400px}
+.nav-item.active{border-bottom:2px solid #4f46e5;color:#4f46e5;font-weight:700}
+.tech-block{transition:all .3s ease;cursor:pointer}
+.tech-block:hover{transform:translateY(-2px);box-shadow:0 4px 6px -1px rgba(0,0,0,.1)}
+.tech-block.selected{ring:2px;ring-color:#4f46e5;background-color:#eef2ff;border-color:#4f46e5}
+.no-scrollbar::-webkit-scrollbar{display:none}
+.no-scrollbar{-ms-overflow-style:none;scrollbar-width:none}
+#chat-sidebar{transition:transform .3s ease-in-out}
+#chat-sidebar.closed{transform:translateX(100%)}
+#chat-sidebar.open{transform:translateX(0)}
+.typing-indicator span{display:inline-block;width:6px;height:6px;background-color:#4f46e5;border-radius:50%;animation:typing 1.4s infinite ease-in-out both;margin:0 2px}
+.typing-indicator span:nth-child(1){animation-delay:-.32s}
+.typing-indicator span:nth-child(2){animation-delay:-.16s}
+@keyframes typing{0%,80%,100%{transform:scale(0)}40%{transform:scale(1)}}
+.prose h1,.prose h2,.prose h3{font-weight:bold;margin-top:1em;margin-bottom:.5em;color:#312e81;font-size:1.1em}
+.prose ul{list-style-type:disc;padding-left:1.5em;margin-bottom:1em}
+.prose strong{color:#4338ca}
+.prose p{margin-bottom:.8em}
+.chat-msg{border-radius:12px;padding:10px 14px;margin-bottom:10px;max-width:85%;font-size:.95rem}
+.chat-msg.user{background-color:#4f46e5;color:white;align-self:flex-end;margin-left:auto}
+.chat-msg.ai{background-color:#f3f4f6;color:#1f2937;align-self:flex-start;border:1px solid #e5e7eb}
+.textbook-content h3{font-size:1.25rem;font-weight:700;color:#1e3a8a;margin-top:1.5rem;margin-bottom:.75rem;border-left:4px solid #4f46e5;padding-left:.75rem}
+.textbook-content h4{font-size:1.1rem;font-weight:600;color:#374151;margin-top:1rem;margin-bottom:.5rem}
+.textbook-content p{margin-bottom:1rem;line-height:1.8;color:#4b5563}
+.textbook-content ul{list-style-type:disc;padding-left:1.5rem;margin-bottom:1rem;color:#4b5563}
+.textbook-content li{margin-bottom:.5rem;line-height:1.7}
+.textbook-content table{width:100%;border-collapse:collapse;margin-bottom:1.5rem;font-size:.95rem}
+.textbook-content th,.textbook-content td{border:1px solid #e5e7eb;padding:.75rem;text-align:left}
+.textbook-content th{background-color:#f9fafb;font-weight:600;color:#1f2937}
+.textbook-content .highlight{background-color:#eef2ff;color:#4338ca;font-weight:600;padding:0 4px;border-radius:4px}
+.textbook-content pre{background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:1rem;overflow-x:auto;margin-bottom:1rem;font-size:.85rem;line-height:1.6}
+.textbook-content code{font-family:'Courier New',monospace}
+.def-box{background:linear-gradient(135deg,#eef2ff 0%,#e0e7ff 100%);border-left:4px solid #4f46e5;border-radius:8px;padding:1.25rem;margin-bottom:1rem}
+.def-box p{color:#312e81;font-weight:500;margin:0;line-height:1.8}
+.insight-box{background-color:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:1rem;margin:1rem 0}
+.insight-box::before{content:'\1F4A1';margin-right:.5rem}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.animate-fade-in{animation:fadeIn .4s ease-out forwards}
+</style>
+</head>
+<body class="bg-stone-100 min-h-screen flex flex-col overflow-x-hidden">
+
+<header class="bg-white shadow-sm sticky top-0 z-40">
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+<div class="flex justify-between items-center pt-3 pb-1">
+<div class="flex flex-col justify-center min-w-0">
+<span class="text-[10px] sm:text-xs text-indigo-600 font-bold uppercase tracking-wider leading-tight">KPC 정보관리기술사 ZIP-UP 심화반</span>
+<div class="flex items-center gap-2">
+<span class="text-lg sm:text-xl font-bold text-gray-900 tracking-tight truncate">NoSQL의 CAP 이론과 PACELC 이론</span>
+<span class="text-[10px] sm:text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-bold flex-shrink-0">2026</span>
+</div>
+</div>
+</div>
+<nav class="flex space-x-1 sm:space-x-4 overflow-x-auto no-scrollbar pb-1 items-center">
+<button onclick="navTo('overview')" id="nav-overview" class="nav-item active px-1 pt-1 pb-2 text-xs sm:text-sm font-medium text-gray-900 whitespace-nowrap">개요 및 개념</button>
+<button onclick="navTo('cap')" id="nav-cap" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium text-gray-500 hover:text-gray-700 whitespace-nowrap">CAP 이론</button>
+<button onclick="navTo('pacelc')" id="nav-pacelc" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium text-gray-500 hover:text-gray-700 whitespace-nowrap">PACELC 이론</button>
+<button onclick="navTo('compare')" id="nav-compare" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium text-gray-500 hover:text-gray-700 whitespace-nowrap">비교·적용</button>
+<button onclick="navTo('textbook')" id="nav-textbook" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium text-gray-500 hover:text-gray-700 whitespace-nowrap">원문 학습</button>
+<button onclick="navTo('script')" id="nav-script" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium text-amber-600 hover:text-amber-800 whitespace-nowrap hidden">🎬 강의 스크립트</button>
+<button onclick="navTo('quiz')" id="nav-quiz" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium text-indigo-600 hover:text-indigo-800 whitespace-nowrap">퀴즈 &amp; 암기</button>
+<span class="w-px h-4 bg-gray-300 flex-shrink-0"></span>
+<button onclick="toggleSettings()" class="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium text-indigo-600 hover:bg-indigo-50 border border-indigo-200 hover:border-indigo-400 transition-all whitespace-nowrap flex-shrink-0" title="API Key 설정">&#128273; API</button>
+</nav>
+</div>
+</header>
+
+<main class="flex-grow max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12 pb-24">
+
+<section id="overview" class="space-y-8 animate-fade-in">
+<!-- 정의 박스 -->
+<div class="bg-white rounded-xl shadow-sm p-6 sm:p-8 border-l-4 border-indigo-500">
+<div class="def-box">
+<p><strong>CAP 이론(CAP Theorem)</strong>이란 분산 데이터 시스템에서 <strong>일관성(Consistency)</strong>, <strong>가용성(Availability)</strong>, <strong>분할 내성(Partition Tolerance)</strong> 세 가지 속성을 동시에 모두 만족시키는 것은 불가능하며, 최대 두 가지만 보장할 수 있다는 정리이다. <strong>PACELC 이론</strong>은 CAP을 확장하여 정상 상태(Else)에서의 <strong>지연시간(Latency)</strong>과 <strong>일관성(Consistency)</strong> 간 트레이드오프를 추가로 설명하는 프레임워크이다.</p>
+</div>
+
+<p class="text-gray-600 leading-relaxed mt-4">쉽게 말하면, 여러 대의 서버에 데이터를 나누어 저장하는 분산 시스템에서는 "모든 서버가 항상 같은 데이터를 보여주면서(일관성), 모든 요청에 항상 응답하면서(가용성), 서버 간 통신이 끊어져도 계속 동작(분할 내성)"하는 것이 물리적으로 불가능합니다. 마치 "빠르고, 싸고, 품질 좋은" 세 가지를 동시에 가질 수 없는 것과 비슷합니다. CAP은 네트워크 장애 상황의 선택을, PACELC은 정상 상황에서의 추가적 선택(속도 vs 정확성)까지 다룹니다.</p>
+
+<!-- 역사 타임라인 -->
+<div class="mt-6">
+<h4 class="font-bold text-gray-900 mb-4">📅 이론의 역사적 맥락</h4>
+<div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+<div class="bg-indigo-50 rounded-lg p-3 text-center border border-indigo-200">
+<div class="text-xs font-bold text-indigo-700">2000</div>
+<div class="text-xs text-gray-600 mt-1">Brewer, PODC 학회에서 CAP 추측 발표</div>
+</div>
+<div class="bg-blue-50 rounded-lg p-3 text-center border border-blue-200">
+<div class="text-xs font-bold text-blue-700">2002</div>
+<div class="text-xs text-gray-600 mt-1">Gilbert & Lynch, MIT에서 CAP 정리 증명</div>
+</div>
+<div class="bg-green-50 rounded-lg p-3 text-center border border-green-200">
+<div class="text-xs font-bold text-green-700">2010</div>
+<div class="text-xs text-gray-600 mt-1">Brewer, "CAP 12 Years Later" 재해석</div>
+</div>
+<div class="bg-purple-50 rounded-lg p-3 text-center border border-purple-200">
+<div class="text-xs font-bold text-purple-700">2012</div>
+<div class="text-xs text-gray-600 mt-1">Abadi, Yale에서 PACELC 이론 발표</div>
+</div>
+<div class="bg-amber-50 rounded-lg p-3 text-center border border-amber-200">
+<div class="text-xs font-bold text-amber-700">현재</div>
+<div class="text-xs text-gray-600 mt-1">Tunable Consistency 시대</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- 레이더 차트 -->
+<div class="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+<h3 class="font-bold text-lg text-gray-900 mb-4">CP / AP / CA 시스템 특성 비교</h3>
+<div class="chart-container">
+<canvas id="capRadar"></canvas>
+</div>
+<p class="text-xs text-gray-400 mt-3 text-center">* 점수는 상대적 비교를 위한 예시 값입니다.</p>
+</div>
+</section>
+
+<section id="cap" class="hidden space-y-8 animate-fade-in">
+<!-- CAP 삼각형 시각화 -->
+<div class="bg-white rounded-xl shadow-sm p-6 sm:p-8 border-l-4 border-indigo-500">
+<h3 class="font-bold text-lg text-gray-900 mb-6">CAP 삼각형</h3>
+<div class="flex justify-center mb-6">
+<div class="relative" style="width:320px;height:280px;">
+<!-- 삼각형 꼭짓점 -->
+<div class="absolute left-1/2 -translate-x-1/2 top-0 bg-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-bold text-center shadow-md">Consistency<br><span class="text-xs font-normal opacity-80">일관성 (C)</span></div>
+<div class="absolute left-0 bottom-0 bg-green-600 text-white rounded-lg px-4 py-2 text-sm font-bold text-center shadow-md">Partition<br>Tolerance<br><span class="text-xs font-normal opacity-80">분할 내성 (P)</span></div>
+<div class="absolute right-0 bottom-0 bg-purple-600 text-white rounded-lg px-4 py-2 text-sm font-bold text-center shadow-md">Availability<br><span class="text-xs font-normal opacity-80">가용성 (A)</span></div>
+<!-- 변 라벨 -->
+<div class="absolute left-[15%] top-[45%] bg-blue-100 text-blue-800 rounded px-2 py-1 text-xs font-bold">CP</div>
+<div class="absolute right-[15%] top-[45%] bg-amber-100 text-amber-800 rounded px-2 py-1 text-xs font-bold">CA</div>
+<div class="absolute left-1/2 -translate-x-1/2 bottom-[15%] bg-green-100 text-green-800 rounded px-2 py-1 text-xs font-bold">AP</div>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+<div class="bg-blue-50 rounded-lg p-3 border border-blue-200 text-center"><strong class="text-blue-700">CP</strong><br>HBase, MongoDB, Zookeeper</div>
+<div class="bg-green-50 rounded-lg p-3 border border-green-200 text-center"><strong class="text-green-700">AP</strong><br>Cassandra, DynamoDB, CouchDB</div>
+<div class="bg-amber-50 rounded-lg p-3 border border-amber-200 text-center"><strong class="text-amber-700">CA</strong><br>전통 RDBMS (단일 노드)</div>
+</div>
+</div>
+
+<!-- 세 속성 상세 정의 -->
+<div class="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+<h3 class="font-bold text-lg text-gray-900 mb-4">세 가지 속성의 상세 정의</h3>
+<table class="w-full text-sm border-collapse">
+<thead><tr class="bg-gray-50"><th class="border border-gray-200 p-3 text-left">속성</th><th class="border border-gray-200 p-3 text-left">영문</th><th class="border border-gray-200 p-3 text-left">정의</th><th class="border border-gray-200 p-3 text-left">핵심 의미</th></tr></thead>
+<tbody>
+<tr><td class="border border-gray-200 p-3 font-bold text-indigo-700">일관성 (C)</td><td class="border border-gray-200 p-3">Consistency</td><td class="border border-gray-200 p-3">모든 노드가 동일 시점에 동일한 데이터를 반환</td><td class="border border-gray-200 p-3">선형적 일관성: 쓰기 완료 후 모든 읽기가 최신 값 반환</td></tr>
+<tr><td class="border border-gray-200 p-3 font-bold text-green-700">가용성 (A)</td><td class="border border-gray-200 p-3">Availability</td><td class="border border-gray-200 p-3">장애가 없는 모든 노드는 합리적 시간 내에 응답을 반환</td><td class="border border-gray-200 p-3">모든 요청에 에러 없이 응답 (최신 값 보장은 아님)</td></tr>
+<tr><td class="border border-gray-200 p-3 font-bold text-purple-700">분할 내성 (P)</td><td class="border border-gray-200 p-3">Partition Tolerance</td><td class="border border-gray-200 p-3">네트워크 분할이 발생해도 시스템이 계속 동작</td><td class="border border-gray-200 p-3">분산 시스템의 필수 속성 (네트워크 장애는 불가피)</td></tr>
+</tbody>
+</table>
+</div>
+
+<!-- 불가능성 증명 -->
+<div class="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+<h3 class="font-bold text-lg text-gray-900 mb-4">CAP 불가능성 증명 (Gilbert &amp; Lynch, 2002)</h3>
+<p class="text-gray-600 text-sm mb-4">귀류법을 이용한 증명 과정:</p>
+<!-- 증명 단계 시각화 -->
+<div class="space-y-4">
+<div class="flex items-start gap-3"><span class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-sm font-bold flex-shrink-0">1</span><div class="bg-indigo-50 rounded-lg p-3 flex-grow"><strong class="text-indigo-800">가정:</strong> <span class="text-gray-700">C, A, P를 모두 만족하는 분산 시스템이 존재한다고 가정</span></div></div>
+<div class="flex items-start gap-3"><span class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-bold flex-shrink-0">2</span><div class="bg-blue-50 rounded-lg p-3 flex-grow"><strong class="text-blue-800">시나리오:</strong> <span class="text-gray-700">노드 N1과 N2가 존재, 네트워크 분할로 상호 통신 불가능. Client A가 N1에 값 V1을 쓰기(Write), Client B가 N2에서 읽기(Read)</span></div></div>
+<div class="flex items-start gap-3"><span class="w-8 h-8 rounded-full bg-red-100 text-red-700 flex items-center justify-center text-sm font-bold flex-shrink-0">3</span><div class="bg-red-50 rounded-lg p-3 flex-grow"><strong class="text-red-800">모순 도출:</strong> <span class="text-gray-700">P 보장→시스템 동작, A 보장→N2 응답 필수, C 보장→N2는 V1 반환 필요. 그러나 N1→N2 통신 불가 → N2는 V1을 알 수 없음 → <strong>모순!</strong></span></div></div>
+<div class="flex items-start gap-3"><span class="w-8 h-8 rounded-full bg-green-100 text-green-700 flex items-center justify-center text-sm font-bold flex-shrink-0">4</span><div class="bg-green-50 rounded-lg p-3 flex-grow"><strong class="text-green-800">결론:</strong> <span class="text-gray-700">C, A, P를 동시에 만족하는 것은 불가능</span></div></div>
+</div>
+
+<!-- 증명 다이어그램 시각화 -->
+<div class="mt-6 bg-slate-50 rounded-lg p-4 border border-slate-200">
+<h4 class="text-sm font-bold text-gray-700 mb-3">증명 시나리오 다이어그램</h4>
+<div class="flex flex-col md:flex-row items-center justify-center gap-4">
+<div class="text-center"><div class="bg-blue-100 rounded-lg p-3 border border-blue-300"><span class="text-sm font-bold text-blue-800">Client A</span></div><div class="text-xs text-gray-500 mt-1">Write(V1)</div></div>
+<div class="text-2xl text-gray-400">→</div>
+<div class="text-center"><div class="bg-indigo-100 rounded-lg p-3 border border-indigo-300"><span class="text-sm font-bold text-indigo-800">Node N1</span><br><span class="text-xs text-indigo-600">V1 저장됨</span></div></div>
+<div class="text-center"><div class="bg-red-100 rounded-lg px-3 py-1 border border-red-300"><span class="text-xs font-bold text-red-700">╳ 네트워크 분할</span></div></div>
+<div class="text-center"><div class="bg-indigo-100 rounded-lg p-3 border border-indigo-300"><span class="text-sm font-bold text-indigo-800">Node N2</span><br><span class="text-xs text-red-600">V0 (구 값)</span></div></div>
+<div class="text-2xl text-gray-400">←</div>
+<div class="text-center"><div class="bg-blue-100 rounded-lg p-3 border border-blue-300"><span class="text-sm font-bold text-blue-800">Client B</span></div><div class="text-xs text-gray-500 mt-1">Read()</div></div>
+</div>
+<p class="text-xs text-red-600 font-bold text-center mt-3">C 위반! (V1이어야 하는데 V0 반환) → A 유지 (응답 반환) → P 유지 (분할 상태에서 동작)</p>
+</div>
+</div>
+
+<!-- CP vs AP 선택 전략 -->
+<div class="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+<h3 class="font-bold text-lg text-gray-900 mb-4">CP vs AP 선택 전략</h3>
+<div class="insight-box"><p class="text-sm text-amber-800">분산 시스템에서 네트워크 분할(P)은 불가피하므로, 실질적 선택은 <strong>CP vs AP</strong>이다. CA는 단일 서버 환경(비분산)에서만 가능하다.</p></div>
+<table class="w-full text-sm border-collapse mt-4">
+<thead><tr class="bg-gray-50"><th class="border border-gray-200 p-3">선택</th><th class="border border-gray-200 p-3">전략</th><th class="border border-gray-200 p-3">동작 방식</th><th class="border border-gray-200 p-3">대표 시스템</th><th class="border border-gray-200 p-3">적합 서비스</th></tr></thead>
+<tbody>
+<tr class="bg-blue-50"><td class="border border-gray-200 p-3 font-bold text-blue-700">CP</td><td class="border border-gray-200 p-3">일관성 우선</td><td class="border border-gray-200 p-3">분할 시 일부 노드 응답 거부 (가용성 희생)</td><td class="border border-gray-200 p-3">HBase, MongoDB, Redis Cluster, Zookeeper</td><td class="border border-gray-200 p-3">금융 거래, 재고 관리, 좌석 예매</td></tr>
+<tr class="bg-green-50"><td class="border border-gray-200 p-3 font-bold text-green-700">AP</td><td class="border border-gray-200 p-3">가용성 우선</td><td class="border border-gray-200 p-3">분할 시 구 데이터라도 응답 (일관성 희생)</td><td class="border border-gray-200 p-3">Cassandra, DynamoDB, CouchDB, Riak</td><td class="border border-gray-200 p-3">SNS 피드, 상품 추천, IoT 센서</td></tr>
+<tr class="bg-gray-50"><td class="border border-gray-200 p-3 font-bold text-gray-500">CA</td><td class="border border-gray-200 p-3">분할 무시</td><td class="border border-gray-200 p-3">네트워크 분할 자체가 없다고 가정</td><td class="border border-gray-200 p-3">전통 RDBMS (단일 노드)</td><td class="border border-gray-200 p-3">단일 서버 환경</td></tr>
+</tbody>
+</table>
+</div>
+</section>
+
+<section id="pacelc" class="hidden space-y-8 animate-fade-in">
+<!-- PACELC 프레임워크 개요 -->
+<div class="bg-white rounded-xl shadow-sm p-6 sm:p-8 border-l-4 border-purple-500">
+<h3 class="font-bold text-lg text-gray-900 mb-2">PACELC 프레임워크</h3>
+<div class="def-box">
+<p><strong>PACELC</strong> = if <strong>P</strong>artition, choose <strong>A</strong>vailability or <strong>C</strong>onsistency; <strong>E</strong>lse (정상 상태), choose <strong>L</strong>atency or <strong>C</strong>onsistency</p>
+</div>
+<p class="text-gray-600 text-sm mt-3">CAP 이론은 네트워크 분할 발생 시의 트레이드오프만 다루지만, 현실에서 분할은 일시적이다. 대부분의 시간인 <strong>정상 상태(Normal Operation)</strong>에서도 <strong>지연시간(Latency)</strong>과 <strong>일관성(Consistency)</strong> 사이의 트레이드오프가 존재하며, Daniel Abadi(Yale, 2012)가 이를 PACELC로 정리하였다.</p>
+</div>
+
+<!-- PACELC 의사결정 트리 시각화 -->
+<div class="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+<h3 class="font-bold text-lg text-gray-900 mb-6">PACELC 의사결정 트리</h3>
+<div class="flex flex-col items-center space-y-3">
+<!-- 루트 -->
+<div class="bg-gray-800 text-white rounded-lg px-6 py-3 text-sm font-bold text-center shadow-md">네트워크 분할 발생?</div>
+<div class="flex items-center gap-8">
+<div class="flex flex-col items-center">
+<div class="text-xs text-gray-500 font-bold mb-1">Yes (P)</div>
+<div class="w-px h-4 bg-gray-400"></div>
+<div class="flex gap-4 mt-2">
+<div class="bg-green-100 border-2 border-green-400 rounded-lg px-4 py-3 text-center"><span class="text-sm font-bold text-green-800">A</span><br><span class="text-xs text-green-600">가용성</span></div>
+<div class="text-gray-400 self-center text-xs font-bold">or</div>
+<div class="bg-indigo-100 border-2 border-indigo-400 rounded-lg px-4 py-3 text-center"><span class="text-sm font-bold text-indigo-800">C</span><br><span class="text-xs text-indigo-600">일관성</span></div>
+</div>
+</div>
+<div class="flex flex-col items-center">
+<div class="text-xs text-gray-500 font-bold mb-1">No (Else)</div>
+<div class="w-px h-4 bg-gray-400"></div>
+<div class="flex gap-4 mt-2">
+<div class="bg-amber-100 border-2 border-amber-400 rounded-lg px-4 py-3 text-center"><span class="text-sm font-bold text-amber-800">L</span><br><span class="text-xs text-amber-600">저지연</span></div>
+<div class="text-gray-400 self-center text-xs font-bold">or</div>
+<div class="bg-indigo-100 border-2 border-indigo-400 rounded-lg px-4 py-3 text-center"><span class="text-sm font-bold text-indigo-800">C</span><br><span class="text-xs text-indigo-600">일관성</span></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- 4가지 조합 상세 -->
+<div class="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+<h3 class="font-bold text-lg text-gray-900 mb-4">PACELC 4가지 조합 상세</h3>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div class="tech-block bg-white rounded-lg p-4 border-2 border-green-300 hover:shadow-md" onclick="updateDetail('pael');" id="block-pael">
+<div class="flex items-center gap-2 mb-2"><span class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-bold">PA/EL</span><span class="text-sm font-bold text-gray-800">최대 성능·가용성</span></div>
+<p class="text-xs text-gray-600">분할 시 가용성(A) + 정상 시 저지연(L). 일관성 최소.</p>
+<p class="text-xs text-gray-500 mt-1">📌 Cassandra, DynamoDB, Riak</p>
+</div>
+<div class="tech-block bg-white rounded-lg p-4 border-2 border-indigo-300 hover:shadow-md" onclick="updateDetail('pcec');" id="block-pcec">
+<div class="flex items-center gap-2 mb-2"><span class="bg-indigo-100 text-indigo-800 px-2 py-1 rounded text-xs font-bold">PC/EC</span><span class="text-sm font-bold text-gray-800">강한 일관성</span></div>
+<p class="text-xs text-gray-600">분할 시 일관성(C) + 정상 시 일관성(C). 지연시간 증가 감수.</p>
+<p class="text-xs text-gray-500 mt-1">📌 HBase, VoltDB, MongoDB(strong read)</p>
+</div>
+<div class="tech-block bg-white rounded-lg p-4 border-2 border-amber-300 hover:shadow-md" onclick="updateDetail('paec');" id="block-paec">
+<div class="flex items-center gap-2 mb-2"><span class="bg-amber-100 text-amber-800 px-2 py-1 rounded text-xs font-bold">PA/EC</span><span class="text-sm font-bold text-gray-800">하이브리드</span></div>
+<p class="text-xs text-gray-600">분할 시 가용성(A) + 정상 시 일관성(C). 상황별 적응.</p>
+<p class="text-xs text-gray-500 mt-1">📌 MongoDB(기본 설정), PNUTS</p>
+</div>
+<div class="tech-block bg-white rounded-lg p-4 border-2 border-gray-300 hover:shadow-md" onclick="updateDetail('pcel');" id="block-pcel">
+<div class="flex items-center gap-2 mb-2"><span class="bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs font-bold">PC/EL</span><span class="text-sm font-bold text-gray-800">드문 조합</span></div>
+<p class="text-xs text-gray-600">분할 시 일관성(C) + 정상 시 저지연(L). 분할 시에만 엄격.</p>
+<p class="text-xs text-gray-500 mt-1">📌 일부 커스텀 시스템</p>
+</div>
+</div>
+<div id="detail-panel" class="mt-4 bg-gray-50 rounded-lg p-4 border border-gray-200 hidden"></div>
+</div>
+
+<!-- L/C 트레이드오프 메커니즘 -->
+<div class="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+<h3 class="font-bold text-lg text-gray-900 mb-4">정상 상태(E)에서의 L/C 트레이드오프</h3>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div class="bg-indigo-50 rounded-lg p-4 border border-indigo-200">
+<h4 class="font-bold text-indigo-800 mb-2">일관성 보장 시 (EC)</h4>
+<ul class="text-sm text-gray-700 space-y-1">
+<li>• 쓰기: 모든 복제본(Replica)에 전파 완료 후 응답 → 복제 지연</li>
+<li>• 읽기: Quorum 읽기로 최신 값 확인 → 다수 노드 응답 대기</li>
+<li>• <strong class="text-indigo-700">결과: 응답 시간 증가 (Latency ↑)</strong></li>
+</ul>
+</div>
+<div class="bg-amber-50 rounded-lg p-4 border border-amber-200">
+<h4 class="font-bold text-amber-800 mb-2">저지연 보장 시 (EL)</h4>
+<ul class="text-sm text-gray-700 space-y-1">
+<li>• 쓰기: 가장 가까운 노드에만 기록 후 즉시 응답 → 비동기 복제</li>
+<li>• 읽기: 가장 가까운 복제본에서 즉시 읽기 → 구 값 가능</li>
+<li>• <strong class="text-amber-700">결과: 일시적 불일치 (Eventual Consistency)</strong></li>
+</ul>
+</div>
+</div>
+<!-- Quorum 수식 -->
+<div class="mt-4 bg-slate-50 rounded-lg p-4 border border-slate-200">
+<h4 class="font-bold text-gray-800 mb-2">Quorum 수식</h4>
+<div class="text-sm text-gray-700">
+<p class="mb-2">N = 전체 복제본 수, W = 쓰기 승인 수, R = 읽기 승인 수</p>
+<p class="mb-2"><strong>강한 일관성 조건: W + R > N</strong></p>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+<div class="bg-green-50 rounded-lg p-3 border border-green-200"><span class="text-xs font-bold text-green-700">강한 일관성</span><br><span class="text-xs">N=3, W=2, R=2 → W+R=4 > 3 ✅</span></div>
+<div class="bg-red-50 rounded-lg p-3 border border-red-200"><span class="text-xs font-bold text-red-700">최종 일관성</span><br><span class="text-xs">N=3, W=1, R=1 → W+R=2 ≤ 3 ❌</span></div>
+</div>
+</div>
+</div>
+</div>
+</section>
+
+<section id="compare" class="hidden space-y-8 animate-fade-in">
+<!-- CAP vs PACELC 비교 -->
+<div class="bg-white rounded-xl shadow-sm p-6 sm:p-8 border-l-4 border-teal-500">
+<h3 class="font-bold text-lg text-gray-900 mb-4">CAP vs PACELC 비교</h3>
+<table class="w-full text-sm border-collapse">
+<thead><tr class="bg-gray-50"><th class="border border-gray-200 p-3 text-left">비교 기준</th><th class="border border-gray-200 p-3 text-left bg-indigo-50">CAP 이론</th><th class="border border-gray-200 p-3 text-left bg-purple-50">PACELC 이론</th></tr></thead>
+<tbody>
+<tr><td class="border border-gray-200 p-3 font-bold">제안자</td><td class="border border-gray-200 p-3">Eric Brewer (2000)</td><td class="border border-gray-200 p-3">Daniel Abadi (2012)</td></tr>
+<tr><td class="border border-gray-200 p-3 font-bold">분석 범위</td><td class="border border-gray-200 p-3">분할 발생 시에만</td><td class="border border-gray-200 p-3">분할 시 + 정상 시 모두</td></tr>
+<tr><td class="border border-gray-200 p-3 font-bold">선택 축</td><td class="border border-gray-200 p-3">A vs C (P는 필수)</td><td class="border border-gray-200 p-3">(A vs C) + (L vs C)</td></tr>
+<tr><td class="border border-gray-200 p-3 font-bold">시스템 분류</td><td class="border border-gray-200 p-3">CP, AP, (CA) 3가지</td><td class="border border-gray-200 p-3">PA/EL, PC/EC, PA/EC, PC/EL 4가지</td></tr>
+<tr><td class="border border-gray-200 p-3 font-bold">한계</td><td class="border border-gray-200 p-3">정상 상태 미고려</td><td class="border border-gray-200 p-3">연속적 스펙트럼을 이산적 분류</td></tr>
+<tr><td class="border border-gray-200 p-3 font-bold">실무 활용</td><td class="border border-gray-200 p-3">기본 설계 방향 수립</td><td class="border border-gray-200 p-3">세밀한 일관성 수준 결정</td></tr>
+</tbody>
+</table>
+</div>
+
+<!-- NoSQL 유형별 매핑 -->
+<div class="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+<h3 class="font-bold text-lg text-gray-900 mb-4">NoSQL 유형별 CAP/PACELC 매핑</h3>
+<div class="overflow-x-auto">
+<table class="w-full text-sm border-collapse">
+<thead><tr class="bg-gray-50"><th class="border border-gray-200 p-3 text-left">NoSQL 유형</th><th class="border border-gray-200 p-3 text-left">대표 시스템</th><th class="border border-gray-200 p-3 text-left">CAP</th><th class="border border-gray-200 p-3 text-left">PACELC</th><th class="border border-gray-200 p-3 text-left">일관성 모델</th></tr></thead>
+<tbody>
+<tr class="bg-green-50"><td class="border border-gray-200 p-3">Key-Value</td><td class="border border-gray-200 p-3 font-bold">DynamoDB</td><td class="border border-gray-200 p-3"><span class="bg-green-100 text-green-800 px-2 py-0.5 rounded text-xs font-bold">AP</span></td><td class="border border-gray-200 p-3">PA/EL</td><td class="border border-gray-200 p-3">Eventual Consistency</td></tr>
+<tr class="bg-blue-50"><td class="border border-gray-200 p-3">Key-Value</td><td class="border border-gray-200 p-3 font-bold">Redis Cluster</td><td class="border border-gray-200 p-3"><span class="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs font-bold">CP</span></td><td class="border border-gray-200 p-3">PC/EC</td><td class="border border-gray-200 p-3">Strong Consistency</td></tr>
+<tr class="bg-green-50"><td class="border border-gray-200 p-3">Wide-Column</td><td class="border border-gray-200 p-3 font-bold">Cassandra</td><td class="border border-gray-200 p-3"><span class="bg-green-100 text-green-800 px-2 py-0.5 rounded text-xs font-bold">AP</span></td><td class="border border-gray-200 p-3">PA/EL</td><td class="border border-gray-200 p-3">Tunable Consistency</td></tr>
+<tr class="bg-blue-50"><td class="border border-gray-200 p-3">Wide-Column</td><td class="border border-gray-200 p-3 font-bold">HBase</td><td class="border border-gray-200 p-3"><span class="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs font-bold">CP</span></td><td class="border border-gray-200 p-3">PC/EC</td><td class="border border-gray-200 p-3">Strong Consistency</td></tr>
+<tr class="bg-amber-50"><td class="border border-gray-200 p-3">Document</td><td class="border border-gray-200 p-3 font-bold">MongoDB</td><td class="border border-gray-200 p-3"><span class="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs font-bold">CP(기본)</span></td><td class="border border-gray-200 p-3">PA/EC</td><td class="border border-gray-200 p-3">Configurable</td></tr>
+<tr class="bg-green-50"><td class="border border-gray-200 p-3">Document</td><td class="border border-gray-200 p-3 font-bold">CouchDB</td><td class="border border-gray-200 p-3"><span class="bg-green-100 text-green-800 px-2 py-0.5 rounded text-xs font-bold">AP</span></td><td class="border border-gray-200 p-3">PA/EL</td><td class="border border-gray-200 p-3">Eventual Consistency</td></tr>
+<tr><td class="border border-gray-200 p-3">Graph</td><td class="border border-gray-200 p-3 font-bold">Neo4j</td><td class="border border-gray-200 p-3"><span class="bg-gray-100 text-gray-800 px-2 py-0.5 rounded text-xs font-bold">CA(단일)</span></td><td class="border border-gray-200 p-3">-</td><td class="border border-gray-200 p-3">ACID</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<!-- 적용 사례 -->
+<div class="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+<h3 class="font-bold text-lg text-gray-900 mb-4">실무 적용 사례</h3>
+<div class="space-y-4">
+<div class="bg-green-50 rounded-lg p-4 border border-green-200 cursor-pointer" onclick="this.querySelector('.strategy-detail').classList.toggle('hidden');this.querySelector('.strategy-summary').classList.toggle('hidden');">
+<div class="flex items-center gap-2 mb-2"><span class="bg-green-200 text-green-800 px-2 py-1 rounded text-xs font-bold">PA/EL</span><strong class="text-green-800">Amazon DynamoDB</strong><span class="text-xs text-gray-400 ml-auto">클릭하여 펼치기 ▼</span></div>
+<p class="strategy-summary text-sm text-gray-600">"장바구니 서비스가 1초라도 응답하지 않으면 매출 손실" — 가용성과 저지연을 일관성보다 우선시</p>
+<div class="strategy-detail hidden mt-2 text-sm text-gray-700 space-y-1">
+<p>• 2007년 "Dynamo" 논문으로 설계 철학 공개</p>
+<p>• 하루 10조 건 이상 요청 처리, 99.999% 가용성 달성</p>
+<p>• 비즈니스 요구: 전자상거래에서 응답 지연 = 직접적 매출 손실</p>
+</div>
+</div>
+<div class="bg-indigo-50 rounded-lg p-4 border border-indigo-200 cursor-pointer" onclick="this.querySelector('.strategy-detail').classList.toggle('hidden');this.querySelector('.strategy-summary').classList.toggle('hidden');">
+<div class="flex items-center gap-2 mb-2"><span class="bg-indigo-200 text-indigo-800 px-2 py-1 rounded text-xs font-bold">PC/EC</span><strong class="text-indigo-800">국민은행 차세대 시스템</strong><span class="text-xs text-gray-400 ml-auto">클릭하여 펼치기 ▼</span></div>
+<p class="strategy-summary text-sm text-gray-600">계정계 시스템(입출금, 이체)에 강한 일관성 보장 — 잔액 조회에서 구 값 허용 불가</p>
+<div class="strategy-detail hidden mt-2 text-sm text-gray-700 space-y-1">
+<p>• 2022년 약 5,000억 원 규모 차세대 시스템 구축</p>
+<p>• 금융 거래 특성: 구 데이터 노출 = 금융 사고</p>
+<p>• 네트워크 분할 시 일부 서비스 중단(가용성 희생) 감수</p>
+</div>
+</div>
+<div class="bg-green-50 rounded-lg p-4 border border-green-200 cursor-pointer" onclick="this.querySelector('.strategy-detail').classList.toggle('hidden');this.querySelector('.strategy-summary').classList.toggle('hidden');">
+<div class="flex items-center gap-2 mb-2"><span class="bg-green-200 text-green-800 px-2 py-1 rounded text-xs font-bold">PA/EL</span><strong class="text-green-800">Netflix Cassandra</strong><span class="text-xs text-gray-400 ml-auto">클릭하여 펼치기 ▼</span></div>
+<p class="strategy-summary text-sm text-gray-600">2.3억 글로벌 구독자 대상 — 시청 기록 조회 0.1초 이내 응답이 핵심</p>
+<div class="strategy-detail hidden mt-2 text-sm text-gray-700 space-y-1">
+<p>• 추천 시스템, 시청 기록, 사용자 프로필을 Cassandra로 관리</p>
+<p>• Eventual Consistency 허용, 수 밀리초 이내 동기화</p>
+<p>• 3개 AWS 리전에 걸쳐 클러스터 운영, 분할 시 독립 서비스</p>
+</div>
+</div>
+</div>
+</div>
+
+<!-- 연관 이론 -->
+<div class="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+<h3 class="font-bold text-lg text-gray-900 mb-4">연관 이론 연결</h3>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+<div class="bg-indigo-50 rounded-lg p-4 border border-indigo-200">
+<h4 class="font-bold text-indigo-800 text-sm mb-2">ACID vs BASE</h4>
+<p class="text-xs text-gray-700">CP 시스템 → ACID에 가깝고, AP 시스템 → BASE에 가깝다. RDBMS의 ACID 트랜잭션이 분산 환경에서 비용이 급증하는 이유가 CAP 정리이다.</p>
+</div>
+<div class="bg-green-50 rounded-lg p-4 border border-green-200">
+<h4 class="font-bold text-green-800 text-sm mb-2">CRDTs</h4>
+<p class="text-xs text-gray-700">Conflict-free Replicated Data Types. AP 시스템에서 데이터 충돌 해결. 수학적으로 충돌 없는 자료구조로 합의 프로토콜 없이 최종 일관성 보장.</p>
+</div>
+<div class="bg-purple-50 rounded-lg p-4 border border-purple-200">
+<h4 class="font-bold text-purple-800 text-sm mb-2">Paxos / Raft</h4>
+<p class="text-xs text-gray-700">CP 시스템의 합의 알고리즘. 과반수(Majority) 기반 합의로 일관성 보장. 과반수 미달 시 요청 거부(가용성 희생).</p>
+</div>
+</div>
+</div>
+</section>
+
+<section id="textbook" class="hidden space-y-6 animate-fade-in">
+<div class="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+<div class="textbook-content">
+
+<h3>제1장 개요 및 배경</h3>
+
+<h4>1.1 분산 시스템과 NoSQL의 부상</h4>
+<p>2000년대 이후 인터넷 서비스의 폭발적 성장으로 전통적인 관계형 데이터베이스(RDBMS)의 수직 확장(Scale-up) 방식은 물리적·경제적 한계에 직면하였다. Google, Amazon, Facebook 등 대규모 서비스 기업들은 수평 확장(Scale-out)이 가능한 분산 데이터 저장소를 자체 개발하기 시작하였으며, 이것이 NoSQL(Not Only SQL) 운동의 시발점이 되었다.</p>
+<p>분산 시스템에서는 데이터를 여러 노드에 분산 저장하므로, 필연적으로 일관성(Consistency), 가용성(Availability), 분할 내성(Partition Tolerance) 간의 트레이드오프가 발생한다. 이 트레이드오프를 이론적으로 정립한 것이 Eric Brewer의 CAP 이론(2000)이며, 이후 Daniel Abadi가 정상 상태에서의 추가적 트레이드오프를 설명하기 위해 PACELC 이론(2012)을 제안하였다.</p>
+
+<h4>1.2 이론의 역사적 맥락</h4>
+<table>
+<thead><tr><th>연도</th><th>사건</th><th>의의</th></tr></thead>
+<tbody>
+<tr><td>1998</td><td>Eric Brewer, UC Berkeley에서 분산 시스템 연구</td><td>CAP 개념의 학문적 기초</td></tr>
+<tr><td>2000</td><td>Brewer, PODC 학회 기조연설에서 CAP 추측(Conjecture) 발표</td><td>"3가지 중 2가지만 선택 가능" 명제 제시</td></tr>
+<tr><td>2002</td><td>Seth Gilbert &amp; Nancy Lynch, MIT에서 CAP 정리 공식 증명</td><td>추측에서 정리(Theorem)로 격상</td></tr>
+<tr><td>2010</td><td>Brewer, "CAP Twelve Years Later" 논문 발표</td><td>CAP의 재해석 및 오해 교정</td></tr>
+<tr><td>2012</td><td>Daniel Abadi, Yale대에서 PACELC 이론 발표</td><td>정상 상태(E)에서의 L/C 트레이드오프 보완</td></tr>
+</tbody>
+</table>
+
+<h3>제2장 CAP 이론의 핵심 개념</h3>
+
+<h4>2.1 CAP 정리(CAP Theorem)의 정의</h4>
+<div class="def-box">
+<p>CAP 정리란 분산 데이터 시스템에서 다음 세 가지 속성을 동시에 모두 만족시키는 것은 불가능하며, 최대 두 가지만 보장할 수 있다는 정리이다.</p>
+</div>
+
+<h4>2.2 세 가지 속성의 상세 정의</h4>
+<table>
+<thead><tr><th>속성</th><th>영문</th><th>정의</th><th>핵심 의미</th></tr></thead>
+<tbody>
+<tr><td>일관성 (C)</td><td>Consistency</td><td>모든 노드가 동일 시점에 동일한 데이터를 반환</td><td>선형적 일관성(Linearizability): 쓰기 완료 후 모든 읽기가 최신 값 반환</td></tr>
+<tr><td>가용성 (A)</td><td>Availability</td><td>장애가 없는 모든 노드는 합리적 시간 내에 응답을 반환</td><td>모든 요청에 대해 에러 없이 응답 (최신 값 보장은 아님)</td></tr>
+<tr><td>분할 내성 (P)</td><td>Partition Tolerance</td><td>네트워크 분할(노드 간 통신 단절)이 발생해도 시스템이 계속 동작</td><td>분산 시스템의 필수 속성 (네트워크 장애는 불가피)</td></tr>
+</tbody>
+</table>
+
+<h4>2.3 CAP 불가능성 증명 (Gilbert &amp; Lynch, 2002)</h4>
+<p><strong>증명의 핵심 논리</strong> (귀류법):</p>
+<ul>
+<li><strong>가정</strong>: C, A, P를 모두 만족하는 분산 시스템이 존재한다고 가정</li>
+<li><strong>네트워크 분할 시나리오 구성</strong>: 노드 N1과 N2가 존재하며, 네트워크 분할로 상호 통신이 불가능한 상태. 클라이언트가 N1에 값 V1을 쓰기(Write) 수행. 다른 클라이언트가 N2에서 읽기(Read) 수행</li>
+<li><strong>모순 도출</strong>: P 보장→네트워크 분할에도 시스템이 동작해야 함. A 보장→N2는 반드시 응답해야 함. C 보장→N2는 최신 값 V1을 반환해야 함. 그러나 N1→N2 통신이 불가능하므로 N2는 V1을 알 수 없음 → <strong>모순</strong></li>
+<li><strong>결론</strong>: C, A, P를 동시에 만족하는 것은 불가능</li>
+</ul>
+
+<h4>2.4 CAP에서의 선택 전략</h4>
+<p>분산 시스템에서 네트워크 분할(P)은 불가피하므로, 실질적 선택은 <strong>CP vs AP</strong>이다.</p>
+<table>
+<thead><tr><th>선택</th><th>전략</th><th>동작 방식</th><th>대표 시스템</th><th>적합 서비스</th></tr></thead>
+<tbody>
+<tr><td>CP</td><td>일관성 우선</td><td>분할 시 일부 노드 응답 거부 (가용성 희생)</td><td>HBase, MongoDB, Redis Cluster, Zookeeper</td><td>금융 거래, 재고 관리, 좌석 예매</td></tr>
+<tr><td>AP</td><td>가용성 우선</td><td>분할 시 구 데이터라도 응답 (일관성 희생)</td><td>Cassandra, DynamoDB, CouchDB, Riak</td><td>SNS 피드, 상품 추천, IoT 센서 데이터</td></tr>
+<tr><td>CA</td><td>분할 무시</td><td>네트워크 분할 자체가 없다고 가정</td><td>전통 RDBMS (단일 노드)</td><td>단일 서버 환경 (분산 시스템 아님)</td></tr>
+</tbody>
+</table>
+<div class="insight-box"><p>CA 선택은 분산 시스템에서는 사실상 불가능하다. 네트워크 분할은 물리적으로 반드시 발생하기 때문이다. 따라서 분산 시스템의 실질적 선택은 항상 CP 또는 AP이다.</p></div>
+
+<h3>제3장 PACELC 이론: CAP의 보완</h3>
+
+<h4>3.1 CAP 이론의 한계</h4>
+<p>CAP 이론은 네트워크 분할이 발생한 상황(Partition)에서의 트레이드오프만 다룬다. 그러나 현실에서 네트워크 분할은 일시적이며, 대부분의 시간은 정상 상태(Normal Operation)이다. 정상 상태에서도 분산 시스템은 지연시간(Latency)과 일관성(Consistency) 사이의 트레이드오프에 직면한다. Daniel Abadi(Yale, 2012)는 이 관점을 PACELC로 정리하였다.</p>
+
+<h4>3.2 PACELC 프레임워크</h4>
+<div class="def-box">
+<p><strong>PACELC</strong> = if <strong>P</strong>artition, choose <strong>A</strong>vailability or <strong>C</strong>onsistency; <strong>E</strong>lse (정상 상태), choose <strong>L</strong>atency or <strong>C</strong>onsistency</p>
+</div>
+
+<h4>3.3 PACELC 4가지 조합 상세</h4>
+<table>
+<thead><tr><th>조합</th><th>분할 시</th><th>정상 시</th><th>특성</th><th>대표 시스템</th></tr></thead>
+<tbody>
+<tr><td><strong>PA/EL</strong></td><td>가용성(A) 우선</td><td>저지연(L) 우선</td><td>최대 성능·가용성, 일관성 최소</td><td>Cassandra, DynamoDB, Riak</td></tr>
+<tr><td><strong>PC/EC</strong></td><td>일관성(C) 우선</td><td>일관성(C) 우선</td><td>강한 일관성, 지연시간 증가 감수</td><td>HBase, VoltDB, MongoDB(strong read)</td></tr>
+<tr><td><strong>PA/EC</strong></td><td>가용성(A) 우선</td><td>일관성(C) 우선</td><td>분할 시 가용, 정상 시 일관성</td><td>MongoDB(기본 설정), PNUTS</td></tr>
+<tr><td><strong>PC/EL</strong></td><td>일관성(C) 우선</td><td>저지연(L) 우선</td><td>드문 조합, 분할 시에만 엄격</td><td>일부 커스텀 시스템</td></tr>
+</tbody>
+</table>
+
+<h4>3.4 정상 상태(E)에서의 L/C 트레이드오프 메커니즘</h4>
+<p><strong>일관성 보장 시 (EC)</strong>: 쓰기 시 모든 복제본(Replica)에 전파 완료 후 응답 → 복제 지연 발생. 읽기 시 다수결(Quorum) 읽기로 최신 값 확인 → 다수 노드 응답 대기 필요. 결과: 응답 시간 증가 (Latency ↑)</p>
+<p><strong>저지연 보장 시 (EL)</strong>: 쓰기 시 가장 가까운 노드에만 기록 후 즉시 응답 → 비동기 복제. 읽기 시 가장 가까운 복제본에서 즉시 읽기 → 구 값 가능. 결과: 일시적 불일치(Eventual Consistency)</p>
+<p><strong>Quorum 수식</strong>: N = 전체 복제본 수, W = 쓰기 승인 수, R = 읽기 승인 수</p>
+<ul>
+<li><strong>강한 일관성 조건</strong>: W + R > N</li>
+<li>예시: N=3일 때, W=2, R=2이면 W+R=4 > 3 → 강한 일관성 보장</li>
+<li>예시: N=3일 때, W=1, R=1이면 W+R=2 ≤ 3 → 최종 일관성(Eventual)</li>
+</ul>
+
+<h3>제4장 비교·분석</h3>
+
+<h4>4.1 CAP vs PACELC 비교</h4>
+<table>
+<thead><tr><th>비교 기준</th><th>CAP 이론</th><th>PACELC 이론</th></tr></thead>
+<tbody>
+<tr><td>제안자</td><td>Eric Brewer (2000)</td><td>Daniel Abadi (2012)</td></tr>
+<tr><td>분석 범위</td><td>분할 발생 시에만</td><td>분할 시 + 정상 시 모두</td></tr>
+<tr><td>선택 축</td><td>A vs C (P는 필수)</td><td>(A vs C) + (L vs C)</td></tr>
+<tr><td>시스템 분류</td><td>CP, AP, (CA) 3가지</td><td>PA/EL, PC/EC, PA/EC, PC/EL 4가지</td></tr>
+<tr><td>한계</td><td>정상 상태 미고려</td><td>연속적 스펙트럼을 이산적으로 분류</td></tr>
+<tr><td>실무 활용</td><td>기본 설계 방향 수립</td><td>세밀한 일관성 수준 결정</td></tr>
+</tbody>
+</table>
+
+<h4>4.2 NoSQL 유형별 CAP/PACELC 매핑</h4>
+<table>
+<thead><tr><th>NoSQL 유형</th><th>대표 시스템</th><th>CAP 분류</th><th>PACELC 분류</th><th>일관성 모델</th></tr></thead>
+<tbody>
+<tr><td>Key-Value</td><td>DynamoDB</td><td>AP</td><td>PA/EL</td><td>Eventual Consistency</td></tr>
+<tr><td>Key-Value</td><td>Redis Cluster</td><td>CP</td><td>PC/EC</td><td>Strong Consistency</td></tr>
+<tr><td>Wide-Column</td><td>Cassandra</td><td>AP</td><td>PA/EL</td><td>Tunable Consistency</td></tr>
+<tr><td>Wide-Column</td><td>HBase</td><td>CP</td><td>PC/EC</td><td>Strong Consistency</td></tr>
+<tr><td>Document</td><td>MongoDB</td><td>CP(기본)</td><td>PA/EC</td><td>Configurable</td></tr>
+<tr><td>Document</td><td>CouchDB</td><td>AP</td><td>PA/EL</td><td>Eventual Consistency</td></tr>
+<tr><td>Graph</td><td>Neo4j</td><td>CA(단일)</td><td>-</td><td>ACID</td></tr>
+</tbody>
+</table>
+
+<h3>제5장 적용 사례</h3>
+
+<h4>5.1 Amazon DynamoDB (PA/EL)</h4>
+<p>Amazon은 2007년 "Dynamo: Amazon's Highly Available Key-value Store" 논문을 통해 DynamoDB의 설계 철학을 공개하였다. Amazon의 전자상거래 플랫폼에서 "장바구니 서비스가 1초라도 응답하지 않으면 매출 손실이 발생한다"는 비즈니스 요구를 반영하여, 가용성과 저지연을 일관성보다 우선시하였다. 2023년 기준 DynamoDB는 AWS의 핵심 서비스로서, 하루 10조 건 이상의 요청을 처리하며 99.999%(5 nines)의 가용성을 달성하고 있다.</p>
+
+<h4>5.2 국민은행 차세대 시스템 (PC/EC)</h4>
+<p>국민은행은 2022년 약 5,000억 원 규모의 차세대 시스템 구축 프로젝트에서 계정계 시스템(입출금, 이체)에 강한 일관성을 보장하는 CP 기반 시스템을 채택하였다. 금융 거래의 특성상 "잔액 조회 시 구 값이 보이는 것"은 허용될 수 없으며, 이로 인해 네트워크 분할 시 일부 서비스 중단(가용성 희생)을 감수하는 설계를 선택하였다.</p>
+
+<h4>5.3 Netflix의 Cassandra 활용 (PA/EL)</h4>
+<p>Netflix는 약 2.3억 명의 글로벌 구독자에게 서비스를 제공하며, 추천 시스템, 시청 기록, 사용자 프로필 등의 데이터를 Cassandra(PA/EL)로 관리한다. 사용자가 시청 기록 조회 시 0.1초 이내 응답이 핵심이므로, 일시적 불일치(Eventual Consistency)를 허용하되 최종적으로 수 밀리초 이내에 모든 복제본이 동기화되도록 설계하였다. Netflix는 Cassandra 클러스터를 3개 AWS 리전에 걸쳐 운영하며, 분할 발생 시에도 각 리전이 독립적으로 서비스를 제공한다.</p>
+
+<h3>제6장 연관 이론 연결</h3>
+
+<h4>6.1 ACID vs BASE</h4>
+<p>CAP 이론은 데이터 일관성 모델의 양 극단인 ACID(Atomicity, Consistency, Isolation, Durability)와 BASE(Basically Available, Soft state, Eventually consistent)를 이론적으로 설명하는 프레임워크이다. CP 시스템은 ACID에 가깝고, AP 시스템은 BASE에 가깝다. RDBMS의 ACID 트랜잭션이 단일 노드에서는 완벽하지만 분산 환경에서는 비용이 급격히 증가하는 이유가 바로 CAP 정리에 의한 것이다.</p>
+
+<h4>6.2 Eventual Consistency와 CRDTs</h4>
+<p>AP 시스템에서 발생하는 데이터 충돌을 해결하기 위해 CRDT(Conflict-free Replicated Data Types)가 연구되고 있다. CRDT는 수학적으로 충돌이 발생하지 않는 자료구조로, 분산 환경에서 별도의 합의 프로토콜 없이 최종 일관성을 보장한다. 이는 CAP에서 AP를 선택하면서도 일관성을 점진적으로 확보하려는 실용적 접근이다.</p>
+
+<h4>6.3 Paxos/Raft 합의 알고리즘</h4>
+<p>CP 시스템에서 분할 상황의 일관성을 보장하기 위해 사용되는 합의 알고리즘이다. Leslie Lamport의 Paxos(1998)와 Diego Ongaro의 Raft(2014)가 대표적이며, 이들은 과반수(Majority) 기반 합의로 일관성을 보장하되, 과반수 미달 시 요청을 거부(가용성 희생)하는 방식으로 CAP에서의 CP 선택을 구현한다.</p>
+
+<h3>제7장 시험 출제 관점</h3>
+
+<h4>7.1 기출 연계 포인트</h4>
+<ul>
+<li><strong>1교시형</strong>: "CAP 이론을 설명하고 PACELC와 비교하시오" → 본 교재 제2~3장 중심</li>
+<li><strong>1교시형</strong>: "NoSQL의 일관성 모델을 설명하시오" → 제4장 + Quorum 수식 활용</li>
+<li><strong>2교시형 연계</strong>: "분산 데이터베이스 설계 시 고려사항" → CAP 선택 전략 + PACELC 적용</li>
+</ul>
+
+<h4>7.2 답안 구성 전략</h4>
+<p><strong>서론 (15%)</strong>: CAP의 배경(분산 시스템의 불가피한 트레이드오프) + 정의</p>
+<p><strong>본론 (75%)</strong>:</p>
+<ul>
+<li>CAP 세 속성 정의 및 불가능성 증명 (25%)</li>
+<li>CP/AP 선택 전략과 대표 시스템 매핑 (20%)</li>
+<li>PACELC의 보완 관점 및 4가지 조합 (20%)</li>
+<li>Quorum 수식 및 적용 사례 (10%)</li>
+</ul>
+<p><strong>결론 (10%)</strong>: 현대 분산 시스템의 Tunable Consistency 추세 연결</p>
+
+</div>
+</div>
+</section>
+
+<section id="script" class="hidden space-y-6 animate-fade-in">
+<div class="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+<div class="bg-amber-50 border border-amber-300 rounded-lg p-4 mb-6">
+<div class="flex items-center gap-2 mb-2"><span class="bg-amber-200 text-amber-800 px-2 py-1 rounded text-xs font-bold">🔒 멘토 전용</span></div>
+<p class="text-sm text-amber-800">이 탭은 멘토 전용입니다. URL에 <code class="bg-amber-100 px-1 rounded">?mentor=true</code> 파라미터를 추가하여 접근할 수 있습니다.</p>
+</div>
+
+<div class="textbook-content">
+<h4>🎬 [도입부]</h4>
+<p>안녕하세요, ZIP-UP 멘토링 수강생 여러분. 오늘은 분산 시스템의 가장 기본이 되는 이론, CAP 이론과 PACELC 이론에 대해 이야기해보겠습니다.</p>
+<p>이 토픽이 왜 중요하냐면요, 여러분이 NoSQL이나 분산 데이터베이스 관련 문제를 풀 때, 단순히 "MongoDB는 CP입니다, Cassandra는 AP입니다"라고만 쓰면 합격 점수를 받기 어려워요. 채점관은 "왜 3가지를 동시에 못 만족하는지", "정상 상태에서는 어떤 트레이드오프가 있는지"까지 아는 사람에게 높은 점수를 주거든요. 기출에서도 분산 시스템 설계, NoSQL 일관성 모델, 빅데이터 아키텍처 관련 문제가 꾸준히 나오고 있어서, 이 이론을 한 번 제대로 정리해 두면 여러 문제에 폭넓게 활용할 수 있습니다. 특히 2교시형에서 분산 데이터베이스 설계 전략을 물어볼 때 CAP과 PACELC를 뼈대로 답안을 구성하면 아주 깔끔한 답안이 나와요.</p>
+
+<h4>🎬 [CAP 이론 설명]</h4>
+<p>자, 먼저 CAP 이론부터 살펴볼게요. 2000년에 UC Berkeley의 Eric Brewer 교수가 PODC라는 학회에서 기조연설을 하면서 처음 제안한 건데요, 당시에는 "추측(Conjecture)"이었어요. 그런데 2002년에 MIT의 Seth Gilbert와 Nancy Lynch가 이걸 수학적으로 증명해서 "정리(Theorem)"로 격상된 거예요. 이 역사를 답안에 쓰면 확실히 차별화가 됩니다.</p>
+<p>CAP이 뭐냐면, 분산 시스템에서 세 가지 속성이 있어요. C는 Consistency, 일관성이에요. 모든 노드가 같은 시점에 같은 데이터를 보여줘야 한다는 거죠. A는 Availability, 가용성인데, 장애가 없는 노드는 반드시 응답을 줘야 한다는 겁니다. P는 Partition Tolerance, 분할 내성으로, 네트워크가 끊어져도 시스템이 계속 돌아가야 한다는 거예요.</p>
+<p>핵심은 이 세 가지를 동시에 다 만족시킬 수 없다는 거거든요. 비유를 하나 들어볼게요. 여러분이 서울과 부산에 각각 사무실이 있는 회사라고 생각해보세요. 서울 사무실에서 고객 정보를 수정했는데, 그 순간 부산 사무실에서 같은 고객 정보를 조회한다면? 전화선이 끊어져 있는 상태에서 서울의 최신 정보를 부산에서 볼 수 있을까요? 불가능하잖아요. 이게 바로 CAP의 핵심이에요.</p>
+
+<h4>🎬 [불가능성 증명]</h4>
+<p>자, 증명 과정을 한번 따라가 봅시다. 이걸 답안에 쓰면 정말 좋은 점수를 받을 수 있어요. 귀류법을 쓸 건데요, 먼저 "C, A, P를 모두 만족하는 시스템이 있다"고 가정합니다.</p>
+<p>노드가 두 개 있다고 해볼게요, N1과 N2. 이 둘 사이에 네트워크가 끊어진 상황이에요. P를 만족하니까 시스템은 계속 동작해야겠죠? 이 상태에서 클라이언트 A가 N1에 값을 "100"으로 씁니다. 그리고 클라이언트 B가 N2에서 읽기를 해요. A를 만족하려면 N2는 반드시 응답해야 하고요, C를 만족하려면 N2는 최신 값인 "100"을 줘야 해요. 그런데 네트워크가 끊어져 있으니까 N2는 N1에서 새로 쓴 값을 알 수가 없잖아요? 모순이 발생하는 거죠. 그래서 3가지를 동시에 만족하는 건 불가능하다, 이게 증명의 핵심이에요.</p>
+<p>여기서 많이들 놓치시는 부분이 있는데요, 분산 시스템에서 P, 즉 네트워크 분할은 우리가 선택하는 게 아니에요. 반드시 발생해요. 물리적으로 네트워크 케이블이 끊어질 수도 있고, 라우터가 다운될 수도 있고, 심지어 해저 케이블이 손상될 수도 있잖아요? 그래서 실질적인 선택은 항상 CP 아니면 AP입니다.</p>
+
+<h4>🎬 [CP vs AP 선택]</h4>
+<p>CP를 선택하면 어떻게 되냐면요, 네트워크 분할이 발생했을 때 일관성을 지키기 위해 일부 노드가 응답을 거부해요. "나 지금 최신 데이터 확인 못 하니까 응답 안 할게"라는 거죠. 은행 시스템 같은 데서 쓰는 방식이에요. 잔액이 100만 원인데 구 데이터 때문에 200만 원으로 보이면 큰일 나잖아요?</p>
+<p>AP를 선택하면 반대예요. 네트워크가 끊어져도 일단 응답은 해요. 대신 최신 값이 아닐 수 있어요. 카카오톡 같은 SNS에서 친구의 프로필 사진이 잠깐 예전 사진으로 보인다고 큰 문제는 아니잖아요? 이런 서비스에 적합한 거예요.</p>
+
+<h4>🎬 [PACELC 이론]</h4>
+<p>자, 여기서 한 단계 더 나아가 봅시다. PACELC 이론이에요. 2012년에 Yale대의 Daniel Abadi 교수가 제안했는데요, CAP의 한계를 딱 집어서 보완한 이론이에요.</p>
+<p>CAP의 문제가 뭐냐면, 네트워크 분할이 발생한 상황만 다룬다는 거예요. 그런데 현실에서 네트워크 분할은 1년에 몇 번 정도 일어나는 극단적 상황이잖아요? 나머지 99.9%의 시간, 즉 정상 상태에서도 트레이드오프가 있거든요. 그게 바로 <span class="highlight">Latency</span>와 <span class="highlight">Consistency</span> 사이의 트레이드오프예요.</p>
+<p>PACELC를 읽는 법을 알려드릴게요. "if Partition, choose A or C; Else, choose L or C" 이렇게 읽으면 돼요. 앞의 PAC는 CAP이랑 같고, 뒤의 ELC가 새로 추가된 부분이에요.</p>
+<p>왜 정상 상태에서도 충돌하냐면요, 일관성을 보장하려면 데이터를 쓸 때 모든 복제본에 전파가 완료될 때까지 기다려야 해요. N=3이면 3개 노드에 다 쓰고 나서야 "쓰기 완료"라고 응답하는 거죠. 당연히 느려질 수밖에 없어요. 반면에 저지연을 원하면 가장 가까운 노드 하나에만 쓰고 바로 응답하면 되는데, 나머지 노드에는 나중에 비동기로 전파하니까 그 사이에 읽으면 구 값이 나올 수 있는 거예요.</p>
+
+<h4>🎬 [Quorum 수식 &amp; 실무 사례]</h4>
+<p>여기서 <span class="highlight">Quorum 수식</span>이 중요한데요, 이걸 답안에 꼭 쓰세요. <span class="highlight">W + R > N</span>이면 강한 일관성을 보장할 수 있어요. W는 쓰기 시 몇 개 노드에 확인받을 건지, R은 읽기 시 몇 개 노드에서 읽을 건지, N은 전체 복제본 수예요. 예를 들어 N=3이면 W=2, R=2로 설정하면 W+R=4 > 3이니까 강한 일관성이 보장돼요. 반대로 W=1, R=1이면 W+R=2로 3보다 작으니까 최종 일관성이 되는 거죠. 이 수치를 구체적으로 대입해서 쓰면 채점관이 "아, 이 사람 실무를 아는구나" 하고 높은 점수를 줍니다.</p>
+<p>실무 사례도 정리해 드릴게요. Amazon의 DynamoDB는 전형적인 PA/EL 시스템이에요. "장바구니 서비스가 1초라도 응답 안 하면 매출 손실"이라는 거예요. 현재 DynamoDB는 하루에 10조 건 이상의 요청을 처리하면서 99.999% 가용성을 달성하고 있어요.</p>
+<p>반대로 은행이나 금융 시스템은 PC/EC를 택하는 게 맞겠죠? 국민은행 차세대 시스템 같은 경우, 약 5천억 원 규모의 프로젝트에서 계정계 시스템에 강한 일관성을 적용했어요. 잔액 조회에서 구 데이터가 보이면 금융 사고가 나니까요.</p>
+
+<h4>🎬 [답안 작성 팁 &amp; 마무리]</h4>
+<p>자, 이제 답안 작성 팁을 정리해 드릴게요. 서론에서는 분산 시스템의 확산 배경과 CAP의 의의를 간단히 쓰고요, 본론에서 제일 중요한 건 세 가지예요. 첫째, <span class="highlight">CAP 삼각형 도식</span>을 그리세요. 둘째, <span class="highlight">불가능성 증명</span>을 귀류법으로 간단히 서술하세요. 이걸 쓰는 사람이 거의 없어서 확실한 차별화가 됩니다. 셋째, <span class="highlight">PACELC 의사결정 트리</span>를 그리고 4가지 조합을 표로 정리하세요.</p>
+<p>결론에서는 최신 트렌드를 언급하면 좋아요. 요즘 Cassandra 같은 시스템은 <span class="highlight">Tunable Consistency</span>라고 해서, 쿼리마다 일관성 수준을 조절할 수 있거든요. ONE으로 설정하면 AP처럼 동작하고, ALL로 설정하면 CP처럼 동작해요.</p>
+<p>마지막으로 연관 토픽 연결도 해두세요. CAP은 ACID vs BASE 비교와 직결되고요, 합의 알고리즘(Paxos, Raft)과도 연결돼요. 이렇게 다른 토픽과 연결 지어 쓰면 답안의 깊이가 확 달라집니다.</p>
+<p>여러분, 오늘 배운 핵심을 마지막으로 정리할게요. <span class="highlight">"캡 속 일가분"</span> — 일관성, 가용성, 분할 내성. 그리고 "PACELC는 정상 상태의 L과 C까지 커버한다". <span class="highlight">W + R > N</span>이면 강한 일관성. 이 세 가지만 확실히 외우고 가시면 됩니다. 화이팅 하시고, 수고하셨습니다!</p>
+</div>
+</div>
+</section>
+
+<div id="quiz" class="hidden space-y-8 animate-fade-in">
+<!-- AI 실전 퀴즈 영역 -->
+<div class="bg-indigo-50 rounded-xl p-6 border border-indigo-100 mb-8">
+<div class="flex items-center justify-between mb-4">
+<h3 class="font-bold text-indigo-900 text-lg flex items-center"><span class="mr-2">🧠</span> AI 실전 문제 생성</h3>
+<button onclick="generateQuiz()" id="btn-quiz-gen" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm transition-colors flex items-center gap-2"><span>✨ 새로운 문제 생성</span></button>
+</div>
+<div id="quiz-loading" class="hidden py-8 text-center">
+<div class="typing-indicator flex justify-center mb-2"><span></span><span></span><span></span></div>
+<p class="text-indigo-600 text-sm">AI가 문제를 출제하고 있습니다...</p>
+</div>
+<div id="quiz-container" class="hidden space-y-4">
+<div class="bg-white p-5 rounded-lg shadow-sm border border-indigo-100">
+<div class="flex items-start gap-2 mb-4">
+<span id="quiz-type-badge" class="bg-indigo-100 text-indigo-800 text-xs font-bold px-2 py-1 rounded whitespace-nowrap mt-1">객관식</span>
+<p id="quiz-question" class="font-bold text-gray-800 text-lg"></p>
+</div>
+<div id="quiz-options" class="space-y-2"></div>
+<div id="quiz-input-area" class="hidden mt-4">
+<div class="flex gap-2">
+<input type="text" id="quiz-answer-input" placeholder="정답을 입력하세요" class="flex-grow border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+<button onclick="checkShortAnswer()" id="btn-short-submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-bold">제출</button>
+</div>
+</div>
+</div>
+<div id="quiz-feedback" class="hidden bg-white p-5 rounded-lg border-l-4"></div>
+</div>
+<div id="quiz-placeholder" class="text-center py-8 text-gray-500 border-2 border-dashed border-indigo-200 rounded-lg">
+<p>'새로운 문제 생성' 버튼을 눌러 실력을 점검해보세요.</p>
+</div>
+</div>
+
+<!-- 암기 노트 ① 두문자어 -->
+<div class="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+<h3 class="font-bold text-lg text-gray-900 mb-4">📝 암기 노트 ① 두문자어 암기법</h3>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+<div class="bg-indigo-50 rounded-lg p-4 border border-indigo-200 text-center">
+<div class="text-2xl font-bold text-indigo-700 mb-2">"캡 속 일가분"</div>
+<p class="text-sm text-gray-600">CAP의 3속성: <strong>일</strong>관성, <strong>가</strong>용성, <strong>분</strong>할 내성</p>
+</div>
+<div class="bg-purple-50 rounded-lg p-4 border border-purple-200 text-center">
+<div class="text-2xl font-bold text-purple-700 mb-2">"파셀크 이엘씨"</div>
+<p class="text-sm text-gray-600">PACELC: <strong>P</strong>artition→A/C, <strong>E</strong>lse→<strong>L</strong>/C</p>
+</div>
+<div class="bg-green-50 rounded-lg p-4 border border-green-200 text-center">
+<div class="text-2xl font-bold text-green-700 mb-2">"W+R>N"</div>
+<p class="text-sm text-gray-600">Quorum 일관성 공식: <strong>W</strong> + <strong>R</strong> > <strong>N</strong></p>
+</div>
+</div>
+</div>
+
+<!-- 암기 노트 ② 골격 답안 -->
+<div class="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+<h3 class="font-bold text-lg text-gray-900 mb-4">📝 암기 노트 ② 골격 답안 구조</h3>
+<table class="w-full text-sm border-collapse">
+<thead><tr class="bg-gray-50"><th class="border border-gray-200 p-3 text-left w-24">구간</th><th class="border border-gray-200 p-3 text-left">내용</th></tr></thead>
+<tbody>
+<tr><td class="border border-gray-200 p-3 font-bold text-indigo-700">서론 (15%)</td><td class="border border-gray-200 p-3">분산 시스템 확산 배경 → CAP의 의의 → PACELC 보완 필요성</td></tr>
+<tr><td class="border border-gray-200 p-3 font-bold text-blue-700" rowspan="4">본론 (75%)</td><td class="border border-gray-200 p-3">1. CAP 이론 (25%) — 3속성 정의 + 불가능성 증명(귀류법) + 삼각형 도식</td></tr>
+<tr><td class="border border-gray-200 p-3">2. CP vs AP 선택 전략 (20%) — 비교표 + 대표 시스템 매핑 + 적합 서비스</td></tr>
+<tr><td class="border border-gray-200 p-3">3. PACELC 이론 (20%) — 정상 상태(E)의 L/C 트레이드오프 + 4조합 + 의사결정 트리</td></tr>
+<tr><td class="border border-gray-200 p-3">4. 실무 적용 (10%) — Quorum 수식(W+R>N) + DynamoDB/HBase 사례</td></tr>
+<tr><td class="border border-gray-200 p-3 font-bold text-green-700">결론 (10%)</td><td class="border border-gray-200 p-3">Tunable Consistency 추세 → 서비스 특성별 최적 선택 강조</td></tr>
+</tbody>
+</table>
+</div>
+
+<!-- 암기 노트 ③ 필수 도식 + 차별화 포인트 -->
+<div class="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+<h3 class="font-bold text-lg text-gray-900 mb-4">📝 암기 노트 ③ 필수 도식 &amp; 차별화 포인트</h3>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+<div class="bg-indigo-50 rounded-lg p-3 border border-indigo-200">
+<h4 class="text-sm font-bold text-indigo-800 mb-1">📐 필수 도식</h4>
+<ul class="text-xs text-gray-700 space-y-1">
+<li>1. CAP 삼각형: C-A-P 꼭짓점 + CP/AP/CA 영역</li>
+<li>2. PACELC 의사결정 트리: P→A/C + E→L/C 분기</li>
+<li>3. NoSQL 시스템 매핑표: 시스템별 CAP/PACELC 분류</li>
+<li>4. Quorum 수식: W + R > N + 수치 예시</li>
+</ul>
+</div>
+<div class="bg-amber-50 rounded-lg p-3 border border-amber-200">
+<h4 class="text-sm font-bold text-amber-800 mb-1">⭐ 차별화 포인트</h4>
+<ul class="text-xs text-gray-700 space-y-1">
+<li>• Gilbert &amp; Lynch의 <strong>귀류법 증명</strong> 과정 포함 → 이론적 깊이</li>
+<li>• <strong>Quorum 수식</strong>에 구체적 수치(N=3, W=2, R=2) 대입</li>
+<li>• PACELC의 <strong>PA/EC 조합</strong>(MongoDB 기본) 설명 → 실무 이해도</li>
+<li>• <strong>Tunable Consistency</strong>(ONE/QUORUM/ALL) → 최신 트렌드</li>
+</ul>
+</div>
+</div>
+</div>
+
+<!-- 제2부 전체 암기 요약 -->
+<div class="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+<h3 class="font-bold text-lg text-indigo-800 mb-4 border-l-4 border-indigo-500 pl-3">제2부 — 암기 요약 자료</h3>
+<div class="textbook-content">
+<h4>한 줄 정의</h4>
+<div class="def-box">
+<p>CAP 이론은 분산 시스템에서 일관성(C)·가용성(A)·분할 내성(P)을 동시에 만족할 수 없다는 정리이며, PACELC는 정상 상태에서의 지연시간(L)과 일관성(C) 트레이드오프를 추가로 설명하는 확장 이론이다.</p>
+</div>
+
+<h4>핵심 키워드 맵</h4>
+<div class="bg-slate-50 rounded-lg border border-slate-200 p-4 mb-4">
+<div class="space-y-2 text-sm">
+<div class="font-bold text-indigo-800">CAP/PACELC</div>
+<div class="pl-4 border-l-2 border-indigo-300 space-y-2">
+<div>
+<span class="font-bold text-blue-700">CAP</span> <span class="text-gray-500">(Brewer, 2000 / Gilbert &amp; Lynch 증명 2002)</span>
+<div class="pl-4 border-l-2 border-blue-200 mt-1 text-xs text-gray-600 space-y-1">
+<div>C: 선형적 일관성(Linearizability)</div>
+<div>A: 장애 없는 노드의 응답 보장</div>
+<div>P: 네트워크 분할 하 동작 (필수)</div>
+<div>실질 선택: CP vs AP (CA는 비분산)</div>
+</div>
+</div>
+<div>
+<span class="font-bold text-purple-700">PACELC</span> <span class="text-gray-500">(Abadi, 2012)</span>
+<div class="pl-4 border-l-2 border-purple-200 mt-1 text-xs text-gray-600 space-y-1">
+<div>P시: A vs C</div>
+<div>E시: L vs C</div>
+<div>4조합: PA/EL, PC/EC, PA/EC, PC/EL</div>
+</div>
+</div>
+<div class="text-xs text-gray-600"><span class="font-bold text-green-700">Quorum</span>: W + R > N (강한 일관성 조건)</div>
+<div class="text-xs text-gray-600"><span class="font-bold text-amber-700">연관</span>: ACID↔BASE, CRDTs, Paxos/Raft</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+</main>
+
+<!-- AI 튜터 플로팅 버튼 -->
+<button onclick="toggleChat()" class="fixed bottom-6 right-6 z-50 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all p-4 flex items-center gap-2 group">
+<span class="text-2xl">💬</span><span class="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 whitespace-nowrap text-sm font-bold">AI 튜터</span>
+</button>
+
+<!-- 채팅 사이드바 -->
+<div id="chat-sidebar" class="fixed top-0 right-0 w-80 sm:w-96 h-full bg-white shadow-2xl z-50 flex flex-col closed">
+<div class="p-4 bg-indigo-600 text-white flex justify-between items-center">
+<h3 class="font-bold">💬 AI 튜터</h3>
+<button onclick="toggleChat()" class="text-white hover:text-indigo-200 text-xl">&times;</button>
+</div>
+<div id="chat-messages" class="flex-grow overflow-y-auto p-4 flex flex-col space-y-2">
+<div class="chat-msg ai">안녕하세요! CAP 이론과 PACELC에 대해 궁금한 것을 물어보세요.</div>
+</div>
+<div class="p-4 border-t border-gray-200">
+<div class="flex gap-2">
+<input type="text" id="chat-input" onkeydown="handleChatKey(event)" placeholder="질문을 입력하세요..." class="flex-grow border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+<button onclick="sendChatMessage()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-bold">전송</button>
+</div>
+</div>
+</div>
+
+<!-- API Key 설정 모달 -->
+<div id="settings-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex justify-center items-center">
+<div class="bg-white rounded-lg p-6 w-full max-w-md mx-4 shadow-xl">
+<h3 class="text-lg font-bold mb-4">⚙️ API Key 설정</h3>
+<p class="text-sm text-gray-600 mb-4">AI 기능을 사용하기 위해 Google Gemini API Key를 입력하세요.</p>
+<input type="password" id="api-key-input" placeholder="API Key 입력" class="w-full border border-gray-300 rounded-lg px-4 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+<div class="flex gap-2">
+<button onclick="saveApiKey()" class="flex-1 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700">저장</button>
+<button onclick="toggleSettings()" class="flex-1 bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200">취소</button>
+</div>
+<p class="text-xs text-gray-400 mt-3">* API Key는 브라우저 로컬 스토리지에 저장됩니다.</p>
+</div>
+</div>
+
+<footer class="bg-white mt-12 py-8 border-t border-gray-200">
+<div class="max-w-6xl mx-auto px-4 text-center">
+<div class="flex flex-col md:flex-row justify-center items-center gap-2 md:gap-6 text-sm text-gray-600 mb-3 font-medium">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-indigo-500"></span>
+<span>박교익PE (132회 정보관리기술사, dr.code92@gmail.com)</span>
+</div>
+</div>
+<p class="text-xs text-gray-400">Copyright © KPC 정보관리기술사 ZIP-UP 심화반. All rights reserved.</p>
+</div>
+</footer>
+
+<script>
+// ── 멘토 모드 ──
+var isMentorMode = new URLSearchParams(window.location.search).get('mentor') === 'true';
+if(isMentorMode){document.getElementById('nav-script').classList.remove('hidden');}
+var sections = isMentorMode
+    ? ['overview','cap','pacelc','compare','textbook','script','quiz']
+    : ['overview','cap','pacelc','compare','textbook','quiz'];
+
+// ── 탭 네비게이션 ──
+function navTo(id){
+    document.querySelectorAll('.nav-item').forEach(function(el){el.classList.remove('active','text-indigo-600');});
+    document.getElementById('nav-'+id).classList.add('active','text-indigo-600');
+    sections.forEach(function(s){document.getElementById(s).classList.add('hidden');});
+    document.getElementById(id).classList.remove('hidden');
+    window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// ── API Key 관리 ──
+function getApiKey(){
+    var k=localStorage.getItem('gemini_api_key');
+    if(!k){var u=new URLSearchParams(window.location.search);k=u.get('key');}
+    return k;
+}
+function toggleSettings(){document.getElementById('settings-modal').classList.toggle('hidden');}
+function saveApiKey(){var k=document.getElementById('api-key-input').value.trim();if(k){localStorage.setItem('gemini_api_key',k);toggleSettings();alert('API Key가 저장되었습니다.');}else{alert('API Key를 입력해주세요.');}}
+
+// ── 채팅 ──
+function toggleChat(){var s=document.getElementById('chat-sidebar');s.classList.toggle('closed');s.classList.toggle('open');}
+function handleChatKey(e){if(e.key==='Enter')sendChatMessage();}
+function sendChatMessage(){
+    var input=document.getElementById('chat-input');var msg=input.value.trim();if(!msg)return;
+    var box=document.getElementById('chat-messages');
+    box.innerHTML+='<div class="chat-msg user">'+msg+'</div>';input.value='';
+    var key=getApiKey();
+    if(!key){box.innerHTML+='<div class="chat-msg ai">⚠️ API Key가 설정되지 않았습니다. 상단의 🔑 API 버튼을 눌러 설정해주세요.</div>';toggleSettings();return;}
+    box.innerHTML+='<div id="typing-ind" class="chat-msg ai"><div class="typing-indicator"><span></span><span></span><span></span></div></div>';
+    box.scrollTop=box.scrollHeight;
+    fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key='+key,{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({contents:[{parts:[{text:"당신은 정보관리기술사 시험 멘토입니다. 'CAP 이론과 PACELC' 관련 질문에 전문적이고 명쾌하게 답변해주세요. 300자 이내로 핵심만 요약. 질문: "+msg}]}]})
+    }).then(function(r){return r.json();}).then(function(d){
+        var el=document.getElementById('typing-ind');if(el)el.remove();
+        try{var t=d.candidates[0].content.parts[0].text;box.innerHTML+='<div class="chat-msg ai prose">'+marked.parse(t)+'</div>';}
+        catch(e){box.innerHTML+='<div class="chat-msg ai">⚠️ 응답 처리 중 오류가 발생했습니다.</div>';}
+        box.scrollTop=box.scrollHeight;
+    }).catch(function(){
+        var el=document.getElementById('typing-ind');if(el)el.remove();
+        box.innerHTML+='<div class="chat-msg ai">⚠️ API 호출 중 오류가 발생했습니다.</div>';
+    });
+}
+
+// ── 클릭 확장 ──
+function updateDetail(key){
+    document.querySelectorAll('.tech-block').forEach(function(el){el.classList.remove('selected','ring-2','ring-indigo-500','bg-indigo-50','border-indigo-500');});
+    var block=document.getElementById('block-'+key);
+    if(block)block.classList.add('selected','ring-2','ring-indigo-500','bg-indigo-50','border-indigo-500');
+    var panel=document.getElementById('detail-panel');
+    if(panel && typeof detailData!=='undefined' && detailData[key]){
+        panel.innerHTML='<h4 class="font-bold text-lg text-gray-900 mb-2">'+detailData[key].title+'</h4><div class="text-gray-600 text-sm leading-relaxed">'+detailData[key].content+'</div>';
+        panel.classList.remove('hidden');
+    }
+}
+
+// ── PACELC 클릭 확장 데이터 ──
+var detailData = {
+    'pael': {title:'PA/EL — 최대 성능·가용성', content:'<p>분할 발생 시 가용성(A)을 택하고, 정상 상태에서 저지연(L)을 택하는 조합입니다. 일관성을 최소화하여 최대 성능을 추구합니다.</p><p class="mt-2"><strong>대표 시스템:</strong> Cassandra, DynamoDB, Riak</p><p><strong>특징:</strong> Eventual Consistency를 허용하며, 비동기 복제로 빠른 응답. Amazon, Netflix 등 대규모 서비스에서 채택.</p>'},
+    'pcec': {title:'PC/EC — 강한 일관성', content:'<p>분할 발생 시에도 정상 시에도 일관성(C)을 택하는 조합입니다. 지연시간 증가를 감수하고 데이터 정확성을 최우선합니다.</p><p class="mt-2"><strong>대표 시스템:</strong> HBase, VoltDB, MongoDB(strong read)</p><p><strong>특징:</strong> 금융, 의료 등 데이터 무결성이 필수인 도메인에 적합. Quorum W+R>N 조건 적용.</p>'},
+    'paec': {title:'PA/EC — 하이브리드 전략', content:'<p>분할 발생 시 가용성(A), 정상 시 일관성(C)을 택하는 흥미로운 조합입니다. 극단 상황에서는 유연하게, 평상시에는 엄격하게 운영합니다.</p><p class="mt-2"><strong>대표 시스템:</strong> MongoDB(기본 설정), PNUTS</p><p><strong>특징:</strong> 시험 답안에서 이 조합을 언급하면 실무 이해도 차별화 가능.</p>'},
+    'pcel': {title:'PC/EL — 드문 조합', content:'<p>분할 발생 시 일관성(C), 정상 시 저지연(L)을 택하는 조합입니다. 이론적으로는 존재하지만 실무에서는 매우 드뭅니다.</p><p class="mt-2"><strong>대표 시스템:</strong> 일부 커스텀 시스템</p><p><strong>특징:</strong> 분할 시에만 엄격한 일관성을 적용하고, 평상시에는 성능을 우선시.</p>'}
+};
+
+// ── 퀴즈 (고정 템플릿 — QUIZ_TEMPLATE.md 기준) ──
+var geminiKey = (typeof getApiKey === 'function') ? (getApiKey() || '') : (localStorage.getItem('geminiKey') || localStorage.getItem('gemini_api_key') || '');
+var quizTypeHistory = [];
+var currentQuizData = null;
+var quizTopics = [
+    {category:"CAP 이론 기초",keywords:"Consistency, Availability, Partition Tolerance, Brewer, 2000년, 정리, 추측"},
+    {category:"CAP 불가능성 증명",keywords:"Gilbert, Lynch, 귀류법, 네트워크 분할, 선형적 일관성, 모순"},
+    {category:"CP vs AP 선택",keywords:"CP, AP, CA, HBase, Cassandra, DynamoDB, 금융, SNS"},
+    {category:"PACELC 프레임워크",keywords:"Abadi, 2012, Latency, Consistency, Else, 정상 상태, 의사결정 트리"},
+    {category:"PACELC 4가지 조합",keywords:"PA/EL, PC/EC, PA/EC, PC/EL, DynamoDB, HBase, MongoDB"},
+    {category:"Quorum과 일관성 수준",keywords:"W+R>N, Quorum, Tunable Consistency, ONE, ALL, Eventual"},
+    {category:"NoSQL 유형별 매핑",keywords:"Key-Value, Wide-Column, Document, Graph, ACID, BASE"},
+    {category:"실무 사례와 연관 이론",keywords:"Amazon DynamoDB, Netflix Cassandra, 국민은행, CRDTs, Paxos, Raft"}
+];
+
+async function generateQuiz() {
+    geminiKey = (typeof getApiKey === 'function') ? (getApiKey() || '') : (localStorage.getItem('geminiKey') || localStorage.getItem('gemini_api_key') || '');
+    if (!geminiKey) { alert('API Key를 먼저 설정해주세요.'); toggleSettings(); return; }
+    var btn = document.getElementById('btn-quiz-gen');
+    btn.disabled = true; btn.innerHTML = '<span>생성 중...</span>';
+    document.getElementById('quiz-placeholder').classList.add('hidden');
+    document.getElementById('quiz-container').classList.add('hidden');
+    document.getElementById('quiz-loading').classList.remove('hidden');
+    var isMC;
+    var recent = quizTypeHistory.slice(-2);
+    if (recent.length >= 2 && recent[0] === recent[1]) { isMC = !recent[1]; }
+    else { isMC = Math.random() > 0.5; }
+    quizTypeHistory.push(isMC);
+    var selected = quizTopics[Math.floor(Math.random() * quizTopics.length)];
+    var quizType = isMC ? '객관식 (4지선다)' : '단답형';
+    var format = isMC
+        ? '{"question":"문제","options":["A","B","C","D"],"correctIndex":0,"explanation":"해설"}'
+        : '{"question":"문제","correctAnswer":"정답","explanation":"해설"}';
+    var prompt = "다음 카테고리에 대한 " + quizType + " 퀴즈 1문제를 만드세요.\n"
+        + "카테고리: " + selected.category + "\n"
+        + "관련 키워드: " + selected.keywords + "\n"
+        + "규칙: 반드시 위 카테고리와 키워드에 직접 관련된 문제를 출제하세요.\n"
+        + "JSON 형식으로 응답: " + format;
+    try {
+        var r = await fetch(
+            'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=' + geminiKey,
+            { method:'POST', headers:{'Content-Type':'application/json'},
+              body: JSON.stringify({ contents:[{parts:[{text:prompt}]}], generationConfig:{responseMimeType:"application/json"} })
+            }
+        );
+        var d = await r.json();
+        var t = d.candidates[0].content.parts[0].text;
+        t = t.replace(/```json\s*/gi,"").replace(/```\s*/g,"").trim();
+        var depth=0, start=-1, end=-1;
+        for (var i=0;i<t.length;i++) {
+            if (t[i]==='{') { if(depth===0) start=i; depth++; }
+            else if (t[i]==='}') { depth--; if(depth===0 && start!==-1) { end=i; break; } }
+        }
+        if (start===-1||end===-1) throw new Error("No JSON found");
+        t = t.substring(start, end+1);
+        t = t.replace(/[\x00-\x1F\x7F]/g, function(c) { return c==='\n'||c==='\r'||c==='\t' ? ' ' : ''; });
+        currentQuizData = JSON.parse(t);
+        renderQuiz(isMC);
+    } catch(e) {
+        document.getElementById('quiz-loading').classList.add('hidden');
+        document.getElementById('quiz-placeholder').classList.remove('hidden');
+        document.getElementById('quiz-placeholder').innerHTML = '<p class="text-red-500">퀴즈 생성 오류: ' + e.message + '</p>';
+    }
+    btn.disabled = false; btn.innerHTML = '<span>✨ 새로운 문제 생성</span>';
+}
+function renderQuiz(isMC) {
+    document.getElementById('quiz-loading').classList.add('hidden');
+    document.getElementById('quiz-feedback').classList.add('hidden');
+    document.getElementById('quiz-container').classList.remove('hidden');
+    document.getElementById('quiz-type-badge').textContent = isMC ? '객관식' : '단답형';
+    document.getElementById('quiz-question').textContent = currentQuizData.question;
+    var optDiv = document.getElementById('quiz-options');
+    var inputDiv = document.getElementById('quiz-input-area');
+    if (isMC) {
+        optDiv.classList.remove('hidden');
+        inputDiv.classList.add('hidden');
+        var h = '';
+        var letters = ['A','B','C','D'];
+        currentQuizData.options.forEach(function(opt, i) {
+            h += '<button onclick="checkMultipleChoice(' + i + ', this)" class="w-full text-left p-4 rounded-lg border border-gray-200 hover:bg-indigo-50 hover:border-indigo-300 transition-all mb-2 flex items-center group">'
+                + '<span class="w-8 h-8 rounded-full bg-gray-100 group-hover:bg-indigo-100 flex items-center justify-center text-sm font-bold text-gray-500 group-hover:text-indigo-600 mr-3 flex-shrink-0">' + letters[i] + '</span>'
+                + '<span class="text-sm text-gray-700">' + opt + '</span></button>';
+        });
+        optDiv.innerHTML = h;
+    } else {
+        optDiv.classList.add('hidden');
+        inputDiv.classList.remove('hidden');
+        document.getElementById('quiz-answer-input').value = '';
+        document.getElementById('quiz-answer-input').focus();
+    }
+}
+function checkMultipleChoice(idx, btnEl) {
+    var correct = idx === currentQuizData.correctIndex;
+    document.querySelectorAll('#quiz-options button').forEach(function(b, i) {
+        b.disabled = true;
+        if (i === currentQuizData.correctIndex) { b.classList.add('bg-green-50','border-green-400'); b.querySelector('span:first-child').classList.add('bg-green-100','text-green-700'); }
+        else if (i === idx && !correct) { b.classList.add('bg-red-50','border-red-400'); b.querySelector('span:first-child').classList.add('bg-red-100','text-red-700'); }
+    });
+    showQuizFeedback(correct, currentQuizData.options[currentQuizData.correctIndex], currentQuizData.explanation);
+}
+async function checkShortAnswer() {
+    geminiKey = (typeof getApiKey === 'function') ? (getApiKey() || '') : (localStorage.getItem('geminiKey') || localStorage.getItem('gemini_api_key') || '');
+    var ans = document.getElementById('quiz-answer-input').value.trim();
+    if (!ans) { alert('답을 입력해주세요.'); return; }
+    var btn = document.getElementById('btn-short-submit');
+    btn.disabled = true; btn.textContent = '채점 중...';
+    try {
+        var gradingPrompt = "당신은 정보관리기술사 시험 채점관입니다. 아래 문제에 대해 사용자의 답안이 정답으로 인정될 수 있는지 판정하세요.\n\n"
+            + "문제: " + currentQuizData.question + "\n"
+            + "모범 정답: " + currentQuizData.correctAnswer + "\n"
+            + "사용자 답안: " + ans + "\n\n"
+            + "판정 기준:\n- 핵심 의미가 동일하면 정답\n- 약어/풀네임 모두 인정\n- 영어/한글 혼용 인정\n- 띄어쓰기/조사 차이는 무시\n- 의미가 명확히 다르면 오답\n\n"
+            + "Output JSON: {\"correct\":true/false,\"reason\":\"판정 이유\"}";
+        var r = await fetch(
+            'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=' + geminiKey,
+            { method:'POST', headers:{'Content-Type':'application/json'},
+              body: JSON.stringify({ contents:[{parts:[{text:gradingPrompt}]}], generationConfig:{responseMimeType:"application/json"} })
+            }
+        );
+        var d = await r.json();
+        var gt = d.candidates[0].content.parts[0].text;
+        gt = gt.replace(/```json\s*/gi,"").replace(/```\s*/g,"").trim();
+        var gd=0,gs=-1,ge=-1;
+        for(var i=0;i<gt.length;i++){if(gt[i]==='{'){if(gd===0)gs=i;gd++;}else if(gt[i]==='}'){gd--;if(gd===0&&gs!==-1){ge=i;break;}}}
+        if(gs===-1||ge===-1) throw new Error("No JSON");
+        gt=gt.substring(gs,ge+1);
+        gt=gt.replace(/[\x00-\x1F\x7F]/g,function(c){return c==='\n'||c==='\r'||c==='\t'?' ':'';});
+        var result = JSON.parse(gt);
+        showQuizFeedback(result.correct, currentQuizData.correctAnswer, currentQuizData.explanation + (result.reason ? ' (AI: ' + result.reason + ')' : ''));
+    } catch(e) {
+        var normalize = function(s){return s.replace(/\s/g,'').toLowerCase();};
+        var correct = normalize(currentQuizData.correctAnswer).includes(normalize(ans)) || normalize(ans).includes(normalize(currentQuizData.correctAnswer));
+        showQuizFeedback(correct, currentQuizData.correctAnswer, currentQuizData.explanation + ' (로컬 채점)');
+    }
+    btn.disabled = false; btn.textContent = '제출';
+}
+function showQuizFeedback(correct, answer, explanation) {
+    var fb = document.getElementById('quiz-feedback');
+    fb.classList.remove('hidden','border-green-500','bg-green-50','border-red-500','bg-red-50');
+    if (correct) {
+        fb.classList.add('border-green-500','bg-green-50');
+        fb.innerHTML = '<p class="font-bold text-green-700 mb-1">✅ 정답입니다!</p><p class="text-sm text-green-600">' + explanation + '</p>';
+    } else {
+        fb.classList.add('border-red-500','bg-red-50');
+        fb.innerHTML = '<p class="font-bold text-red-700 mb-1">❌ 오답입니다.</p><p class="text-sm text-red-700 mb-1">정답: ' + answer + '</p><p class="text-sm text-red-600">' + explanation + '</p>';
+    }
+}
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && document.getElementById('quiz-answer-input') === document.activeElement) { checkShortAnswer(); }
+});
+
+// ── Chart.js ──
+document.addEventListener('DOMContentLoaded', function() {
+    var ctx1 = document.getElementById('capRadar');
+    if(ctx1){
+        new Chart(ctx1.getContext('2d'), {
+            type:'radar',
+            data:{
+                labels:['일관성(C)','가용성(A)','분할내성(P)','저지연(L)','확장성'],
+                datasets:[
+                    {label:'CP 시스템 (HBase)',data:[5,2,5,2,4],borderColor:'#6366f1',backgroundColor:'rgba(99,102,241,0.15)',pointBackgroundColor:'#6366f1'},
+                    {label:'AP 시스템 (Cassandra)',data:[2,5,5,5,5],borderColor:'#22c55e',backgroundColor:'rgba(34,197,94,0.15)',pointBackgroundColor:'#22c55e'},
+                    {label:'CA 시스템 (RDBMS)',data:[5,5,1,3,2],borderColor:'#a855f7',backgroundColor:'rgba(168,85,247,0.15)',pointBackgroundColor:'#a855f7'}
+                ]
+            },
+            options:{responsive:true,maintainAspectRatio:false,scales:{r:{beginAtZero:true,max:5,ticks:{stepSize:1}}},plugins:{legend:{position:'bottom'}}}
+        });
+    }
+});
+</script>
+</body>
+</html>

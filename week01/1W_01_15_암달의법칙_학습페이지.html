@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>암달의 법칙(Amdahl's Law) — KPC 정보관리기술사 ZIP-UP</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+body{font-family:'Noto Sans KR',sans-serif}
+.def-box{background:linear-gradient(135deg,#eef2ff 0%,#e0e7ff 100%);border-left:4px solid #4f46e5;border-radius:8px;padding:1.25rem;margin-bottom:1rem}
+.def-box p{color:#312e81;font-weight:500;margin:0;line-height:1.8}
+.insight-box{background-color:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:1rem;margin:1rem 0}
+.insight-box::before{content:'💡';margin-right:.5rem}
+.textbook-content h3{font-size:1.25rem;font-weight:700;color:#1e3a8a;margin-top:1.5rem;margin-bottom:.75rem;border-left:4px solid #4f46e5;padding-left:.75rem}
+.textbook-content h4{font-size:1.1rem;font-weight:600;color:#374151;margin-top:1rem;margin-bottom:.5rem}
+.textbook-content p{margin-bottom:1rem;line-height:1.8;color:#4b5563}
+.textbook-content ul{list-style-type:disc;padding-left:1.5rem;margin-bottom:1rem;color:#4b5563}
+.textbook-content li{margin-bottom:.5rem;line-height:1.7}
+.textbook-content table{width:100%;border-collapse:collapse;margin-bottom:1.5rem;font-size:.95rem}
+.textbook-content th,.textbook-content td{border:1px solid #e5e7eb;padding:.75rem;text-align:left}
+.textbook-content th{background-color:#f9fafb;font-weight:600;color:#1f2937}
+.textbook-content .highlight{background-color:#eef2ff;color:#4338ca;font-weight:600;padding:0 4px;border-radius:4px}
+.textbook-content pre{background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:1rem;overflow-x:auto;margin-bottom:1rem;font-size:.85rem;line-height:1.6}
+.textbook-content code{font-family:'Courier New',monospace}
+.tech-block{transition:all .3s ease;cursor:pointer}
+.tech-block:hover{transform:translateY(-2px);box-shadow:0 4px 6px -1px rgba(0,0,0,.1)}
+.tech-block.selected{ring:2px;ring-color:#4f46e5;background-color:#eef2ff;border-color:#4f46e5}
+.nav-item.active{border-bottom:2px solid #4f46e5;color:#4f46e5;font-weight:700}
+.chat-msg{border-radius:12px;padding:10px 14px;margin-bottom:10px;max-width:85%;font-size:.95rem}
+.chat-msg.user{background-color:#4f46e5;color:#fff;align-self:flex-end;margin-left:auto}
+.chat-msg.ai{background-color:#f3f4f6;color:#1f2937;align-self:flex-start;border:1px solid #e5e7eb}
+#chat-sidebar{transition:transform .3s ease-in-out}
+#chat-sidebar.closed{transform:translateX(100%)}
+#chat-sidebar.open{transform:translateX(0)}
+.typing-indicator span{display:inline-block;width:6px;height:6px;background-color:#4f46e5;border-radius:50%;animation:typing 1.4s infinite ease-in-out both;margin:0 2px}
+.typing-indicator span:nth-child(1){animation-delay:-.32s}
+.typing-indicator span:nth-child(2){animation-delay:-.16s}
+@keyframes typing{0%,80%,100%{transform:scale(0)}40%{transform:scale(1)}}
+.chart-container{position:relative;width:100%;max-width:600px;margin-left:auto;margin-right:auto;height:350px;max-height:400px}
+.no-scrollbar::-webkit-scrollbar{display:none}
+.no-scrollbar{-ms-overflow-style:none;scrollbar-width:none}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.animate-fade-in{animation:fadeIn .4s ease-out forwards}
+</style>
+</head><body class="bg-stone-100 min-h-screen flex flex-col overflow-x-hidden">
+<header class="bg-white shadow-sm sticky top-0 z-40">
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+<div class="flex justify-between items-center pt-3 pb-1">
+<div class="flex flex-col justify-center min-w-0">
+<span class="text-[10px] sm:text-xs text-indigo-600 font-bold uppercase tracking-wider leading-tight">KPC 정보관리기술사 ZIP-UP 심화반</span>
+<div class="flex items-center gap-2">
+<span class="text-lg sm:text-xl font-bold text-gray-900 tracking-tight truncate">암달의 법칙(Amdahl's Law)</span>
+<span class="text-[10px] sm:text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-bold flex-shrink-0">2026</span>
+</div>
+</div>
+</div>
+<nav class="flex space-x-1 sm:space-x-4 overflow-x-auto no-scrollbar pb-1 items-center">
+<button onclick="navTo('overview')" id="nav-overview" class="nav-item active px-1 pt-1 pb-2 text-xs sm:text-sm font-medium whitespace-nowrap">개요 및 개념</button>
+<button onclick="navTo('formula')" id="nav-formula" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium whitespace-nowrap">수식 & 계산</button>
+<button onclick="navTo('comparison')" id="nav-comparison" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium whitespace-nowrap">비교 & 함의</button>
+<button onclick="navTo('cases')" id="nav-cases" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium whitespace-nowrap">사례 & 연관이론</button>
+<button onclick="navTo('textbook')" id="nav-textbook" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium whitespace-nowrap">원문 학습</button>
+<button onclick="navTo('script')" id="nav-script" class="nav-item hidden px-1 pt-1 pb-2 text-xs sm:text-sm font-medium whitespace-nowrap text-amber-700">🎬 강의 스크립트</button>
+<button onclick="navTo('quiz')" id="nav-quiz" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium whitespace-nowrap">퀴즈 & 암기</button>
+<span class="w-px h-4 bg-gray-300 flex-shrink-0"></span>
+<button onclick="toggleSettings()" class="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium text-indigo-600 hover:bg-indigo-50 border border-indigo-200 hover:border-indigo-400 transition-all whitespace-nowrap flex-shrink-0" title="API Key 설정">🔑 API</button>
+</nav>
+</div>
+</header>
+<main class="flex-grow max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12 pb-24">
+<section id="overview">
+<div class="bg-white rounded-xl shadow-sm p-6 sm:p-8 border-l-4 border-indigo-500">
+<h2 class="text-xl font-bold text-gray-900 mb-4">📖 개요 및 개념</h2>
+
+<div class="def-box mb-6">
+<p><strong>암달의 법칙(Amdahl's Law)</strong>이란 <strong>병렬 처리 시 성능 향상의 이론적 상한선</strong>을 제시하는 법칙이다. 1967년 IBM의 Gene Amdahl이 AFIPS 학회에서 발표하였으며, "프로그램에서 순차적으로만 실행되어야 하는 부분이 존재하는 한, 프로세서를 아무리 많이 추가해도 성능 향상에는 한계가 있다"는 것이 핵심 메시지이다.</p>
+</div>
+
+<p class="text-gray-700 leading-relaxed mb-4">이사하는 상황을 비유로 생각해 보세요. 짐을 옮기는 건 사람을 많이 부르면 빨라지지만(병렬 처리 부분), 새 집에 가구를 배치하는 건 한 명이 지시해야 합니다(순차 처리 부분). 사람을 아무리 많이 불러도 가구 배치 시간은 줄어들지 않습니다. 이것이 바로 암달의 법칙의 핵심입니다.</p>
+
+<!-- 핵심 수식 박스 -->
+<div class="bg-indigo-50 rounded-xl p-6 border border-indigo-200 mb-6 text-center">
+<h3 class="text-lg font-bold text-indigo-900 mb-3">📐 핵심 수식</h3>
+<div class="text-2xl font-bold text-indigo-800 mb-3 font-mono">S(N) = 1 / (f + (1-f)/N)</div>
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+<div class="bg-white rounded-lg p-3 border border-indigo-100">
+<div class="font-bold text-indigo-700">S(N)</div>
+<div class="text-gray-600">N개 프로세서의 성능 향상비</div>
+</div>
+<div class="bg-white rounded-lg p-3 border border-indigo-100">
+<div class="font-bold text-indigo-700">f</div>
+<div class="text-gray-600">순차 처리 비율 (0≤f≤1)</div>
+</div>
+<div class="bg-white rounded-lg p-3 border border-indigo-100">
+<div class="font-bold text-indigo-700">N</div>
+<div class="text-gray-600">프로세서 수</div>
+</div>
+</div>
+<div class="mt-3 text-sm text-indigo-600 font-medium">N→∞ 일 때: <strong>S(∞) = 1/f</strong> (이론적 상한)</div>
+</div>
+
+<!-- 프로그램 구성 시각화 -->
+<h3 class="text-lg font-bold text-gray-900 mt-6 mb-3">🔧 프로그램의 두 부분</h3>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+<div class="bg-red-50 rounded-lg border border-red-200 p-4">
+<div class="font-bold text-red-800 mb-2">🔒 순차 처리 부분 (f)</div>
+<p class="text-sm text-red-700">반드시 순서대로 실행되어야 하는 부분</p>
+<p class="text-xs text-red-600 mt-1">예: 초기화, 결과 병합, 의존성 있는 연산</p>
+<p class="text-xs text-red-500 mt-1 font-medium">→ 프로세서를 아무리 늘려도 줄어들지 않음</p>
+</div>
+<div class="bg-green-50 rounded-lg border border-green-200 p-4">
+<div class="font-bold text-green-800 mb-2">⚡ 병렬 처리 부분 (1-f)</div>
+<p class="text-sm text-green-700">여러 프로세서가 동시 실행할 수 있는 부분</p>
+<p class="text-xs text-green-600 mt-1">예: 독립적 데이터 처리, 행렬 연산</p>
+<p class="text-xs text-green-500 mt-1 font-medium">→ N개 프로세서로 1/N로 줄어듦</p>
+</div>
+</div>
+
+<!-- 역사적 맥락 -->
+<h3 class="text-lg font-bold text-gray-900 mt-6 mb-3">📅 역사적 맥락</h3>
+<div class="space-y-3 mb-4">
+<div class="flex items-start gap-3">
+<span class="bg-indigo-100 text-indigo-800 text-xs font-bold px-2 py-1 rounded whitespace-nowrap mt-0.5">1967</span>
+<div class="text-sm text-gray-700">Gene Amdahl, AFIPS 학회에서 법칙 발표 — 병렬 처리 성능 한계의 이론적 기초 정립</div>
+</div>
+<div class="flex items-start gap-3">
+<span class="bg-green-100 text-green-800 text-xs font-bold px-2 py-1 rounded whitespace-nowrap mt-0.5">1988</span>
+<div class="text-sm text-gray-700">John Gustafson, 구스타프손의 법칙 발표 — 암달의 법칙의 가정을 보완하는 확장 법칙</div>
+</div>
+<div class="flex items-start gap-3">
+<span class="bg-amber-100 text-amber-800 text-xs font-bold px-2 py-1 rounded whitespace-nowrap mt-0.5">2005</span>
+<div class="text-sm text-gray-700">Herb Sutter, "The Free Lunch Is Over" — CPU 클럭 한계 → 멀티코어 시대 → 암달의 법칙 재조명</div>
+</div>
+<div class="flex items-start gap-3">
+<span class="bg-purple-100 text-purple-800 text-xs font-bold px-2 py-1 rounded whitespace-nowrap mt-0.5">2007</span>
+<div class="text-sm text-gray-700">Intel Core 2 Quad 출시, 멀티코어 본격화 — 암달의 법칙의 실무적 중요성 급증</div>
+</div>
+</div>
+
+</div>
+</section>
+
+<section id="formula" class="hidden">
+<div class="bg-white rounded-xl shadow-sm p-6 sm:p-8 border-l-4 border-indigo-500">
+<h2 class="text-xl font-bold text-gray-900 mb-4">📐 수식 & 계산</h2>
+
+<!-- 수치 대입 계산 -->
+<h3 class="text-lg font-bold text-gray-900 mb-3">🧮 구체적 수치 대입 계산 (f=0.4)</h3>
+<p class="text-sm text-gray-600 mb-3">문제 조건: 순차 처리 비율 f = 40% = 0.4</p>
+
+<div class="overflow-x-auto mb-6">
+<table class="w-full text-sm border-collapse">
+<thead><tr class="bg-indigo-50">
+<th class="border p-3 text-left">프로세서 수 (N)</th>
+<th class="border p-3 text-left">계산 과정</th>
+<th class="border p-3 text-center">성능 향상비 S(N)</th>
+</tr></thead>
+<tbody>
+<tr><td class="border p-3">1</td><td class="border p-3 font-mono text-xs">1/(0.4+0.6/1) = 1/1</td><td class="border p-3 text-center font-bold">1.00배</td></tr>
+<tr><td class="border p-3">2</td><td class="border p-3 font-mono text-xs">1/(0.4+0.6/2) = 1/0.7</td><td class="border p-3 text-center font-bold">1.43배</td></tr>
+<tr><td class="border p-3">4</td><td class="border p-3 font-mono text-xs">1/(0.4+0.6/4) = 1/0.55</td><td class="border p-3 text-center font-bold">1.82배</td></tr>
+<tr class="bg-indigo-50"><td class="border p-3 font-bold">8</td><td class="border p-3 font-mono text-xs">1/(0.4+0.6/8) = 1/0.475</td><td class="border p-3 text-center font-bold text-indigo-700">2.11배</td></tr>
+<tr><td class="border p-3">16</td><td class="border p-3 font-mono text-xs">1/(0.4+0.6/16) = 1/0.4375</td><td class="border p-3 text-center font-bold">2.29배</td></tr>
+<tr><td class="border p-3">100</td><td class="border p-3 font-mono text-xs">1/(0.4+0.6/100) = 1/0.406</td><td class="border p-3 text-center font-bold">2.46배</td></tr>
+<tr class="bg-red-50"><td class="border p-3 font-bold">∞</td><td class="border p-3 font-mono text-xs">1/0.4</td><td class="border p-3 text-center font-bold text-red-700">2.50배 (이론적 상한)</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="insight-box">
+<strong>핵심 결론</strong>: 40%가 순차 처리라면, 프로세서를 무한대로 늘려도 최대 2.5배까지만 빨라진다. 8개 프로세서로 이미 2.11배(상한의 84%)에 도달하므로, 그 이후의 투자 대비 효과가 급격히 감소한다.
+</div>
+
+<!-- 성능 향상 그래프 -->
+<h3 class="text-lg font-bold text-gray-900 mt-8 mb-3">📊 성능 향상 곡선</h3>
+<div class="chart-container mb-6">
+<canvas id="amdahlChart"></canvas>
+</div>
+<p class="text-xs text-gray-400 text-center mb-6">* 순차 비율(f)이 작을수록 프로세서 추가에 따른 성능 향상 효과가 큽니다.</p>
+
+<!-- 다양한 순차 비율별 비교 -->
+<h3 class="text-lg font-bold text-gray-900 mt-8 mb-3">📋 순차 비율별 성능 상한 비교</h3>
+<div class="overflow-x-auto mb-6">
+<table class="w-full text-sm border-collapse">
+<thead><tr class="bg-gray-50">
+<th class="border p-3 text-left">순차 비율 (f)</th>
+<th class="border p-3 text-center">최대 성능 향상 (1/f)</th>
+<th class="border p-3 text-center">N=8 시 실현율</th>
+<th class="border p-3 text-left">의미</th>
+</tr></thead>
+<tbody>
+<tr><td class="border p-3">5%</td><td class="border p-3 text-center font-bold text-green-700">20.0배</td><td class="border p-3 text-center">5.93배 (30%)</td><td class="border p-3">충분히 병렬화 가능</td></tr>
+<tr><td class="border p-3">10%</td><td class="border p-3 text-center font-bold text-indigo-700">10.0배</td><td class="border p-3 text-center">4.71배 (47%)</td><td class="border p-3">병렬화 효과 높음</td></tr>
+<tr><td class="border p-3">25%</td><td class="border p-3 text-center font-bold text-amber-700">4.0배</td><td class="border p-3 text-center">2.91배 (73%)</td><td class="border p-3">점차 한계 체감</td></tr>
+<tr class="bg-amber-50"><td class="border p-3 font-bold">40%</td><td class="border p-3 text-center font-bold text-orange-700">2.5배</td><td class="border p-3 text-center">2.11배 (84%)</td><td class="border p-3 font-medium">투자 대비 효과 감소</td></tr>
+<tr><td class="border p-3">50%</td><td class="border p-3 text-center font-bold text-red-600">2.0배</td><td class="border p-3 text-center">1.78배 (89%)</td><td class="border p-3">병렬화 효과 미미</td></tr>
+<tr><td class="border p-3">75%</td><td class="border p-3 text-center font-bold text-red-800">1.33배</td><td class="border p-3 text-center">1.23배 (92%)</td><td class="border p-3">병렬화 의미 거의 없음</td></tr>
+</tbody>
+</table>
+</div>
+
+<!-- 이론적 상한 바 차트 -->
+<h3 class="text-lg font-bold text-gray-900 mt-8 mb-3">📊 순차 비율별 이론적 상한</h3>
+<div class="chart-container mb-4">
+<canvas id="maxSpeedupChart"></canvas>
+</div>
+
+</div>
+</section>
+
+<section id="comparison" class="hidden">
+<div class="bg-white rounded-xl shadow-sm p-6 sm:p-8 border-l-4 border-indigo-500">
+<h2 class="text-xl font-bold text-gray-900 mb-4">⚖️ 비교 & 함의</h2>
+
+<!-- 암달 vs 구스타프손 -->
+<h3 class="text-lg font-bold text-gray-900 mb-3">🔄 암달의 법칙 vs 구스타프손의 법칙</h3>
+<div class="overflow-x-auto mb-6">
+<table class="w-full text-sm border-collapse">
+<thead><tr class="bg-gray-50">
+<th class="border p-3 text-left">비교 기준</th>
+<th class="border p-3 text-left bg-indigo-50">암달의 법칙 (1967)</th>
+<th class="border p-3 text-left bg-green-50">구스타프손의 법칙 (1988)</th>
+</tr></thead>
+<tbody>
+<tr><td class="border p-3 font-medium">핵심 가정</td><td class="border p-3">문제 크기 고정 (Fixed Problem Size)</td><td class="border p-3">문제 크기 확장 (Scaled Problem Size)</td></tr>
+<tr><td class="border p-3 font-medium">관점</td><td class="border p-3">고정된 작업을 빨리 끝내기</td><td class="border p-3">같은 시간에 더 큰 문제를 풀기</td></tr>
+<tr><td class="border p-3 font-medium">수식</td><td class="border p-3 font-mono text-xs">S(N) = 1/(f + (1-f)/N)</td><td class="border p-3 font-mono text-xs">S(N) = N - f×(N-1)</td></tr>
+<tr><td class="border p-3 font-medium">N→∞ 결과</td><td class="border p-3 font-bold text-red-600">1/f (유한한 상한)</td><td class="border p-3 font-bold text-green-600">∞ (무한 확장 가능)</td></tr>
+<tr><td class="border p-3 font-medium">현실 해석</td><td class="border p-3">성능 향상의 한계 강조 (비관적)</td><td class="border p-3">병렬화의 가치 강조 (낙관적)</td></tr>
+<tr><td class="border p-3 font-medium">적합 상황</td><td class="border p-3">실시간 처리, 응답시간 최소화</td><td class="border p-3">대규모 과학 계산, 빅데이터 처리</td></tr>
+<tr><td class="border p-3 font-medium">스케일링</td><td class="border p-3">Strong Scaling</td><td class="border p-3">Weak Scaling</td></tr>
+</tbody>
+</table>
+</div>
+
+<!-- 같은 조건 비교 박스 -->
+<div class="bg-amber-50 rounded-lg border border-amber-200 p-4 mb-8">
+<h4 class="font-bold text-amber-800 mb-2">💡 같은 조건(f=0.4, N=8)에서의 비교</h4>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div class="bg-white rounded-lg p-3 border text-center">
+<div class="text-xs text-gray-500 mb-1">암달의 법칙</div>
+<div class="text-2xl font-bold text-indigo-700">2.11배</div>
+<div class="text-xs text-gray-500">S(8) = 1/(0.4+0.6/8)</div>
+</div>
+<div class="bg-white rounded-lg p-3 border text-center">
+<div class="text-xs text-gray-500 mb-1">구스타프손의 법칙</div>
+<div class="text-2xl font-bold text-green-700">5.2배</div>
+<div class="text-xs text-gray-500">S(8) = 8 - 0.4×7</div>
+</div>
+</div>
+<p class="text-xs text-amber-700 mt-2 text-center">→ 관점의 차이가 결과를 2.5배나 다르게 만든다!</p>
+</div>
+
+<!-- 설계 원칙으로서의 함의 -->
+<h3 class="text-lg font-bold text-gray-900 mb-3">🏗️ 설계 원칙으로서의 함의</h3>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+<div class="bg-indigo-50 rounded-lg border border-indigo-200 p-4 cursor-pointer" onclick="toggleStrategy(this)">
+<div class="font-bold text-indigo-800 mb-1">1️⃣ 병목 지점 최적화 우선</div>
+<div class="strategy-summary text-sm text-indigo-600">순차 부분(f) 줄이기 &gt; 프로세서 수 늘리기</div>
+<div class="strategy-detail hidden mt-2 text-sm text-gray-700">f를 40%에서 10%로 줄이면 상한이 2.5배→10배로 4배 증가한다. 같은 비용으로 프로세서를 추가하는 것보다 순차 부분을 최적화하는 것이 훨씬 효과적이다.</div>
+</div>
+<div class="bg-green-50 rounded-lg border border-green-200 p-4 cursor-pointer" onclick="toggleStrategy(this)">
+<div class="font-bold text-green-800 mb-1">2️⃣ 투자 대비 효과(ROI)</div>
+<div class="strategy-summary text-sm text-green-600">프로세서 추가의 한계 효용 체감</div>
+<div class="strategy-detail hidden mt-2 text-sm text-gray-700">f=0.4에서 8코어 → 2.11배, 16코어 → 2.29배. 코어를 2배로 늘렸지만 성능은 8%만 향상. 투자 대비 효과가 급격히 감소하는 지점을 정량적으로 판단할 수 있다.</div>
+</div>
+<div class="bg-purple-50 rounded-lg border border-purple-200 p-4 cursor-pointer" onclick="toggleStrategy(this)">
+<div class="font-bold text-purple-800 mb-1">3️⃣ Make the Common Case Fast</div>
+<div class="strategy-summary text-sm text-purple-600">자주 실행되는 경로 최적화</div>
+<div class="strategy-detail hidden mt-2 text-sm text-gray-700">Hennessy &amp; Patterson의 Computer Architecture 핵심 원칙. 자주 실행되는 경로(Common Case)를 최적화하는 것이 전체 성능에 가장 큰 영향을 미친다. 암달의 법칙과 직결된다.</div>
+</div>
+</div>
+
+</div>
+</section>
+
+<section id="cases" class="hidden">
+<div class="bg-white rounded-xl shadow-sm p-6 sm:p-8 border-l-4 border-indigo-500">
+<h2 class="text-xl font-bold text-gray-900 mb-4">🏢 사례 & 연관이론</h2>
+
+<!-- 적용 사례 -->
+<h3 class="text-lg font-bold text-gray-900 mb-3">📌 적용 사례</h3>
+<div class="space-y-4 mb-8">
+<div class="bg-blue-50 rounded-lg border border-blue-200 p-4 cursor-pointer" onclick="toggleStrategy(this)">
+<div class="flex items-center gap-2 mb-1">
+<span class="bg-blue-100 text-blue-800 text-xs font-bold px-2 py-0.5 rounded">Intel</span>
+<span class="font-bold text-blue-900">멀티코어 프로세서 설계</span>
+</div>
+<div class="strategy-summary text-sm text-blue-700">2005년 이후 CPU 클럭 한계 → 멀티코어 전환, 그러나 단순 코어 추가의 한계 직면</div>
+<div class="strategy-detail hidden mt-3 text-sm text-gray-700">
+<p>Intel은 2005년 이후 전력 장벽(Power Wall)에 직면하여 멀티코어 전략으로 전환하였으나, 암달의 법칙에 의해 단순 코어 수 증가만으로는 성능 향상에 한계가 있음이 명확해졌다. 이에 비순차 실행(Out-of-Order), 분기 예측, SIMD 확장 등 순차 처리 부분의 성능을 높이는 방향으로도 투자. 2024년 기준 Core Ultra 시리즈는 P-Core(성능)+E-Core(효율)+NPU의 이종 아키텍처를 채택하여 암달의 법칙 한계를 다양한 방식으로 우회하고 있다.</p>
+</div>
+</div>
+<div class="bg-green-50 rounded-lg border border-green-200 p-4 cursor-pointer" onclick="toggleStrategy(this)">
+<div class="flex items-center gap-2 mb-1">
+<span class="bg-green-100 text-green-800 text-xs font-bold px-2 py-0.5 rounded">행안부</span>
+<span class="font-bold text-green-900">공공 빅데이터 분석 플랫폼</span>
+</div>
+<div class="strategy-summary text-sm text-green-700">코어 4배 증가 → 실제 2.5배 향상에 그침 → 순차 비율 줄여 5.7배 달성</div>
+<div class="strategy-detail hidden mt-3 text-sm text-gray-700">
+<p>행정안전부의 공공데이터 분석 플랫폼(약 3,000억 원 규모)은 Hadoop/Spark 기반 분산 처리 시스템을 구축. 초기에 코어를 128개→512개로 4배 늘렸지만, 데이터 전처리(순차 부분)가 30%를 차지하여 실제로는 2.5배 향상에 그쳤다. 이후 전처리 파이프라인을 병렬화(MapReduce 파티셔닝 최적화)하여 순차 비율을 10%로 줄인 결과, 512코어에서 5.7배 향상을 달성.</p>
+</div>
+</div>
+</div>
+
+<!-- 연관 이론 -->
+<h3 class="text-lg font-bold text-gray-900 mb-3">🔗 연관 이론 연결</h3>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+<div class="bg-red-50 rounded-lg border border-red-200 p-4 cursor-pointer" onclick="toggleStrategy(this)">
+<div class="font-bold text-red-800 mb-1">브룩스의 법칙</div>
+<div class="strategy-summary text-sm text-red-600">SW 공학 버전의 암달의 법칙</div>
+<div class="strategy-detail hidden mt-2 text-sm text-gray-700">
+Fred Brooks(1975): "늦은 SW 프로젝트에 인력을 추가하면 더 늦어진다." 인력 추가(프로세서 추가)로 해결되지 않는 순차 의존성(커뮤니케이션 오버헤드)이 존재. 커뮤니케이션 채널 수 N(N-1)/2도 프로세서 간 동기화 오버헤드의 비유.
+</div>
+</div>
+<div class="bg-amber-50 rounded-lg border border-amber-200 p-4 cursor-pointer" onclick="toggleStrategy(this)">
+<div class="font-bold text-amber-800 mb-1">무어의 법칙 & 전력 장벽</div>
+<div class="strategy-summary text-sm text-amber-600">클럭 한계 → 멀티코어 시대 개막</div>
+<div class="strategy-detail hidden mt-2 text-sm text-gray-700">
+Gordon Moore(1965): 트랜지스터 밀도 2년마다 2배. 2005년경 전력 장벽(Power Wall)에 의해 클럭 속도 향상 멈춤 → 멀티코어 시대 개막. 이때 암달의 법칙이 재조명 — "코어 수만 늘려서는 안 되고 순차 부분을 줄여야 한다."
+</div>
+</div>
+<div class="bg-teal-50 rounded-lg border border-teal-200 p-4 cursor-pointer" onclick="toggleStrategy(this)">
+<div class="font-bold text-teal-800 mb-1">GPU & 병렬 컴퓨팅</div>
+<div class="strategy-summary text-sm text-teal-600">f≈0이면 코어 수에 비례하는 성능</div>
+<div class="strategy-detail hidden mt-2 text-sm text-gray-700">
+NVIDIA GPU는 수천 개 코어 탑재. AI/딥러닝에서 압도적 성능의 이유: 행렬 연산이 거의 100% 병렬화 가능(f≈0)하여 코어 수 증가에 비례한 성능 향상 가능. 반면 범용 프로그램에서 GPU가 CPU보다 느린 경우는 순차 처리 비율이 높기 때문.
+</div>
+</div>
+</div>
+
+</div>
+</section>
+
+<section id="textbook" class="hidden">
+<div class="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+<h2 class="text-xl font-bold text-gray-900 mb-6">📚 원문 학습</h2>
+<div class="textbook-content">
+
+<h3>제1장 개요 및 배경</h3>
+
+<h4>1.1 암달의 법칙의 정의</h4>
+<div class="def-box">
+<p><strong>암달의 법칙(Amdahl's Law)</strong>이란 <strong>병렬 처리 시 성능 향상의 이론적 상한선</strong>을 제시하는 법칙이다. 1967년 IBM의 Gene Amdahl이 AFIPS 학회에서 발표하였으며, "프로그램에서 순차적으로만 실행되어야 하는 부분이 존재하는 한, 프로세서를 아무리 많이 추가해도 성능 향상에는 한계가 있다"는 것이 핵심 메시지이다.</p>
+</div>
+
+<h4>1.2 역사적 맥락</h4>
+<table>
+<tr><th>연도</th><th>사건</th><th>의의</th></tr>
+<tr><td>1967</td><td>Gene Amdahl, AFIPS 학회에서 법칙 발표</td><td>병렬 처리 성능 한계의 이론적 기초 정립</td></tr>
+<tr><td>1988</td><td>John Gustafson, 구스타프손의 법칙 발표</td><td>암달의 법칙의 가정을 보완하는 확장 법칙</td></tr>
+<tr><td>2005</td><td>Herb Sutter, "The Free Lunch Is Over" 발표</td><td>CPU 클럭 한계 → 멀티코어 시대 → 암달의 법칙 재조명</td></tr>
+<tr><td>2007</td><td>Intel Core 2 Quad 출시, 멀티코어 본격화</td><td>암달의 법칙의 실무적 중요성 급증</td></tr>
+</table>
+
+<h4>1.3 법칙의 배경: 왜 병렬화만으로는 부족한가</h4>
+<p>모든 프로그램은 크게 두 부분으로 나뉜다:</p>
+<ul>
+<li><strong>순차 처리 부분(Serial Fraction)</strong>: 반드시 순서대로 실행되어야 하는 부분 (예: 초기화, 결과 병합, 의존성 있는 연산)</li>
+<li><strong>병렬 처리 가능 부분(Parallelizable Fraction)</strong>: 여러 프로세서가 동시에 실행할 수 있는 부분</li>
+</ul>
+<p>프로세서 수를 아무리 늘려도 순차 처리 부분의 실행 시간은 줄어들지 않으므로, 전체 성능 향상에 상한선이 존재한다.</p>
+
+<h3>제2장 핵심 수식 및 이론 모델</h3>
+
+<h4>2.1 암달의 법칙 수식</h4>
+<pre><code>S(N) = 1 / (f + (1-f)/N)</code></pre>
+<p>여기서:</p>
+<ul>
+<li><strong>S(N)</strong>: N개 프로세서 사용 시 성능 향상비(Speedup)</li>
+<li><strong>f</strong>: 전체 프로그램에서 순차 처리 비율 (0 ≤ f ≤ 1)</li>
+<li><strong>N</strong>: 프로세서 수</li>
+<li><strong>(1-f)</strong>: 병렬 처리 가능 비율</li>
+</ul>
+
+<h4>2.2 N → ∞ 일 때 (프로세서 무한대)</h4>
+<pre><code>S(∞) = lim(N→∞) 1 / (f + (1-f)/N) = 1/f</code></pre>
+<p>프로세서를 무한대로 늘려도 성능 향상의 <strong>이론적 상한</strong>은 <strong>1/f</strong>이다.</p>
+
+<h4>2.3 구체적 수치 대입 계산</h4>
+<p><strong>[문제 조건: 순차 처리 비율 f = 40% = 0.4]</strong></p>
+<table>
+<tr><th>프로세서 수 (N)</th><th>계산 과정</th><th>성능 향상비 S(N)</th></tr>
+<tr><td>1</td><td>1 / (0.4 + 0.6/1) = 1/1</td><td><strong>1.00배</strong></td></tr>
+<tr><td>2</td><td>1 / (0.4 + 0.6/2) = 1/0.7</td><td><strong>1.43배</strong></td></tr>
+<tr><td>4</td><td>1 / (0.4 + 0.6/4) = 1/0.55</td><td><strong>1.82배</strong></td></tr>
+<tr><td>8</td><td>1 / (0.4 + 0.6/8) = 1/0.475</td><td><strong>2.11배</strong></td></tr>
+<tr><td>16</td><td>1 / (0.4 + 0.6/16) = 1/0.4375</td><td><strong>2.29배</strong></td></tr>
+<tr><td>100</td><td>1 / (0.4 + 0.6/100) = 1/0.406</td><td><strong>2.46배</strong></td></tr>
+<tr><td>∞</td><td>1 / 0.4</td><td><strong>2.50배</strong> (이론적 상한)</td></tr>
+</table>
+
+<div class="insight-box">
+<strong>핵심 결론</strong>: 40%가 순차 처리라면, 프로세서를 무한대로 늘려도 최대 2.5배까지만 빨라진다. 8개 프로세서로 이미 2.11배(상한의 84%)에 도달하므로, 그 이후의 투자 대비 효과가 급격히 감소한다.
+</div>
+
+<h4>2.4 다양한 순차 비율별 성능 상한 비교</h4>
+<table>
+<tr><th>순차 비율 (f)</th><th>최대 성능 향상 (1/f)</th><th>N=8 시 실현율</th><th>의미</th></tr>
+<tr><td>5%</td><td>20.0배</td><td>5.93배 (30%)</td><td>충분히 병렬화 가능</td></tr>
+<tr><td>10%</td><td>10.0배</td><td>4.71배 (47%)</td><td>병렬화 효과 높음</td></tr>
+<tr><td>25%</td><td>4.0배</td><td>2.91배 (73%)</td><td>점차 한계 체감</td></tr>
+<tr><td>40%</td><td>2.5배</td><td>2.11배 (84%)</td><td>투자 대비 효과 감소</td></tr>
+<tr><td>50%</td><td>2.0배</td><td>1.78배 (89%)</td><td>병렬화 효과 미미</td></tr>
+<tr><td>75%</td><td>1.33배</td><td>1.23배 (92%)</td><td>병렬화 의미 거의 없음</td></tr>
+</table>
+
+<h3>제3장 핵심 프레임워크: 암달의 법칙의 함의</h3>
+
+<h4>3.1 설계 원칙으로서의 암달의 법칙</h4>
+<p>암달의 법칙은 단순한 수식이 아니라, <strong>시스템 설계의 핵심 원칙</strong>을 내포하고 있다.</p>
+<ul>
+<li><strong>병목 지점 최적화 우선</strong>: 순차 처리 부분(f)을 줄이는 것이 프로세서 수를 늘리는 것보다 효과적</li>
+<li><strong>투자 대비 효과(ROI) 분석</strong>: 프로세서 추가의 한계 효용 체감을 정량적으로 판단</li>
+<li><strong>최적 프로세서 수 결정</strong>: 성능 곡선의 기울기가 급격히 감소하는 지점이 최적 투자점</li>
+</ul>
+
+<h4>3.2 Make the Common Case Fast</h4>
+<p>암달의 법칙은 컴퓨터 구조 설계의 핵심 원칙인 <strong>"Make the Common Case Fast"</strong>와 직결된다. 자주 실행되는 경로(Common Case)를 최적화하는 것이 전체 성능 향상에 가장 효과적이라는 원칙으로, Hennessy &amp; Patterson의 <em>Computer Architecture</em> 교재에서 핵심 설계 원칙으로 제시된다.</p>
+
+<h3>제4장 비교·분석</h3>
+
+<h4>4.1 암달의 법칙 vs 구스타프손의 법칙</h4>
+<table>
+<tr><th>비교 기준</th><th>암달의 법칙 (Amdahl, 1967)</th><th>구스타프손의 법칙 (Gustafson, 1988)</th></tr>
+<tr><td>핵심 가정</td><td>문제 크기 고정(Fixed Problem Size)</td><td>문제 크기 확장(Scaled Problem Size)</td></tr>
+<tr><td>관점</td><td>고정된 작업을 빨리 끝내기</td><td>같은 시간에 더 큰 문제를 풀기</td></tr>
+<tr><td>수식</td><td>S(N) = 1/(f + (1-f)/N)</td><td>S(N) = N - f×(N-1)</td></tr>
+<tr><td>N→∞ 결과</td><td>1/f (유한한 상한)</td><td>∞ (무한 확장 가능)</td></tr>
+<tr><td>현실 해석</td><td>성능 향상의 한계 강조 (비관적)</td><td>병렬화의 가치 강조 (낙관적)</td></tr>
+<tr><td>적합 상황</td><td>실시간 처리, 응답시간 최소화</td><td>대규모 과학 계산, 빅데이터 처리</td></tr>
+</table>
+
+<div class="insight-box">
+<strong>핵심 차이</strong>: 암달의 법칙은 "같은 크기의 문제를 더 빨리 풀기(Strong Scaling)"를, 구스타프손의 법칙은 "같은 시간에 더 큰 문제를 풀기(Weak Scaling)"를 다룬다.
+</div>
+
+<h4>4.2 구스타프손의 법칙 수식</h4>
+<pre><code>S(N) = N - f × (N - 1)</code></pre>
+<p>f = 0.4, N = 8일 때: S(8) = 8 - 0.4×7 = 8 - 2.8 = <strong>5.2배</strong></p>
+<p>암달의 법칙으로는 같은 조건에서 2.11배이므로, 관점에 따라 해석이 크게 달라진다.</p>
+
+
+<h3>제5장 적용 사례</h3>
+
+<h4>5.1 멀티코어 프로세서 설계 (Intel)</h4>
+<p>Intel은 2005년 이후 CPU 클럭 속도 향상의 물리적 한계(전력 장벽, Power Wall)에 직면하여 멀티코어 전략으로 전환하였다. 그러나 암달의 법칙에 의해, 단순히 코어 수를 늘리는 것만으로는 성능 향상에 한계가 있음이 명확해졌다. 이에 Intel은 비순차 실행(Out-of-Order), 분기 예측(Branch Prediction), SIMD 확장 등 순차 처리 부분의 성능을 높이는 방향으로도 투자하고 있다. 2024년 기준 Intel Core Ultra 시리즈는 P-Core(성능)+E-Core(효율)+NPU의 이종 아키텍처를 채택하여, 암달의 법칙의 한계를 다양한 방식으로 우회하고 있다.</p>
+
+<h4>5.2 공공 빅데이터 분석 플랫폼</h4>
+<p>행정안전부의 공공데이터 분석 플랫폼은 약 3,000억 원 규모의 투자로, Hadoop/Spark 기반 분산 처리 시스템을 구축하였다. 초기 설계 시 "코어를 128개에서 512개로 4배 늘리면 4배 빨라진다"고 예상했지만, 실제로는 데이터 전처리(순차 부분)가 전체의 약 30%를 차지하여 2.5배 향상에 그쳤다. 이후 데이터 전처리 파이프라인을 병렬화(MapReduce 파티셔닝 최적화)하여 순차 비율을 10%로 줄인 결과, 512코어에서 5.7배 성능 향상을 달성하였다.</p>
+
+<h3>제6장 연관 이론 연결</h3>
+
+<h4>6.1 브룩스의 법칙(Brooks' Law)</h4>
+<p>Fred Brooks(1975)의 "늦은 소프트웨어 프로젝트에 인력을 추가하면 더 늦어진다"는 법칙은 암달의 법칙의 소프트웨어 공학 버전이다. 인력 추가(프로세서 추가)로 해결되지 않는 순차 의존성(커뮤니케이션 오버헤드)이 존재하기 때문이다. 커뮤니케이션 채널 수 N(N-1)/2도 프로세서 간 동기화 오버헤드의 비유가 된다.</p>
+
+<h4>6.2 무어의 법칙과 전력 장벽</h4>
+<p>Gordon Moore(1965)의 트랜지스터 밀도 2년마다 2배 법칙은 2005년경 전력 장벽(Power Wall)에 의해 클럭 속도 향상이 멈추면서 멀티코어 시대를 열었다. 이때 암달의 법칙이 재조명되어, "코어 수를 늘리기만 해서는 안 되고 순차 부분을 줄여야 한다"는 인식이 확산되었다.</p>
+
+<h4>6.3 병렬 컴퓨팅과 GPU 아키텍처</h4>
+<p>NVIDIA의 GPU는 수천 개의 코어를 탑재하여 대규모 병렬 처리에 특화되어 있다. GPU가 AI/딥러닝에서 압도적 성능을 보이는 이유는 행렬 연산이 거의 100% 병렬화 가능(f ≈ 0)하여 암달의 법칙에서 성능 상한이 매우 높기 때문이다. 반면 범용 프로그램에서 GPU가 CPU보다 느린 경우가 있는 것은 순차 처리 비율이 높기 때문이다.</p>
+
+<h3>제7장 시험 출제 관점</h3>
+
+<h4>7.1 기출 연계 포인트</h4>
+<ul>
+<li><strong>1교시형</strong>: "암달의 법칙 수식을 제시하고 계산하시오" → 제2장 수식 + 수치 대입</li>
+<li><strong>1교시형</strong>: "병렬 처리의 성능 향상 한계를 설명하시오" → 제2~3장 + 제4장 비교</li>
+<li><strong>2교시형 연계</strong>: "멀티코어 시대의 성능 최적화 전략" → 암달의 법칙 + 병목 분석</li>
+</ul>
+
+<h4>7.2 답안 구성 전략</h4>
+<p><strong>서론 (15%)</strong>: 멀티코어 시대의 병렬 처리 중요성 + 암달의 법칙 정의</p>
+<p><strong>본론 (75%)</strong>:</p>
+<ul>
+<li>수식 제시 및 변수 설명 (15%)</li>
+<li>구체적 수치 대입 계산(f=0.4, N=∞) (20%)</li>
+<li>성능 향상 그래프 + 함의 해석 (15%)</li>
+<li>구스타프손의 법칙 비교 (15%)</li>
+<li>적용 사례 (10%)</li>
+</ul>
+<p><strong>결론 (10%)</strong>: 순차 부분 최적화의 중요성 + GPU/이종 아키텍처 추세</p>
+
+</div>
+</div>
+</section>
+
+<section id="script" class="hidden">
+<div class="bg-white rounded-xl shadow-sm p-6 sm:p-8 border-l-4 border-amber-500">
+<div class="flex items-center gap-2 mb-4">
+<h2 class="text-xl font-bold text-gray-900">🎬 강의 스크립트</h2>
+<span class="bg-amber-100 text-amber-800 text-xs font-bold px-2 py-0.5 rounded-full">🔒 멘토 전용</span>
+</div>
+<div class="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-6 text-sm text-amber-800">
+이 탭은 멘토 전용 콘텐츠입니다. URL에 <code class="bg-amber-100 px-1 rounded">?mentor=true</code> 파라미터를 추가하면 접근할 수 있습니다.
+</div>
+<div class="textbook-content">
+
+<h4>🎬 도입부 — 약 3분</h4>
+<p>안녕하세요, ZIP-UP 멘토링 수강생 여러분. 오늘은 CA/OS 영역에서 수식과 계산이 핵심인 토픽, 암달의 법칙에 대해 이야기해보겠습니다.</p>
+<p>이 토픽은 시험에서 나오면 수식을 쓰고 구체적인 숫자를 계산해야 하는 토픽이에요. 수식을 외우고 계산을 연습해 두는 게 정말 중요합니다. 단순히 수식만 쓰면 중간 점수고요, "이 법칙이 왜 중요한지", "실무에서 어떤 의미인지"까지 연결해야 높은 점수를 받을 수 있어요.</p>
+<p>먼저 배경부터 잡아볼게요. 1967년에 IBM의 Gene Amdahl이라는 분이 AFIPS 학회에서 발표한 법칙이에요. "프로세서를 아무리 늘려도 성능 향상에는 한계가 있다"고 경고한 거예요.</p>
+
+<h4>🎬 이사 비유 & 핵심 수식 — 약 4분</h4>
+<p>비유를 들어볼게요. 여러분이 이사를 한다고 생각해 보세요. 짐을 옮기는 건 사람을 많이 부르면 빨라지잖아요? 이건 병렬 처리 가능한 부분이에요. 그런데 새 집에 가구를 배치하는 건 한 명이 지시해야 해요. 이건 순차 처리 부분이에요. 사람을 아무리 많이 불러도 가구 배치 시간은 줄어들지 않죠? 이게 바로 암달의 법칙의 핵심이에요.</p>
+<p>자, 수식을 보겠습니다. 이걸 외워야 해요.</p>
+<p><span class="highlight">S(N) = 1 / (f + (1-f)/N)</span></p>
+<p>S(N)은 N개 프로세서를 쓸 때의 성능 향상비예요. f는 순차 처리 비율이에요. N은 프로세서 수예요. 분모를 보세요. f는 순차 처리 부분인데 프로세서를 아무리 늘려도 그대로 남아있어요. (1-f)/N이 병렬 처리 부분인데, N으로 나눠지니까 프로세서가 많을수록 줄어들어요.</p>
+<p>제일 중요한 건 N을 무한대로 보냈을 때예요. <span class="highlight">S(∞) = 1/f</span>가 돼요. 이게 이론적 상한이에요.</p>
+
+<h4>🎬 구체적 수치 계산 — 약 5분</h4>
+<p>시험에서 나올 수 있는 구체적 계산을 해볼게요. f = 0.4예요.</p>
+<p>N=2일 때: 1/(0.4+0.3) = 약 1.43배. N=4일 때: 1/0.55 = 약 1.82배. N=8일 때: 1/0.475 = 약 2.11배. N→∞일 때: 1/0.4 = <span class="highlight">2.5배</span>.</p>
+<p>프로세서를 2개에서 8개로 4배 늘렸는데, 성능은 1.43배에서 2.11배로 고작 1.47배 향상된 거거든요. 투자 대비 효과가 급격히 줄어드는 거예요. 8개 프로세서로 이미 상한의 84%에 도달한 셈이에요. 이 해석까지 답안에 쓰면 확실히 차별화가 됩니다.</p>
+
+<h4>🎬 함의 & 구스타프손 비교 — 약 4분</h4>
+<p>이 법칙의 실무적 함의가 뭐냐면요, "프로세서를 추가하는 것보다 순차 부분(f)을 줄이는 게 훨씬 효과적"이라는 거예요. f가 40%에서 10%로 줄어들면, 상한이 2.5배에서 10배로 4배나 커지거든요. 이건 <span class="highlight">"Make the Common Case Fast"</span>와 직결돼요.</p>
+<p>구스타프손의 법칙도 비교해 드릴게요. 수식은 S(N) = N - f×(N-1)인데, f=0.4, N=8이면 S = 5.2배가 나와요. 같은 조건인데 암달은 2.11배, 구스타프손은 5.2배예요. 암달은 Strong Scaling, 구스타프손은 Weak Scaling.</p>
+
+<h4>🎬 사례 & 마무리 — 약 4분</h4>
+<p>GPU도 마찬가지예요. NVIDIA GPU가 AI에서 압도적인 이유는 행렬 연산이 거의 100% 병렬화 가능(f≈0)해서 코어 수를 수천 개로 늘리면 성능이 그에 비례해서 올라가기 때문이에요.</p>
+<p>국내 사례로는 행정안전부 공공데이터 분석 플랫폼이 있어요. 코어를 4배 늘렸는데 2.5배밖에 빨라지지 않았고, 전처리 파이프라인을 병렬화해서 순차 비율을 10%로 줄이니까 5.7배 향상을 달성했어요.</p>
+<p>마지막 정리합니다. 수식: <span class="highlight">S(N) = 1/(f+(1-f)/N)</span>. 상한: <span class="highlight">S(∞) = 1/f</span>. <span class="highlight">"순병성"</span> — 순차비율, 병렬프로세서, 성능향상비. 구스타프손과의 차이: Strong Scaling vs Weak Scaling. 이것만 잡으시면 됩니다. 오늘로 1주차 모의고사 해설 교재를 모두 마무리했습니다. 열심히 공부하시고, 화이팅 하세요!</p>
+
+</div>
+</div>
+</section>
+
+<section id="quiz" class="hidden">
+<div class="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+<h2 class="text-xl font-bold text-gray-900 mb-6">🧠 퀴즈 & 암기</h2>
+
+            <!-- AI 실전 퀴즈 영역 -->
+            <div class="bg-indigo-50 rounded-xl p-6 border border-indigo-100 mb-8">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-bold text-indigo-900 text-lg flex items-center"><span class="mr-2">🧠</span> AI 실전 문제 생성</h3>
+                    <button onclick="generateQuiz()" id="btn-quiz-gen" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm transition-colors flex items-center gap-2"><span>✨ 새로운 문제 생성</span></button>
+                </div>
+                <div id="quiz-loading" class="hidden py-8 text-center">
+                    <div class="typing-indicator flex justify-center mb-2"><span></span><span></span><span></span></div>
+                    <p class="text-indigo-600 text-sm">AI가 문제를 출제하고 있습니다...</p>
+                </div>
+                <div id="quiz-container" class="hidden space-y-4">
+                    <div class="bg-white p-5 rounded-lg shadow-sm border border-indigo-100">
+                        <div class="flex items-start gap-2 mb-4">
+                            <span id="quiz-type-badge" class="bg-indigo-100 text-indigo-800 text-xs font-bold px-2 py-1 rounded whitespace-nowrap mt-1">객관식</span>
+                            <p id="quiz-question" class="font-bold text-gray-800 text-lg"></p>
+                        </div>
+                        <div id="quiz-options" class="space-y-2"></div>
+                        <div id="quiz-input-area" class="hidden mt-4">
+                            <div class="flex gap-2">
+                                <input type="text" id="quiz-answer-input" placeholder="정답을 입력하세요" class="flex-grow border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <button onclick="checkShortAnswer()" id="btn-short-submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-bold">제출</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="quiz-feedback" class="hidden bg-white p-5 rounded-lg border-l-4"></div>
+                </div>
+                <div id="quiz-placeholder" class="text-center py-8 text-gray-500 border-2 border-dashed border-indigo-200 rounded-lg">
+                    <p>'새로운 문제 생성' 버튼을 눌러 실력을 점검해보세요.</p>
+                </div>
+            </div>
+
+<!-- 암기 노트 ① 두문자어 -->
+<h3 class="text-lg font-bold text-gray-900 mb-4">📝 암기 노트 ① — 두문자어</h3>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+<div class="bg-indigo-50 rounded-xl p-5 border border-indigo-200 text-center">
+<div class="text-3xl font-black text-indigo-600 mb-2">"순병성"</div>
+<div class="text-sm text-indigo-800 font-medium">암달의 법칙 3요소</div>
+<div class="mt-2 text-xs text-indigo-600"><strong>순</strong>차 비율(f) + <strong>병</strong>렬 프로세서(N) + <strong>성</strong>능향상비(S)</div>
+</div>
+<div class="bg-green-50 rounded-xl p-5 border border-green-200 text-center">
+<div class="text-3xl font-black text-green-600 mb-2">"에프분의일"</div>
+<div class="text-sm text-green-800 font-medium">이론적 상한</div>
+<div class="mt-2 text-xs text-green-600"><strong>1/f</strong> — f=0.4이면 최대 <strong>2.5배</strong></div>
+</div>
+</div>
+
+<!-- 암기 노트 ② 골격 답안 -->
+<h3 class="text-lg font-bold text-gray-900 mb-4">📝 암기 노트 ② — 골격 답안</h3>
+<div class="overflow-x-auto mb-8">
+<table class="w-full text-sm border-collapse">
+<thead><tr class="bg-gray-50">
+<th class="border p-3 text-left">단락</th><th class="border p-3 text-left">비율</th><th class="border p-3 text-left">핵심 내용</th>
+</tr></thead>
+<tbody>
+<tr><td class="border p-3 font-medium">서론</td><td class="border p-3">15%</td><td class="border p-3">멀티코어 시대 배경 → 암달의 법칙 정의(Amdahl, 1967)</td></tr>
+<tr><td class="border p-3 font-medium" rowspan="5">본론</td><td class="border p-3">15%</td><td class="border p-3">수식 제시: S(N) = 1/(f+(1-f)/N), S(∞) = 1/f</td></tr>
+<tr><td class="border p-3">20%</td><td class="border p-3">수치 대입 계산: f=0.4일 때 N=2,4,8,∞ → 최대 2.5배</td></tr>
+<tr><td class="border p-3">15%</td><td class="border p-3">성능 곡선 그래프 + 투자 효용 체감 해석</td></tr>
+<tr><td class="border p-3">15%</td><td class="border p-3">구스타프손 비교: Strong vs Weak Scaling</td></tr>
+<tr><td class="border p-3">10%</td><td class="border p-3">멀티코어 설계, GPU 병렬처리 사례</td></tr>
+<tr><td class="border p-3 font-medium">결론</td><td class="border p-3">10%</td><td class="border p-3">순차 부분 최적화 &gt; 프로세서 추가 → 이종 아키텍처 추세</td></tr>
+</tbody>
+</table>
+</div>
+
+<!-- 암기 노트 ③ 필수 도식 + 차별화 -->
+<h3 class="text-lg font-bold text-gray-900 mb-4">📝 암기 노트 ③ — 필수 도식 & 차별화</h3>
+<div class="space-y-4 mb-8">
+<div class="bg-amber-50 rounded-lg border border-amber-200 p-4">
+<h4 class="font-bold text-amber-800 mb-2">📊 필수 도식 4가지</h4>
+<ol class="list-decimal pl-5 text-sm text-amber-900 space-y-1">
+<li><strong>수치 대입 계산표</strong>: f=0.4, N=1~∞ 성능 향상비 (가장 중요!)</li>
+<li><strong>성능 향상 그래프</strong>: X축 프로세서 수, Y축 성능 향상비, 점근선 표시</li>
+<li><strong>암달 vs 구스타프손 비교표</strong>: 6개 기준 비교</li>
+<li><strong>순차 비율별 성능 상한표</strong>: f=5%~75%</li>
+</ol>
+</div>
+<div class="bg-teal-50 rounded-lg border border-teal-200 p-4">
+<h4 class="font-bold text-teal-800 mb-2">💎 차별화 포인트</h4>
+<ul class="list-disc pl-5 text-sm text-teal-900 space-y-1">
+<li>f=0.4, N→∞일 때 S=2.5배 계산 과정을 구체적으로 제시 → 정량적 분석 능력 증명</li>
+<li>구스타프손의 법칙과 비교 → 비판적 사고 능력 증명</li>
+<li>"Make the Common Case Fast" 원칙(Hennessy &amp; Patterson) 연결 → 설계 원칙 이해 증명</li>
+<li>GPU의 f≈0 특성으로 AI 시대 병렬 처리 성공 사례 설명</li>
+</ul>
+</div>
+</div>
+
+<!-- 제2부 전체 -->
+<h3 class="text-lg font-bold text-indigo-800 mt-10 mb-4 border-l-4 border-indigo-500 pl-3">제2부 — 서술형 답안 암기 요약</h3>
+<div class="textbook-content">
+
+<h4>한 줄 정의</h4>
+<div class="def-box">
+<p>암달의 법칙은 병렬 처리 시 성능 향상비가 S(N) = 1/(f+(1-f)/N)으로 제한되며, 프로세서를 무한대로 늘려도 최대 1/f배까지만 향상된다는 법칙이다.</p>
+</div>
+
+<h4>핵심 키워드 맵</h4>
+<div class="bg-slate-50 rounded-lg border p-4 mb-4">
+<div class="space-y-1 text-sm">
+<div class="font-bold text-gray-800">암달의 법칙 (Amdahl, 1967)</div>
+<div class="pl-4 border-l-2 border-gray-300 ml-2 space-y-1">
+<div><strong>수식</strong>: S(N) = 1 / (f + (1-f)/N)</div>
+<div class="pl-4 text-gray-600">├ f: 순차 처리 비율</div>
+<div class="pl-4 text-gray-600">├ N: 프로세서 수</div>
+<div class="pl-4 text-gray-600">└ S(∞) = 1/f (이론적 상한)</div>
+<div><strong>핵심 함의</strong></div>
+<div class="pl-4 text-gray-600">├ 순차 부분 줄이기 &gt; 프로세서 늘리기</div>
+<div class="pl-4 text-gray-600">├ 투자 대비 효과(ROI) 체감</div>
+<div class="pl-4 text-gray-600">└ Make the Common Case Fast</div>
+<div><strong>비교</strong>: 구스타프손(S=N-f(N-1)), Strong vs Weak Scaling</div>
+<div><strong>연관</strong>: Brooks 법칙, Moore 법칙, GPU 병렬처리</div>
+</div>
+</div>
+</div>
+
+<h4>두문자어 암기법</h4>
+<p><strong>"순병성"</strong> = 암달의 법칙 3요소: <span class="highlight">순</span>차 비율(f), <span class="highlight">병</span>렬 프로세서(N), <span class="highlight">성</span>능향상비(S)</p>
+<p><strong>"에프분의일"</strong> = 이론적 상한: <strong>1/f</strong> (f=0.4이면 최대 2.5배)</p>
+
+<h4>골격 답안 구조</h4>
+<p><strong>[서론 15%]</strong> — 멀티코어 시대 배경 → 암달의 법칙 정의(Amdahl, 1967)</p>
+<p><strong>[본론 75%]</strong></p>
+<ul>
+<li>수식 제시 (15%) — S(N) = 1/(f+(1-f)/N), S(∞) = 1/f</li>
+<li>수치 대입 계산 (20%) — f=0.4일 때 N=2,4,8,∞ 각각 계산 → 최대 2.5배</li>
+<li>성능 곡선 + 함의 (15%) — 그래프 그리기 + 투자 효용 체감 해석</li>
+<li>구스타프손 비교 (15%) — Strong Scaling vs Weak Scaling 비교표</li>
+<li>적용 사례 (10%) — 멀티코어 설계, GPU 병렬처리</li>
+</ul>
+<p><strong>[결론 10%]</strong> — 순차 부분 최적화 &gt; 프로세서 추가 → 이종 아키텍처 추세</p>
+
+<h4>필수 도식/표</h4>
+<ol class="list-decimal pl-5">
+<li><strong>수치 대입 계산 표</strong>: f=0.4, N=1~∞ 성능 향상비 (가장 중요!)</li>
+<li><strong>성능 향상 그래프</strong>: X축 프로세서 수, Y축 성능 향상비, 점근선 표시</li>
+<li><strong>암달 vs 구스타프손 비교표</strong>: 6개 기준 비교</li>
+<li><strong>순차 비율별 성능 상한표</strong>: f=5%~75%</li>
+</ol>
+
+<h4>차별화 포인트</h4>
+<ul>
+<li>f=0.4, N→∞일 때 S=2.5배 계산 과정을 구체적으로 제시하면 정량적 분석 능력 증명</li>
+<li>구스타프손의 법칙과 비교하면 비판적 사고 능력 증명</li>
+<li>"Make the Common Case Fast" 원칙(Hennessy &amp; Patterson) 연결로 설계 원칙 이해 증명</li>
+<li>GPU의 f≈0 특성으로 AI 시대 병렬 처리 성공 사례 설명</li>
+</ul>
+
+</div>
+</div>
+</section>
+
+<div id="chat-sidebar" class="closed fixed top-0 right-0 w-80 sm:w-96 h-full bg-white shadow-2xl z-50 flex flex-col">
+<div class="flex items-center justify-between p-4 border-b bg-indigo-600 text-white">
+<span class="font-bold">💬 AI 튜터</span>
+<button onclick="toggleChat()" class="text-white hover:text-indigo-200 text-xl">&times;</button>
+</div>
+<div id="chat-messages" class="flex-grow overflow-y-auto p-4 flex flex-col space-y-2" style="max-height:calc(100vh - 140px)">
+<div class="chat-msg ai">안녕하세요! 암달의 법칙과 병렬 처리 성능에 대해 궁금한 점을 질문해주세요.</div>
+</div>
+<div class="p-3 border-t flex gap-2">
+<input type="text" id="chat-input" placeholder="질문을 입력하세요..." class="flex-grow border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" onkeypress="if(event.key==='Enter')sendChat()">
+<button onclick="sendChat()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700">전송</button>
+</div>
+</div>
+<button onclick="toggleChat()" class="fixed bottom-6 right-6 bg-indigo-600 text-white w-14 h-14 rounded-full shadow-lg hover:bg-indigo-700 text-2xl z-50 flex items-center justify-center">💬</button>
+<div id="settings-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4">
+<div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+<div class="flex justify-between items-center mb-4"><h3 class="text-lg font-bold text-gray-900">🔑 API Key 설정</h3><button onclick="toggleSettings()" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button></div>
+<p class="text-sm text-gray-500 mb-3">Google Gemini API Key를 입력하세요. AI 퀴즈 생성 및 튜터 채팅에 사용됩니다.</p>
+<input type="password" id="api-key-input" placeholder="AIzaSy..." class="w-full border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4">
+<div class="flex gap-2"><button onclick="saveApiKey()" class="flex-grow bg-indigo-600 text-white py-2 rounded-lg font-medium hover:bg-indigo-700">저장</button><button onclick="toggleSettings()" class="px-4 py-2 border rounded-lg text-gray-600 hover:bg-gray-50">취소</button></div>
+</div>
+</div>
+
+</main>
+<footer class="bg-white mt-12 py-8 border-t border-gray-200">
+<div class="max-w-6xl mx-auto px-4 text-center">
+<div class="flex flex-col md:flex-row justify-center items-center gap-2 md:gap-6 text-sm text-gray-600 mb-3 font-medium">
+<div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-indigo-500"></span><span>박교익PE (132회 정보관리기술사, dr.code92@gmail.com)</span></div>
+</div>
+<p class="text-xs text-gray-400">Copyright © KPC 정보관리기술사 ZIP-UP 심화반. All rights reserved.</p>
+</div>
+</footer>
+<script>
+    // ── 멘토 모드 ──
+    var isMentorMode = new URLSearchParams(window.location.search).get('mentor') === 'true';
+    if (isMentorMode) { document.getElementById('nav-script').classList.remove('hidden'); }
+    var sections = isMentorMode
+        ? ['overview','formula','comparison','cases','textbook','script','quiz']
+        : ['overview','formula','comparison','cases','textbook','quiz'];
+
+    // ── 탭 네비게이션 ──
+    function navTo(id) {
+        document.querySelectorAll('.nav-item').forEach(function(el){ el.classList.remove('active','text-indigo-600'); });
+        document.getElementById('nav-'+id).classList.add('active','text-indigo-600');
+        sections.forEach(function(s){ document.getElementById(s).classList.add('hidden'); });
+        document.getElementById(id).classList.remove('hidden');
+        window.scrollTo({top:0, behavior:'smooth'});
+    }
+
+    // ── API Key 관리 ──
+    function getApiKey() {
+        return new URLSearchParams(window.location.search).get('key') || localStorage.getItem('geminiKey') || localStorage.getItem('gemini_api_key') || '';
+    }
+    function saveApiKey() {
+        var k = document.getElementById('api-key-input').value.trim();
+        if(k){ localStorage.setItem('geminiKey',k); alert('API Key가 저장되었습니다.'); toggleSettings(); }
+        else { alert('API Key를 입력해주세요.'); }
+    }
+    function toggleSettings() {
+        var m = document.getElementById('settings-modal');
+        m.classList.toggle('hidden');
+        if(!m.classList.contains('hidden')){ document.getElementById('api-key-input').value = getApiKey(); }
+    }
+
+    // ── AI 채팅 ──
+    function toggleChat(){ document.getElementById('chat-sidebar').classList.toggle('closed'); document.getElementById('chat-sidebar').classList.toggle('open'); }
+    async function sendChat() {
+        var input = document.getElementById('chat-input');
+        var msg = input.value.trim(); if(!msg) return; input.value='';
+        var box = document.getElementById('chat-messages');
+        box.innerHTML += '<div class="chat-msg user">'+msg+'</div>';
+        box.innerHTML += '<div id="typing" class="chat-msg ai"><div class="typing-indicator"><span></span><span></span><span></span></div></div>';
+        box.scrollTop = box.scrollHeight;
+        var key = getApiKey();
+        if(!key){ document.getElementById('typing').remove(); box.innerHTML += '<div class="chat-msg ai">API Key를 먼저 설정해주세요.</div>'; return; }
+        try {
+            var r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key='+key,{
+                method:'POST', headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({contents:[{parts:[{text:"당신은 정보관리기술사 시험 멘토입니다. '암달의 법칙(Amdahl\'s Law)' 관련 질문에 전문적이고 명쾌하게 답변해주세요. 300자 이내로 핵심만 요약.\n\n질문: "+msg}]}]})
+            });
+            var d = await r.json();
+            document.getElementById('typing').remove();
+            var reply = d.candidates[0].content.parts[0].text;
+            box.innerHTML += '<div class="chat-msg ai">'+marked.parse(reply)+'</div>';
+        } catch(e) { document.getElementById('typing').remove(); box.innerHTML += '<div class="chat-msg ai">오류: '+e.message+'</div>'; }
+        box.scrollTop = box.scrollHeight;
+    }
+
+    // ── 전략 카드 토글 ──
+    function toggleStrategy(el) {
+        var d = el.querySelector('.strategy-detail');
+        var s = el.querySelector('.strategy-summary');
+        if(d.classList.contains('hidden')){
+            document.querySelectorAll('.strategy-detail').forEach(function(x){x.classList.add('hidden');});
+            document.querySelectorAll('.strategy-summary').forEach(function(x){x.classList.remove('hidden');});
+            d.classList.remove('hidden'); if(s) s.classList.add('hidden');
+        } else { d.classList.add('hidden'); if(s) s.classList.remove('hidden'); }
+    }
+
+    // ── 퀴즈 ──
+    var geminiKey = (typeof getApiKey === 'function') ? (getApiKey() || '') : (localStorage.getItem('geminiKey') || localStorage.getItem('gemini_api_key') || '');
+    var quizTypeHistory = [];
+    var currentQuizData = null;
+    var quizTopics = [
+        { category: "암달의 법칙 기초", keywords: "Amdahl, 1967, AFIPS, Gene Amdahl, 병렬 처리, 성능 향상 상한" },
+        { category: "핵심 수식과 변수", keywords: "S(N), f, N, 순차 처리 비율, 병렬 처리 비율, 성능 향상비, Speedup" },
+        { category: "수치 대입 계산", keywords: "f=0.4, N=8, 2.5배, 2.11배, 1/f, 이론적 상한" },
+        { category: "구스타프손의 법칙 비교", keywords: "Gustafson, 1988, Strong Scaling, Weak Scaling, S=N-f(N-1)" },
+        { category: "설계 원칙과 함의", keywords: "Make the Common Case Fast, 병목 최적화, ROI, Hennessy Patterson" },
+        { category: "멀티코어와 GPU", keywords: "Intel, 전력 장벽, Power Wall, Herb Sutter, Free Lunch, GPU, NVIDIA, SIMD" },
+        { category: "적용 사례", keywords: "멀티코어 설계, 공공 빅데이터, 순차 비율 감소, 코어 추가 한계" },
+        { category: "연관 이론", keywords: "브룩스의 법칙, 무어의 법칙, 커뮤니케이션 오버헤드, 이종 아키텍처" }
+    ];
+
+    async function generateQuiz() {
+        geminiKey = (typeof getApiKey === 'function') ? (getApiKey() || '') : (localStorage.getItem('geminiKey') || localStorage.getItem('gemini_api_key') || '');
+        if (!geminiKey) { alert('API Key를 먼저 설정해주세요.'); toggleSettings(); return; }
+        var btn = document.getElementById('btn-quiz-gen');
+        btn.disabled = true; btn.innerHTML = '<span>생성 중...</span>';
+        document.getElementById('quiz-placeholder').classList.add('hidden');
+        document.getElementById('quiz-container').classList.add('hidden');
+        document.getElementById('quiz-loading').classList.remove('hidden');
+        var isMC;
+        var recent = quizTypeHistory.slice(-2);
+        if (recent.length >= 2 && recent[0] === recent[1]) { isMC = !recent[1]; }
+        else { isMC = Math.random() > 0.5; }
+        quizTypeHistory.push(isMC);
+        var selected = quizTopics[Math.floor(Math.random() * quizTopics.length)];
+        var quizType = isMC ? '객관식 (4지선다)' : '단답형';
+        var format = isMC
+            ? '{"question":"문제","options":["A","B","C","D"],"correctIndex":0,"explanation":"해설"}'
+            : '{"question":"문제","correctAnswer":"정답","explanation":"해설"}';
+        var prompt = "다음 카테고리에 대한 " + quizType + " 퀴즈 1문제를 만드세요.\n"
+            + "카테고리: " + selected.category + "\n"
+            + "관련 키워드: " + selected.keywords + "\n"
+            + "규칙: 반드시 위 카테고리와 키워드에 직접 관련된 문제를 출제하세요.\n"
+            + "JSON 형식으로 응답: " + format;
+        try {
+            var r = await fetch(
+                'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=' + geminiKey,
+                { method:'POST', headers:{'Content-Type':'application/json'},
+                  body: JSON.stringify({ contents:[{parts:[{text:prompt}]}], generationConfig:{responseMimeType:"application/json"} })
+                }
+            );
+            var d = await r.json();
+            var t = d.candidates[0].content.parts[0].text;
+            t = t.replace(/```json\s*/gi,"").replace(/```\s*/g,"").trim();
+            var depth=0, start=-1, end=-1;
+            for (var i=0;i<t.length;i++) {
+                if (t[i]==='{') { if(depth===0) start=i; depth++; }
+                else if (t[i]==='}') { depth--; if(depth===0 && start!==-1) { end=i; break; } }
+            }
+            if (start===-1||end===-1) throw new Error("No JSON found");
+            t = t.substring(start, end+1);
+            t = t.replace(/[\x00-\x1F\x7F]/g, function(c) { return c==='\n'||c==='\r'||c==='\t' ? ' ' : ''; });
+            currentQuizData = JSON.parse(t);
+            renderQuiz(isMC);
+        } catch(e) {
+            document.getElementById('quiz-loading').classList.add('hidden');
+            document.getElementById('quiz-placeholder').classList.remove('hidden');
+            document.getElementById('quiz-placeholder').innerHTML = '<p class="text-red-500">퀴즈 생성 오류: ' + e.message + '</p>';
+        }
+        btn.disabled = false; btn.innerHTML = '<span>✨ 새로운 문제 생성</span>';
+    }
+
+    function renderQuiz(isMC) {
+        document.getElementById('quiz-loading').classList.add('hidden');
+        document.getElementById('quiz-feedback').classList.add('hidden');
+        document.getElementById('quiz-container').classList.remove('hidden');
+        document.getElementById('quiz-type-badge').textContent = isMC ? '객관식' : '단답형';
+        document.getElementById('quiz-question').textContent = currentQuizData.question;
+        var optDiv = document.getElementById('quiz-options');
+        var inputDiv = document.getElementById('quiz-input-area');
+        if (isMC) {
+            optDiv.classList.remove('hidden');
+            inputDiv.classList.add('hidden');
+            var h = '';
+            var letters = ['A','B','C','D'];
+            currentQuizData.options.forEach(function(opt, i) {
+                h += '<button onclick="checkMultipleChoice(' + i + ', this)" class="w-full text-left p-4 rounded-lg border border-gray-200 hover:bg-indigo-50 hover:border-indigo-300 transition-all mb-2 flex items-center group">'
+                    + '<span class="w-8 h-8 rounded-full bg-gray-100 group-hover:bg-indigo-100 flex items-center justify-center text-sm font-bold text-gray-500 group-hover:text-indigo-600 mr-3 flex-shrink-0">' + letters[i] + '</span>'
+                    + '<span class="text-sm text-gray-700">' + opt + '</span></button>';
+            });
+            optDiv.innerHTML = h;
+        } else {
+            optDiv.classList.add('hidden');
+            inputDiv.classList.remove('hidden');
+            document.getElementById('quiz-answer-input').value = '';
+            document.getElementById('quiz-answer-input').focus();
+        }
+    }
+
+    function checkMultipleChoice(idx, btnEl) {
+        var correct = idx === currentQuizData.correctIndex;
+        document.querySelectorAll('#quiz-options button').forEach(function(b, i) {
+            b.disabled = true;
+            if (i === currentQuizData.correctIndex) { b.classList.add('bg-green-50','border-green-400'); b.querySelector('span:first-child').classList.add('bg-green-100','text-green-700'); }
+            else if (i === idx && !correct) { b.classList.add('bg-red-50','border-red-400'); b.querySelector('span:first-child').classList.add('bg-red-100','text-red-700'); }
+        });
+        showQuizFeedback(correct, currentQuizData.options[currentQuizData.correctIndex], currentQuizData.explanation);
+    }
+
+    async function checkShortAnswer() {
+        geminiKey = (typeof getApiKey === 'function') ? (getApiKey() || '') : (localStorage.getItem('geminiKey') || localStorage.getItem('gemini_api_key') || '');
+        var ans = document.getElementById('quiz-answer-input').value.trim();
+        if (!ans) { alert('답을 입력해주세요.'); return; }
+        var btn = document.getElementById('btn-short-submit');
+        btn.disabled = true; btn.textContent = '채점 중...';
+        try {
+            var gradingPrompt = "당신은 정보관리기술사 시험 채점관입니다. 아래 문제에 대해 사용자의 답안이 정답으로 인정될 수 있는지 판정하세요.\n\n"
+                + "문제: " + currentQuizData.question + "\n"
+                + "모범 정답: " + currentQuizData.correctAnswer + "\n"
+                + "사용자 답안: " + ans + "\n\n"
+                + "판정 기준:\n- 핵심 의미가 동일하면 정답\n- 약어/풀네임 모두 인정\n- 영어/한글 혼용 인정\n- 띄어쓰기/조사 차이는 무시\n- 의미가 명확히 다르면 오답\n\n"
+                + "Output JSON: {\"correct\":true/false,\"reason\":\"판정 이유\"}";
+            var r = await fetch(
+                'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=' + geminiKey,
+                { method:'POST', headers:{'Content-Type':'application/json'},
+                  body: JSON.stringify({ contents:[{parts:[{text:gradingPrompt}]}], generationConfig:{responseMimeType:"application/json"} })
+                }
+            );
+            var d = await r.json();
+            var gt = d.candidates[0].content.parts[0].text;
+            gt = gt.replace(/```json\s*/gi,"").replace(/```\s*/g,"").trim();
+            var gd=0,gs=-1,ge=-1;
+            for(var i=0;i<gt.length;i++){if(gt[i]==='{'){if(gd===0)gs=i;gd++;}else if(gt[i]==='}'){gd--;if(gd===0&&gs!==-1){ge=i;break;}}}
+            if(gs===-1||ge===-1) throw new Error("No JSON");
+            gt=gt.substring(gs,ge+1);
+            gt=gt.replace(/[\x00-\x1F\x7F]/g,function(c){return c==='\n'||c==='\r'||c==='\t'?' ':'';});
+            var result = JSON.parse(gt);
+            showQuizFeedback(result.correct, currentQuizData.correctAnswer, currentQuizData.explanation + (result.reason ? ' (AI: ' + result.reason + ')' : ''));
+        } catch(e) {
+            var normalize = function(s){return s.replace(/\s/g,'').toLowerCase();};
+            var correct = normalize(currentQuizData.correctAnswer).includes(normalize(ans)) || normalize(ans).includes(normalize(currentQuizData.correctAnswer));
+            showQuizFeedback(correct, currentQuizData.correctAnswer, currentQuizData.explanation + ' (로컬 채점)');
+        }
+        btn.disabled = false; btn.textContent = '제출';
+    }
+
+    function showQuizFeedback(correct, answer, explanation) {
+        var fb = document.getElementById('quiz-feedback');
+        fb.classList.remove('hidden','border-green-500','bg-green-50','border-red-500','bg-red-50');
+        if (correct) {
+            fb.classList.add('border-green-500','bg-green-50');
+            fb.innerHTML = '<p class="font-bold text-green-700 mb-1">✅ 정답입니다!</p><p class="text-sm text-green-600">' + explanation + '</p>';
+        } else {
+            fb.classList.add('border-red-500','bg-red-50');
+            fb.innerHTML = '<p class="font-bold text-red-700 mb-1">❌ 오답입니다.</p><p class="text-sm text-red-700 mb-1">정답: ' + answer + '</p><p class="text-sm text-red-600">' + explanation + '</p>';
+        }
+    }
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && document.getElementById('quiz-answer-input') === document.activeElement) { checkShortAnswer(); }
+    });
+
+    // ── 차트 초기화 ──
+    document.addEventListener('DOMContentLoaded', function() {
+        // 암달의 법칙 성능 그래프 (f=0.4)
+        var ctx1 = document.getElementById('amdahlChart');
+        if (ctx1) {
+            new Chart(ctx1.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: ['1','2','4','8','16','32','64','128'],
+                    datasets: [{
+                        label: 'f=5%',
+                        data: [1, 1.90, 3.48, 5.93, 9.14, 12.55, 15.42, 17.37],
+                        borderColor: '#10b981',
+                        backgroundColor: 'transparent',
+                        tension: 0.3,
+                        borderWidth: 2
+                    },{
+                        label: 'f=10%',
+                        data: [1, 1.82, 3.08, 4.71, 6.40, 7.80, 8.77, 9.34],
+                        borderColor: '#6366f1',
+                        backgroundColor: 'transparent',
+                        tension: 0.3,
+                        borderWidth: 2
+                    },{
+                        label: 'f=25%',
+                        data: [1, 1.60, 2.29, 2.91, 3.37, 3.66, 3.82, 3.91],
+                        borderColor: '#f59e0b',
+                        backgroundColor: 'transparent',
+                        tension: 0.3,
+                        borderWidth: 2
+                    },{
+                        label: 'f=50%',
+                        data: [1, 1.33, 1.60, 1.78, 1.88, 1.94, 1.97, 1.98],
+                        borderColor: '#ef4444',
+                        backgroundColor: 'transparent',
+                        tension: 0.3,
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'top' }, title: { display: true, text: '순차 비율별 성능 향상 곡선' } },
+                    scales: {
+                        x: { title: { display: true, text: '프로세서 수 (N)' } },
+                        y: { title: { display: true, text: '성능 향상비 S(N)' }, beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        // 순차 비율별 최대 성능 바 차트
+        var ctx2 = document.getElementById('maxSpeedupChart');
+        if (ctx2) {
+            new Chart(ctx2.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: ['f=5%', 'f=10%', 'f=25%', 'f=40%', 'f=50%', 'f=75%'],
+                    datasets: [{
+                        label: '최대 성능 향상 (1/f)',
+                        data: [20, 10, 4, 2.5, 2, 1.33],
+                        backgroundColor: ['#10b981','#6366f1','#f59e0b','#f97316','#ef4444','#dc2626'],
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false }, title: { display: true, text: '순차 비율별 이론적 성능 상한 (1/f)' } },
+                    scales: { y: { title: { display: true, text: '최대 성능 향상비' }, beginAtZero: true } }
+                }
+            });
+        }
+    });
+</script>
+</body></html>

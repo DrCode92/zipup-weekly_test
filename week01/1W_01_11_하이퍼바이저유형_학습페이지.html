@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>하이퍼바이저(Hypervisor) 유형</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+body{font-family:'Noto Sans KR',sans-serif;background-color:#f5f5f4;color:#1f2937}
+.chart-container{position:relative;width:100%;max-width:600px;margin-left:auto;margin-right:auto;height:350px;max-height:400px}
+.nav-item.active{border-bottom:2px solid #4f46e5;color:#4f46e5;font-weight:700}
+.tech-block{transition:all .3s ease;cursor:pointer}
+.tech-block:hover{transform:translateY(-2px);box-shadow:0 4px 6px -1px rgba(0,0,0,.1)}
+.tech-block.selected{ring:2px;ring-color:#4f46e5;background-color:#eef2ff;border-color:#4f46e5}
+.no-scrollbar::-webkit-scrollbar{display:none}
+.no-scrollbar{-ms-overflow-style:none;scrollbar-width:none}
+#chat-sidebar{transition:transform .3s ease-in-out}
+#chat-sidebar.closed{transform:translateX(100%)}
+#chat-sidebar.open{transform:translateX(0)}
+.typing-indicator span{display:inline-block;width:6px;height:6px;background-color:#4f46e5;border-radius:50%;animation:typing 1.4s infinite ease-in-out both;margin:0 2px}
+.typing-indicator span:nth-child(1){animation-delay:-.32s}
+.typing-indicator span:nth-child(2){animation-delay:-.16s}
+@keyframes typing{0%,80%,100%{transform:scale(0)}40%{transform:scale(1)}}
+.prose h1,.prose h2,.prose h3{font-weight:bold;margin-top:1em;margin-bottom:.5em;color:#312e81;font-size:1.1em}
+.prose ul{list-style-type:disc;padding-left:1.5em;margin-bottom:1em}
+.prose strong{color:#4338ca}
+.prose p{margin-bottom:.8em}
+.chat-msg{border-radius:12px;padding:10px 14px;margin-bottom:10px;max-width:85%;font-size:.95rem}
+.chat-msg.user{background-color:#4f46e5;color:white;align-self:flex-end;margin-left:auto}
+.chat-msg.ai{background-color:#f3f4f6;color:#1f2937;align-self:flex-start;border:1px solid #e5e7eb}
+.textbook-content h3{font-size:1.25rem;font-weight:700;color:#1e3a8a;margin-top:1.5rem;margin-bottom:.75rem;border-left:4px solid #4f46e5;padding-left:.75rem}
+.textbook-content h4{font-size:1.1rem;font-weight:600;color:#374151;margin-top:1rem;margin-bottom:.5rem}
+.textbook-content p{margin-bottom:1rem;line-height:1.8;color:#4b5563}
+.textbook-content ul{list-style-type:disc;padding-left:1.5rem;margin-bottom:1rem;color:#4b5563}
+.textbook-content li{margin-bottom:.5rem;line-height:1.7}
+.textbook-content table{width:100%;border-collapse:collapse;margin-bottom:1.5rem;font-size:.95rem}
+.textbook-content th,.textbook-content td{border:1px solid #e5e7eb;padding:.75rem;text-align:left}
+.textbook-content th{background-color:#f9fafb;font-weight:600;color:#1f2937}
+.textbook-content .highlight{background-color:#eef2ff;color:#4338ca;font-weight:600;padding:0 4px;border-radius:4px}
+.textbook-content pre{background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:1rem;overflow-x:auto;margin-bottom:1rem;font-size:.85rem;line-height:1.6}
+.textbook-content code{font-family:'Courier New',monospace}
+.def-box{background:linear-gradient(135deg,#eef2ff 0%,#e0e7ff 100%);border-left:4px solid #4f46e5;border-radius:8px;padding:1.25rem;margin-bottom:1rem}
+.def-box p{color:#312e81;font-weight:500;margin:0;line-height:1.8}
+.insight-box{background-color:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:1rem;margin:1rem 0}
+.insight-box::before{content:'\1F4A1';margin-right:.5rem}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.animate-fade-in{animation:fadeIn .4s ease-out forwards}
+</style>
+</head>
+<body class="bg-stone-100 min-h-screen flex flex-col overflow-x-hidden">
+
+<header class="bg-white shadow-sm sticky top-0 z-40">
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+<div class="flex justify-between items-center pt-3 pb-1">
+<div class="flex flex-col justify-center min-w-0">
+<span class="text-[10px] sm:text-xs text-indigo-600 font-bold uppercase tracking-wider leading-tight">KPC 정보관리기술사 ZIP-UP 심화반</span>
+<div class="flex items-center gap-2">
+<span class="text-lg sm:text-xl font-bold text-gray-900 tracking-tight truncate">하이퍼바이저(Hypervisor) 유형</span>
+<span class="text-[10px] sm:text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-bold flex-shrink-0">2026</span>
+</div>
+</div>
+</div>
+<nav class="flex space-x-1 sm:space-x-4 overflow-x-auto no-scrollbar pb-1 items-center">
+<button onclick="navTo('overview')" id="nav-overview" class="nav-item active px-1 pt-1 pb-2 text-xs sm:text-sm font-medium text-gray-900 whitespace-nowrap">개요 및 개념</button>
+<button onclick="navTo('types')" id="nav-types" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium text-gray-500 hover:text-gray-700 whitespace-nowrap">Type 1 vs Type 2</button>
+<button onclick="navTo('vmethod')" id="nav-vmethod" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium text-gray-500 hover:text-gray-700 whitespace-nowrap">가상화 방식</button>
+<button onclick="navTo('modern')" id="nav-modern" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium text-gray-500 hover:text-gray-700 whitespace-nowrap">현대적 발전</button>
+<button onclick="navTo('textbook')" id="nav-textbook" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium text-gray-500 hover:text-gray-700 whitespace-nowrap">원문 학습</button>
+<button onclick="navTo('script')" id="nav-script" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium text-amber-600 hover:text-amber-800 whitespace-nowrap hidden">🎬 강의 스크립트</button>
+<button onclick="navTo('quiz')" id="nav-quiz" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium text-indigo-600 hover:text-indigo-800 whitespace-nowrap">퀴즈 &amp; 암기</button>
+<span class="w-px h-4 bg-gray-300 flex-shrink-0"></span>
+<button onclick="toggleSettings()" class="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium text-indigo-600 hover:bg-indigo-50 border border-indigo-200 hover:border-indigo-400 transition-all whitespace-nowrap flex-shrink-0" title="API Key 설정">&#128273; API</button>
+</nav>
+</div>
+</header>
+
+<main class="flex-grow max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12 pb-24">
+
+<section id="overview" class="space-y-8 animate-fade-in">
+<div class="bg-white rounded-xl shadow-sm p-6 sm:p-8 border-l-4 border-indigo-500">
+<div class="def-box">
+<p><strong>하이퍼바이저(Hypervisor)</strong>란 하나의 물리적 서버 위에 다수의 가상 머신(VM)을 생성·관리하는 소프트웨어 계층(VMM, Virtual Machine Monitor)으로, 하드웨어에 직접 설치되는 <strong>Type 1(Bare-metal)</strong>과 호스트 OS 위에 설치되는 <strong>Type 2(Hosted)</strong>로 구분된다.</p>
+</div>
+<p class="text-gray-600 leading-relaxed mt-4">쉽게 말하면, 하이퍼바이저는 "컴퓨터 안에 여러 대의 독립된 컴퓨터를 만드는 기술"입니다. 하나의 건물에 여러 독립 사무실을 만드는 건물 관리 시스템처럼, 하이퍼바이저는 하나의 물리 서버에 여러 VM을 만들고 각각에 CPU, 메모리, 저장소를 분배합니다. 클라우드 컴퓨팅(AWS, Azure, GCP)의 IaaS가 모두 이 기술 위에 구축되어 있습니다.</p>
+
+<!-- 역사 타임라인 -->
+<div class="mt-6">
+<h4 class="font-bold text-gray-900 mb-4">📅 가상화 기술의 역사</h4>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+<div class="bg-indigo-50 rounded-lg p-3 text-center border border-indigo-200"><div class="text-xs font-bold text-indigo-700">1967</div><div class="text-xs text-gray-600 mt-1">IBM CP-40, 최초의 VMM</div></div>
+<div class="bg-blue-50 rounded-lg p-3 text-center border border-blue-200"><div class="text-xs font-bold text-blue-700">1974</div><div class="text-xs text-gray-600 mt-1">Popek &amp; Goldberg, 가상화 3대 요건</div></div>
+<div class="bg-green-50 rounded-lg p-3 text-center border border-green-200"><div class="text-xs font-bold text-green-700">1998</div><div class="text-xs text-gray-600 mt-1">VMware 설립, x86 가상화 상용화</div></div>
+<div class="bg-purple-50 rounded-lg p-3 text-center border border-purple-200"><div class="text-xs font-bold text-purple-700">2006</div><div class="text-xs text-gray-600 mt-1">Intel VT-x/AMD-V HW 지원</div></div>
+</div>
+</div>
+
+<!-- Popek & Goldberg 3대 요건 -->
+<div class="mt-6">
+<h4 class="font-bold text-gray-900 mb-3">📋 Popek &amp; Goldberg 가상화 3대 요건 (1974)</h4>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+<div class="bg-indigo-50 rounded-lg p-4 border border-indigo-200"><strong class="text-indigo-800 text-sm">동등성 (Equivalence)</strong><p class="text-xs text-gray-600 mt-1">VM에서 실행되는 프로그램은 실제 하드웨어에서와 본질적으로 동일하게 동작</p></div>
+<div class="bg-green-50 rounded-lg p-4 border border-green-200"><strong class="text-green-800 text-sm">효율성 (Efficiency)</strong><p class="text-xs text-gray-600 mt-1">대부분의 게스트 명령어는 하이퍼바이저 개입 없이 직접 실행</p></div>
+<div class="bg-purple-50 rounded-lg p-4 border border-purple-200"><strong class="text-purple-800 text-sm">자원 제어 (Resource Control)</strong><p class="text-xs text-gray-600 mt-1">하이퍼바이저가 모든 하드웨어 자원을 완전히 통제</p></div>
+</div>
+</div>
+</div>
+
+<!-- 비교 차트 -->
+<div class="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+<h3 class="font-bold text-lg text-gray-900 mb-4">Type 1 vs Type 2 특성 비교</h3>
+<div class="chart-container"><canvas id="typeCompareChart"></canvas></div>
+<p class="text-xs text-gray-400 mt-3 text-center">* 점수는 상대적 비교를 위한 예시 값입니다.</p>
+</div>
+</section>
+
+<section id="types" class="hidden space-y-8 animate-fade-in">
+<!-- 아키텍처 구조도 시각화 -->
+<div class="bg-white rounded-xl shadow-sm p-6 sm:p-8 border-l-4 border-indigo-500">
+<h3 class="font-bold text-lg text-gray-900 mb-6">아키텍처 구조도 비교</h3>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<!-- Type 1 -->
+<div class="border-2 border-indigo-300 rounded-xl p-4">
+<h4 class="text-center font-bold text-indigo-800 mb-4">Type 1: Bare-metal</h4>
+<div class="space-y-2">
+<div class="grid grid-cols-3 gap-2">
+<div class="bg-blue-100 rounded-lg p-2 text-center border border-blue-300"><span class="text-xs font-bold text-blue-800">VM 1</span><br><span class="text-[10px] text-blue-600">Guest OS</span></div>
+<div class="bg-blue-100 rounded-lg p-2 text-center border border-blue-300"><span class="text-xs font-bold text-blue-800">VM 2</span><br><span class="text-[10px] text-blue-600">Guest OS</span></div>
+<div class="bg-blue-100 rounded-lg p-2 text-center border border-blue-300"><span class="text-xs font-bold text-blue-800">VM 3</span><br><span class="text-[10px] text-blue-600">Guest OS</span></div>
+</div>
+<div class="w-full h-1 bg-indigo-300 rounded"></div>
+<div class="bg-indigo-600 text-white rounded-lg p-3 text-center"><span class="text-sm font-bold">하이퍼바이저 (Bare-metal VMM)</span><br><span class="text-[10px] opacity-80">ESXi, Xen, KVM, Hyper-V</span></div>
+<div class="w-full h-1 bg-gray-300 rounded"></div>
+<div class="bg-gray-700 text-white rounded-lg p-3 text-center"><span class="text-sm font-bold">물리적 하드웨어</span><br><span class="text-[10px] opacity-80">CPU, RAM, Storage, NIC</span></div>
+</div>
+</div>
+<!-- Type 2 -->
+<div class="border-2 border-green-300 rounded-xl p-4">
+<h4 class="text-center font-bold text-green-800 mb-4">Type 2: Hosted</h4>
+<div class="space-y-2">
+<div class="grid grid-cols-3 gap-2">
+<div class="bg-blue-100 rounded-lg p-2 text-center border border-blue-300"><span class="text-xs font-bold text-blue-800">VM 1</span><br><span class="text-[10px] text-blue-600">Guest OS</span></div>
+<div class="bg-blue-100 rounded-lg p-2 text-center border border-blue-300"><span class="text-xs font-bold text-blue-800">VM 2</span><br><span class="text-[10px] text-blue-600">Guest OS</span></div>
+<div class="bg-blue-100 rounded-lg p-2 text-center border border-blue-300"><span class="text-xs font-bold text-blue-800">VM 3</span><br><span class="text-[10px] text-blue-600">Guest OS</span></div>
+</div>
+<div class="w-full h-1 bg-green-300 rounded"></div>
+<div class="bg-green-600 text-white rounded-lg p-3 text-center"><span class="text-sm font-bold">하이퍼바이저 (Hosted VMM)</span><br><span class="text-[10px] opacity-80">VirtualBox, VMware Workstation</span></div>
+<div class="w-full h-1 bg-amber-300 rounded"></div>
+<div class="bg-amber-500 text-white rounded-lg p-3 text-center"><span class="text-sm font-bold">호스트 OS</span><br><span class="text-[10px] opacity-80">Windows, Linux, macOS</span></div>
+<div class="w-full h-1 bg-gray-300 rounded"></div>
+<div class="bg-gray-700 text-white rounded-lg p-3 text-center"><span class="text-sm font-bold">물리적 하드웨어</span><br><span class="text-[10px] opacity-80">CPU, RAM, Storage, NIC</span></div>
+</div>
+</div>
+</div>
+<div class="insight-box mt-4"><p class="text-sm text-amber-800"><strong>핵심 차이</strong>: Type 1은 하드웨어 위에 직접 설치(3계층), Type 2는 호스트 OS 위에 설치(4계층). 계층이 하나 더 있어서 Type 2의 오버헤드가 크다.</p></div>
+</div>
+
+<!-- 체계적 비교표 -->
+<div class="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+<h3 class="font-bold text-lg text-gray-900 mb-4">성능 및 자원 관리 비교</h3>
+<div class="overflow-x-auto">
+<table class="w-full text-sm border-collapse">
+<thead><tr class="bg-gray-50"><th class="border border-gray-200 p-3">비교 기준</th><th class="border border-gray-200 p-3 bg-indigo-50">Type 1 (Bare-metal)</th><th class="border border-gray-200 p-3 bg-green-50">Type 2 (Hosted)</th></tr></thead>
+<tbody>
+<tr><td class="border border-gray-200 p-3 font-bold">아키텍처</td><td class="border border-gray-200 p-3">하드웨어 위 직접 설치</td><td class="border border-gray-200 p-3">호스트 OS 위 애플리케이션</td></tr>
+<tr><td class="border border-gray-200 p-3 font-bold">성능 오버헤드</td><td class="border border-gray-200 p-3 text-indigo-700 font-bold">1~5% (낮음)</td><td class="border border-gray-200 p-3 text-red-600">10~30% (높음)</td></tr>
+<tr><td class="border border-gray-200 p-3 font-bold">하드웨어 접근</td><td class="border border-gray-200 p-3">직접 접근 (Direct I/O)</td><td class="border border-gray-200 p-3">호스트 OS 경유 (2단계 중개)</td></tr>
+<tr><td class="border border-gray-200 p-3 font-bold">VM 간 격리</td><td class="border border-gray-200 p-3">하이퍼바이저 수준 강한 격리</td><td class="border border-gray-200 p-3">호스트 OS 프로세스 수준</td></tr>
+<tr><td class="border border-gray-200 p-3 font-bold">보안성</td><td class="border border-gray-200 p-3">높음 (공격 표면 작음)</td><td class="border border-gray-200 p-3">상대적 낮음 (호스트 OS 취약점)</td></tr>
+<tr><td class="border border-gray-200 p-3 font-bold">확장성</td><td class="border border-gray-200 p-3">수백 대 VM 운영</td><td class="border border-gray-200 p-3">수 대~수십 대 VM</td></tr>
+<tr><td class="border border-gray-200 p-3 font-bold">설치 복잡도</td><td class="border border-gray-200 p-3">전용 서버, 전문 지식 필요</td><td class="border border-gray-200 p-3">데스크톱에 간단 설치</td></tr>
+<tr><td class="border border-gray-200 p-3 font-bold">주요 용도</td><td class="border border-gray-200 p-3">데이터센터, 클라우드, 프로덕션</td><td class="border border-gray-200 p-3">개발/테스트, 교육</td></tr>
+<tr><td class="border border-gray-200 p-3 font-bold">대표 사례</td><td class="border border-gray-200 p-3">AWS(Nitro), Azure(Hyper-V)</td><td class="border border-gray-200 p-3">개발자 로컬 테스트 환경</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<!-- 대표 제품 -->
+<div class="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+<h3 class="font-bold text-lg text-gray-900 mb-4">대표 제품 비교</h3>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div>
+<h4 class="font-bold text-indigo-700 mb-3">Type 1 대표 제품</h4>
+<div class="space-y-2">
+<div class="bg-indigo-50 rounded-lg p-3 border border-indigo-200"><strong class="text-indigo-800 text-sm">VMware ESXi</strong> <span class="text-xs text-gray-500">| VMware(Broadcom) | 상용</span><p class="text-xs text-gray-600 mt-1">엔터프라이즈 시장 지배, vSphere 생태계</p></div>
+<div class="bg-indigo-50 rounded-lg p-3 border border-indigo-200"><strong class="text-indigo-800 text-sm">Xen</strong> <span class="text-xs text-gray-500">| Linux Foundation | 오픈소스</span><p class="text-xs text-gray-600 mt-1">반가상화(PV) 최초 도입, AWS 초기 기반</p></div>
+<div class="bg-indigo-50 rounded-lg p-3 border border-indigo-200"><strong class="text-indigo-800 text-sm">KVM</strong> <span class="text-xs text-gray-500">| Red Hat/Linux | 오픈소스</span><p class="text-xs text-gray-600 mt-1">리눅스 커널 모듈, OpenStack 기반</p></div>
+<div class="bg-indigo-50 rounded-lg p-3 border border-indigo-200"><strong class="text-indigo-800 text-sm">Hyper-V</strong> <span class="text-xs text-gray-500">| Microsoft | 상용/무료</span><p class="text-xs text-gray-600 mt-1">Windows Server 통합, Azure 기반</p></div>
+</div>
+</div>
+<div>
+<h4 class="font-bold text-green-700 mb-3">Type 2 대표 제품</h4>
+<div class="space-y-2">
+<div class="bg-green-50 rounded-lg p-3 border border-green-200"><strong class="text-green-800 text-sm">VMware Workstation</strong> <span class="text-xs text-gray-500">| Windows, Linux</span><p class="text-xs text-gray-600 mt-1">개발/테스트 환경</p></div>
+<div class="bg-green-50 rounded-lg p-3 border border-green-200"><strong class="text-green-800 text-sm">Oracle VirtualBox</strong> <span class="text-xs text-gray-500">| Windows, Linux, macOS</span><p class="text-xs text-gray-600 mt-1">교육/개인 사용, 무료</p></div>
+<div class="bg-green-50 rounded-lg p-3 border border-green-200"><strong class="text-green-800 text-sm">Parallels Desktop</strong> <span class="text-xs text-gray-500">| macOS</span><p class="text-xs text-gray-600 mt-1">Mac에서 Windows 실행</p></div>
+<div class="bg-green-50 rounded-lg p-3 border border-green-200"><strong class="text-green-800 text-sm">QEMU</strong> <span class="text-xs text-gray-500">| Linux | 오픈소스</span><p class="text-xs text-gray-600 mt-1">에뮬레이션 + 가상화</p></div>
+</div>
+</div>
+</div>
+<div class="insight-box mt-4"><p class="text-sm text-amber-800"><strong>KVM 분류 논쟁</strong>: KVM은 리눅스 커널 모듈이라 겉보기에 Type 2처럼 보이지만, KVM이 로드되면 리눅스 커널 자체가 하이퍼바이저로 변환되어 하드웨어를 직접 제어하므로 학술적으로 <strong>Type 1</strong>로 분류한다. (시험 빈출 함정 포인트!)</p></div>
+</div>
+</section>
+
+<section id="vmethod" class="hidden space-y-8 animate-fade-in">
+<!-- 전가상화 vs 반가상화 vs HW지원 -->
+<div class="bg-white rounded-xl shadow-sm p-6 sm:p-8 border-l-4 border-purple-500">
+<h3 class="font-bold text-lg text-gray-900 mb-4">전가상화 / 반가상화 / HW 지원 가상화</h3>
+<table class="w-full text-sm border-collapse">
+<thead><tr class="bg-gray-50"><th class="border border-gray-200 p-3">구분</th><th class="border border-gray-200 p-3 bg-indigo-50">전가상화</th><th class="border border-gray-200 p-3 bg-green-50">반가상화</th><th class="border border-gray-200 p-3 bg-purple-50">HW 지원 가상화</th></tr></thead>
+<tbody>
+<tr><td class="border border-gray-200 p-3 font-bold">게스트 OS 수정</td><td class="border border-gray-200 p-3">불필요</td><td class="border border-gray-200 p-3">필요 (하이퍼콜 삽입)</td><td class="border border-gray-200 p-3">불필요</td></tr>
+<tr><td class="border border-gray-200 p-3 font-bold">특권 명령어 처리</td><td class="border border-gray-200 p-3">바이너리 변환</td><td class="border border-gray-200 p-3">하이퍼콜(Hypercall)</td><td class="border border-gray-200 p-3">HW 트래핑 (VT-x)</td></tr>
+<tr><td class="border border-gray-200 p-3 font-bold">성능</td><td class="border border-gray-200 p-3">HW 지원 없으면 낮음</td><td class="border border-gray-200 p-3">우수 (오버헤드 최소)</td><td class="border border-gray-200 p-3">우수 (네이티브 근접)</td></tr>
+<tr><td class="border border-gray-200 p-3 font-bold">호환성</td><td class="border border-gray-200 p-3">모든 OS 지원</td><td class="border border-gray-200 p-3">수정된 OS만</td><td class="border border-gray-200 p-3">VT-x/AMD-V CPU 필요</td></tr>
+<tr><td class="border border-gray-200 p-3 font-bold">대표</td><td class="border border-gray-200 p-3">VMware ESXi</td><td class="border border-gray-200 p-3">Xen PV, Virtio</td><td class="border border-gray-200 p-3">KVM+VT-x, ESXi+VT-x</td></tr>
+</tbody>
+</table>
+</div>
+
+<!-- Ring 구조 시각화 -->
+<div class="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+<h3 class="font-bold text-lg text-gray-900 mb-4">CPU 권한 계층 (Ring) 구조</h3>
+<div class="flex flex-col items-center space-y-2 max-w-md mx-auto">
+<div class="w-full bg-red-100 border-2 border-red-400 rounded-lg p-3 text-center"><span class="text-sm font-bold text-red-800">Ring -1: 하이퍼바이저</span><br><span class="text-xs text-red-600">VMX root mode (VT-x/AMD-V로 추가)</span></div>
+<div class="text-gray-400 text-xs">↑ HW 가상화 확장</div>
+<div class="w-[90%] bg-indigo-100 border-2 border-indigo-400 rounded-lg p-3 text-center"><span class="text-sm font-bold text-indigo-800">Ring 0: 게스트 OS 커널</span></div>
+<div class="w-[75%] bg-gray-100 border border-gray-300 rounded-lg p-2 text-center"><span class="text-xs text-gray-500">Ring 1, 2: (미사용)</span></div>
+<div class="w-[60%] bg-green-100 border-2 border-green-400 rounded-lg p-3 text-center"><span class="text-sm font-bold text-green-800">Ring 3: 게스트 애플리케이션</span></div>
+</div>
+<p class="text-xs text-gray-500 text-center mt-4">2006년 Intel VT-x/AMD-V 도입으로 Ring -1이 추가되어 하이퍼바이저가 최상위 권한에서 실행</p>
+</div>
+
+<!-- 성능 차이 원인 -->
+<div class="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+<h3 class="font-bold text-lg text-gray-900 mb-4">성능 차이의 기술적 원인</h3>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div class="bg-indigo-50 rounded-lg p-4 border border-indigo-200">
+<h4 class="font-bold text-indigo-800 mb-2">Type 1 성능 우위 원인</h4>
+<ul class="text-sm text-gray-700 space-y-1">
+<li>• <strong>Ring 0 직접 실행</strong>: CPU 최상위 권한에서 특권 명령어 트래핑</li>
+<li>• <strong>직접 메모리 매핑</strong>: EPT/NPT로 2단계 주소 변환, 오버헤드 최소</li>
+<li>• <strong>SR-IOV 지원</strong>: 네트워크/스토리지 I/O를 VM에 직접 할당</li>
+</ul>
+</div>
+<div class="bg-red-50 rounded-lg p-4 border border-red-200">
+<h4 class="font-bold text-red-800 mb-2">Type 2 성능 열세 원인</h4>
+<ul class="text-sm text-gray-700 space-y-1">
+<li>• <strong>이중 스케줄링</strong>: 호스트 OS + 하이퍼바이저 스케줄러 이중 동작</li>
+<li>• <strong>I/O 경로 4단계</strong>: Guest→하이퍼바이저→호스트 커널→드라이버→HW</li>
+<li>• <strong>메모리 오버헤드</strong>: 호스트 OS 자체 메모리 사용으로 가용 자원 감소</li>
+</ul>
+</div>
+</div>
+</div>
+</section>
+
+<section id="modern" class="hidden">
+<div class="bg-white rounded-xl shadow-sm p-6 sm:p-8 border-l-4 border-teal-500">
+<h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">🔬 현대적 발전과 변형</h2>
+
+<!-- 5.1 하드웨어 지원 가상화 -->
+<h3 class="text-lg font-bold text-teal-700 mb-4 border-l-4 border-teal-400 pl-3">하드웨어 지원 가상화 (VT-x / AMD-V)</h3>
+<p class="text-gray-700 leading-relaxed mb-4">2006년 Intel VT-x와 AMD-V의 등장으로 CPU에 <strong>Ring -1(VMX root mode)</strong>이라는 새로운 권한 계층이 추가되어, 하이퍼바이저가 Ring -1에서 실행되고 게스트 OS가 Ring 0에서 네이티브에 가깝게 실행될 수 있게 되었습니다.</p>
+
+<!-- 5.2 전가상화 vs 반가상화 비교표 -->
+<h3 class="text-lg font-bold text-teal-700 mb-4 mt-8 border-l-4 border-teal-400 pl-3">전가상화 vs 반가상화 vs HW 지원 가상화</h3>
+<div class="overflow-x-auto mb-6">
+<table class="w-full text-sm border-collapse">
+<thead><tr class="bg-teal-50">
+<th class="border border-gray-200 px-4 py-3 text-left font-bold text-teal-800">구분</th>
+<th class="border border-gray-200 px-4 py-3 text-left font-bold text-teal-800">전가상화</th>
+<th class="border border-gray-200 px-4 py-3 text-left font-bold text-teal-800">반가상화</th>
+<th class="border border-gray-200 px-4 py-3 text-left font-bold text-teal-800">HW 지원</th>
+</tr></thead>
+<tbody>
+<tr><td class="border border-gray-200 px-4 py-2 font-medium">게스트 OS 수정</td><td class="border border-gray-200 px-4 py-2">불필요</td><td class="border border-gray-200 px-4 py-2">필요 (하이퍼콜)</td><td class="border border-gray-200 px-4 py-2">불필요</td></tr>
+<tr class="bg-gray-50"><td class="border border-gray-200 px-4 py-2 font-medium">특권 명령어 처리</td><td class="border border-gray-200 px-4 py-2">바이너리 변환</td><td class="border border-gray-200 px-4 py-2">Hypercall</td><td class="border border-gray-200 px-4 py-2">VMX root mode</td></tr>
+<tr><td class="border border-gray-200 px-4 py-2 font-medium">성능</td><td class="border border-gray-200 px-4 py-2">오버헤드 있음</td><td class="border border-gray-200 px-4 py-2">우수</td><td class="border border-gray-200 px-4 py-2">네이티브 근접</td></tr>
+<tr class="bg-gray-50"><td class="border border-gray-200 px-4 py-2 font-medium">호환성</td><td class="border border-gray-200 px-4 py-2">모든 OS 지원</td><td class="border border-gray-200 px-4 py-2">수정된 OS만</td><td class="border border-gray-200 px-4 py-2">모든 OS 지원</td></tr>
+<tr><td class="border border-gray-200 px-4 py-2 font-medium">대표</td><td class="border border-gray-200 px-4 py-2">VMware ESXi</td><td class="border border-gray-200 px-4 py-2">Xen PV, Virtio</td><td class="border border-gray-200 px-4 py-2">KVM+VT-x</td></tr>
+</tbody>
+</table>
+</div>
+
+<!-- 5.3 컨테이너와의 비교 -->
+<h3 class="text-lg font-bold text-teal-700 mb-4 mt-8 border-l-4 border-teal-400 pl-3">하이퍼바이저(VM) vs 컨테이너(Docker/K8s)</h3>
+<div class="overflow-x-auto mb-6">
+<table class="w-full text-sm border-collapse">
+<thead><tr class="bg-teal-50">
+<th class="border border-gray-200 px-4 py-3 text-left font-bold text-teal-800">비교 기준</th>
+<th class="border border-gray-200 px-4 py-3 text-left font-bold text-teal-800">하이퍼바이저 (VM)</th>
+<th class="border border-gray-200 px-4 py-3 text-left font-bold text-teal-800">컨테이너 (Docker/K8s)</th>
+</tr></thead>
+<tbody>
+<tr><td class="border border-gray-200 px-4 py-2 font-medium">격리 수준</td><td class="border border-gray-200 px-4 py-2">강함 (HW 수준)</td><td class="border border-gray-200 px-4 py-2">상대적 약함 (커널 공유)</td></tr>
+<tr class="bg-gray-50"><td class="border border-gray-200 px-4 py-2 font-medium">부팅 시간</td><td class="border border-gray-200 px-4 py-2">수십 초~수 분</td><td class="border border-gray-200 px-4 py-2">수 초 이내</td></tr>
+<tr><td class="border border-gray-200 px-4 py-2 font-medium">자원 오버헤드</td><td class="border border-gray-200 px-4 py-2">GB 단위</td><td class="border border-gray-200 px-4 py-2">MB 단위</td></tr>
+<tr class="bg-gray-50"><td class="border border-gray-200 px-4 py-2 font-medium">이미지 크기</td><td class="border border-gray-200 px-4 py-2">GB 단위</td><td class="border border-gray-200 px-4 py-2">MB 단위</td></tr>
+<tr><td class="border border-gray-200 px-4 py-2 font-medium">밀도</td><td class="border border-gray-200 px-4 py-2">서버당 수십 VM</td><td class="border border-gray-200 px-4 py-2">서버당 수백~수천</td></tr>
+<tr class="bg-gray-50"><td class="border border-gray-200 px-4 py-2 font-medium">보안</td><td class="border border-gray-200 px-4 py-2">강한 격리 (멀티테넌트)</td><td class="border border-gray-200 px-4 py-2">커널 취약점 공유 위험</td></tr>
+<tr><td class="border border-gray-200 px-4 py-2 font-medium">사용 사례</td><td class="border border-gray-200 px-4 py-2">이종 OS, 높은 격리</td><td class="border border-gray-200 px-4 py-2">마이크로서비스, CI/CD</td></tr>
+</tbody>
+</table>
+</div>
+
+<!-- 혼용 아키텍처 시각화 -->
+<div class="bg-teal-50 rounded-lg p-6 mb-6">
+<h4 class="font-bold text-teal-800 mb-4 text-center">현대적 혼용 아키텍처: VM + 컨테이너</h4>
+<div class="max-w-lg mx-auto space-y-2">
+<div class="bg-blue-100 border-2 border-blue-400 rounded-lg p-3 text-center">
+<div class="grid grid-cols-3 gap-2 mb-2">
+<div class="bg-blue-200 rounded p-2 text-xs font-bold text-blue-800">Pod A</div>
+<div class="bg-blue-200 rounded p-2 text-xs font-bold text-blue-800">Pod B</div>
+<div class="bg-blue-200 rounded p-2 text-xs font-bold text-blue-800">Pod C</div>
+</div>
+<span class="text-xs font-bold text-blue-700">Kubernetes (컨테이너 오케스트레이션)</span>
+</div>
+<div class="text-center text-gray-400 text-lg">↕</div>
+<div class="bg-green-100 border-2 border-green-400 rounded-lg p-3 text-center">
+<span class="text-sm font-bold text-green-800">VM (Worker Node) — 게스트 OS + Docker Runtime</span>
+</div>
+<div class="text-center text-gray-400 text-lg">↕</div>
+<div class="bg-indigo-100 border-2 border-indigo-400 rounded-lg p-3 text-center">
+<span class="text-sm font-bold text-indigo-800">Type 1 하이퍼바이저 (ESXi / KVM / Nitro)</span>
+</div>
+<div class="text-center text-gray-400 text-lg">↕</div>
+<div class="bg-gray-200 border-2 border-gray-400 rounded-lg p-3 text-center">
+<span class="text-sm font-bold text-gray-700">물리적 하드웨어 (CPU, RAM, Storage, NIC)</span>
+</div>
+</div>
+</div>
+
+<!-- 5.4 AWS Nitro -->
+<h3 class="text-lg font-bold text-teal-700 mb-4 mt-8 border-l-4 border-teal-400 pl-3">AWS Nitro System — 하이퍼바이저의 진화</h3>
+<div class="bg-amber-50 border border-amber-200 rounded-lg p-5 mb-6">
+<p class="text-gray-700 leading-relaxed mb-3">AWS는 2017년 Nitro System을 도입하여 네트워크, 스토리지, 보안 기능을 <strong>전용 하드웨어(Nitro Card)</strong>로 오프로딩. 호스트 CPU의 거의 100%를 고객 VM에 할당 가능.</p>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+<div class="bg-white rounded-lg p-3 border border-amber-200 text-center">
+<div class="text-2xl mb-1">🔌</div>
+<div class="font-bold text-amber-800 text-sm">Nitro Card</div>
+<div class="text-xs text-gray-600">네트워크/스토리지 I/O 오프로딩</div>
+</div>
+<div class="bg-white rounded-lg p-3 border border-amber-200 text-center">
+<div class="text-2xl mb-1">🔒</div>
+<div class="font-bold text-amber-800 text-sm">Nitro Security Chip</div>
+<div class="text-xs text-gray-600">하드웨어 기반 보안</div>
+</div>
+<div class="bg-white rounded-lg p-3 border border-amber-200 text-center">
+<div class="text-2xl mb-1">⚡</div>
+<div class="font-bold text-amber-800 text-sm">Nitro Hypervisor</div>
+<div class="text-xs text-gray-600">경량 HV, CPU 100% VM 할당</div>
+</div>
+</div>
+</div>
+
+<!-- 적용 사례 -->
+<h3 class="text-lg font-bold text-teal-700 mb-4 mt-8 border-l-4 border-teal-400 pl-3">적용 사례</h3>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+<div class="bg-indigo-50 rounded-lg p-5 border border-indigo-200 cursor-pointer hover:shadow-md transition-shadow" onclick="this.querySelector('.case-detail').classList.toggle('hidden')">
+<div class="flex items-center gap-2 mb-2"><span class="text-xl">☁️</span><span class="font-bold text-indigo-800">AWS EC2 (Xen → Nitro)</span></div>
+<p class="text-sm text-gray-600">2006년 Xen 기반 → 2017년 Nitro 전환</p>
+<div class="case-detail hidden mt-3 pt-3 border-t border-indigo-200 text-sm text-gray-700 leading-relaxed">
+2023년 기준 IaaS 시장 31%, 약 800억 달러 매출 달성. Nitro의 HW 오프로딩으로 VM 성능을 네이티브 수준에 근접시킨 것이 핵심 경쟁력.
+</div>
+</div>
+<div class="bg-green-50 rounded-lg p-5 border border-green-200 cursor-pointer hover:shadow-md transition-shadow" onclick="this.querySelector('.case-detail').classList.toggle('hidden')">
+<div class="flex items-center gap-2 mb-2"><span class="text-xl">🏢</span><span class="font-bold text-green-800">삼성SDS 클라우드 전환</span></div>
+<p class="text-sm text-gray-600">3,000억 원 규모, VMware vSphere(Type 1) 기반</p>
+<div class="case-detail hidden mt-3 pt-3 border-t border-green-200 text-sm text-gray-700 leading-relaxed">
+약 15,000대 VM 운영 프라이빗 클라우드 구축. 레거시 OS(Windows Server, RHEL, SUSE) 지원을 위해 전가상화 Type 1 선택. 물리 서버 60% 절감.
+</div>
+</div>
+</div>
+
+<!-- 연관 이론 -->
+<h3 class="text-lg font-bold text-teal-700 mb-4 mt-8 border-l-4 border-teal-400 pl-3">연관 이론 연결</h3>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+<div class="bg-purple-50 rounded-lg p-4 border border-purple-200">
+<div class="font-bold text-purple-800 text-sm mb-1">Ring 보호 모델</div>
+<div class="text-xs text-gray-600">Ring -1~3 구조와 하이퍼바이저 권한 계층</div>
+</div>
+<div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
+<div class="font-bold text-blue-800 text-sm mb-1">IaaS/PaaS/SaaS</div>
+<div class="text-xs text-gray-600">IaaS의 핵심 구현 기술로서 하이퍼바이저</div>
+</div>
+<div class="bg-teal-50 rounded-lg p-4 border border-teal-200">
+<div class="font-bold text-teal-800 text-sm mb-1">마이크로서비스</div>
+<div class="text-xs text-gray-600">VM 위 K8s 컨테이너의 다중 가상화 구조</div>
+</div>
+</div>
+</div>
+</section>
+
+<section id="textbook" class="hidden">
+<div class="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+<h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">📖 원문 학습</h2>
+<div class="textbook-content">
+
+<h3>제1장 개요 및 배경</h3>
+
+<h4>1.1 가상화 기술의 부상</h4>
+<p>클라우드 컴퓨팅의 핵심 기반 기술인 가상화(Virtualization)는 하나의 물리적 서버 위에 다수의 가상 머신(Virtual Machine, VM)을 구동하여 하드웨어 자원의 활용률을 극대화하는 기술이다. 이 가상화를 가능하게 하는 소프트웨어 계층이 바로 <strong>하이퍼바이저(Hypervisor)</strong>이며, VMM(Virtual Machine Monitor)이라고도 불린다.</p>
+<p>하이퍼바이저는 물리적 하드웨어와 가상 머신 사이에 위치하여, 각 VM에게 독립적인 하드웨어 환경(CPU, 메모리, I/O)을 제공하고, VM 간의 격리(Isolation)를 보장하는 역할을 수행한다.</p>
+
+<h4>1.2 가상화 기술의 역사적 맥락</h4>
+<table>
+<thead><tr><th>연도</th><th>사건</th><th>의의</th></tr></thead>
+<tbody>
+<tr><td>1967</td><td>IBM CP-40, 최초의 가상 머신 모니터 개발</td><td>메인프레임 시분할 시스템에서 가상화 개념 탄생</td></tr>
+<tr><td>1974</td><td>Popek &amp; Goldberg, 가상화 공식 요건 발표</td><td>가상화의 3대 요건: 동등성, 효율성, 자원 제어 정립</td></tr>
+<tr><td>1998</td><td>VMware 설립, x86 가상화 상용화 시작</td><td>PC/서버 환경에서 가상화 대중화</td></tr>
+<tr><td>2003</td><td>Xen 하이퍼바이저 오픈소스 공개</td><td>반가상화(Para-virtualization) 개념 도입</td></tr>
+<tr><td>2006</td><td>Intel VT-x, AMD-V 하드웨어 가상화 지원</td><td>전가상화의 성능 한계 극복</td></tr>
+<tr><td>2007</td><td>KVM Linux 커널에 통합</td><td>리눅스 기반 Type 1 하이퍼바이저 확산</td></tr>
+<tr><td>2013</td><td>Docker 등장, 컨테이너 가상화 대중화</td><td>VM 기반 가상화의 대안 등장</td></tr>
+</tbody>
+</table>
+
+<h4>1.3 Popek &amp; Goldberg의 가상화 3대 요건</h4>
+<p>1974년 Gerald Popek과 Robert Goldberg가 제시한 가상화의 공식 요건은 하이퍼바이저 아키텍처 설계의 이론적 기초이다.</p>
+<table>
+<thead><tr><th>요건</th><th>영문</th><th>정의</th></tr></thead>
+<tbody>
+<tr><td>동등성</td><td>Equivalence/Fidelity</td><td>VM에서 실행되는 프로그램은 실제 하드웨어에서와 본질적으로 동일하게 동작해야 함</td></tr>
+<tr><td>효율성</td><td>Efficiency/Performance</td><td>대부분의 게스트 명령어는 하이퍼바이저 개입 없이 하드웨어에서 직접 실행되어야 함</td></tr>
+<tr><td>자원 제어</td><td>Resource Control/Safety</td><td>하이퍼바이저는 모든 하드웨어 자원을 완전히 통제해야 함</td></tr>
+</tbody>
+</table>
+
+<h3>제2장 하이퍼바이저 전체 구조 개관</h3>
+
+<h4>2.1 Type 1과 Type 2 아키텍처 비교 구조도</h4>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4 my-4">
+<div class="bg-indigo-50 rounded-lg p-4 border border-indigo-200">
+<div class="font-bold text-indigo-800 text-center mb-3">Type 1: Bare-metal 하이퍼바이저</div>
+<div class="space-y-1 text-center">
+<div class="grid grid-cols-3 gap-1"><div class="bg-blue-100 rounded p-2 text-xs font-bold">VM 1<br>(Guest OS)</div><div class="bg-blue-100 rounded p-2 text-xs font-bold">VM 2<br>(Guest OS)</div><div class="bg-blue-100 rounded p-2 text-xs font-bold">VM 3<br>(Guest OS)</div></div>
+<div class="text-gray-400">↕</div>
+<div class="bg-indigo-200 rounded p-2 text-sm font-bold text-indigo-800">하이퍼바이저 (ESXi, Xen, KVM, Hyper-V)</div>
+<div class="text-gray-400">↕</div>
+<div class="bg-gray-200 rounded p-2 text-sm font-bold">물리적 하드웨어</div>
+</div>
+</div>
+<div class="bg-green-50 rounded-lg p-4 border border-green-200">
+<div class="font-bold text-green-800 text-center mb-3">Type 2: Hosted 하이퍼바이저</div>
+<div class="space-y-1 text-center">
+<div class="grid grid-cols-3 gap-1"><div class="bg-blue-100 rounded p-2 text-xs font-bold">VM 1<br>(Guest OS)</div><div class="bg-blue-100 rounded p-2 text-xs font-bold">VM 2<br>(Guest OS)</div><div class="bg-blue-100 rounded p-2 text-xs font-bold">VM 3<br>(Guest OS)</div></div>
+<div class="text-gray-400">↕</div>
+<div class="bg-green-200 rounded p-2 text-sm font-bold text-green-800">하이퍼바이저 (VirtualBox, Workstation)</div>
+<div class="text-gray-400">↕</div>
+<div class="bg-yellow-100 rounded p-2 text-sm font-bold text-yellow-800">호스트 OS (Windows, Linux, macOS)</div>
+<div class="text-gray-400">↕</div>
+<div class="bg-gray-200 rounded p-2 text-sm font-bold">물리적 하드웨어</div>
+</div>
+</div>
+</div>
+<p><strong>핵심 차이</strong>: Type 1은 하이퍼바이저가 하드웨어 위에 직접 설치되고, Type 2는 호스트 OS 위에 애플리케이션으로 설치된다.</p>
+
+<h3>제3장 각 유형별 상세 설명</h3>
+
+<h4>3.1 Type 1: Bare-metal 하이퍼바이저</h4>
+<div class="def-box"><p><strong>정의</strong>: 물리적 하드웨어 위에 직접 설치되어 게스트 OS를 관리하는 하이퍼바이저이다. 호스트 OS가 불필요하여 하드웨어 자원에 대한 직접 접근이 가능하다.</p></div>
+<p><strong>동작 원리</strong>:</p>
+<ul>
+<li>하이퍼바이저가 부팅 시 하드웨어를 직접 초기화</li>
+<li>하드웨어 인터럽트, I/O 요청을 하이퍼바이저가 직접 처리</li>
+<li>각 VM에 가상 CPU(vCPU), 가상 메모리, 가상 I/O를 할당</li>
+<li>VM 간 자원 스케줄링을 하이퍼바이저가 직접 수행</li>
+</ul>
+<p><strong>대표 제품 비교</strong>:</p>
+<table>
+<thead><tr><th>제품</th><th>개발사</th><th>라이선스</th><th>주요 특징</th></tr></thead>
+<tbody>
+<tr><td>VMware ESXi</td><td>VMware(Broadcom)</td><td>상용</td><td>엔터프라이즈 시장 지배, vSphere 생태계</td></tr>
+<tr><td>Xen</td><td>Linux Foundation</td><td>오픈소스</td><td>반가상화(PV) 최초 도입, AWS 초기 기반</td></tr>
+<tr><td>KVM</td><td>Red Hat/Linux</td><td>오픈소스</td><td>리눅스 커널 모듈 형태, OpenStack 기반</td></tr>
+<tr><td>Hyper-V</td><td>Microsoft</td><td>상용/무료</td><td>Windows Server 통합, Azure 기반</td></tr>
+</tbody>
+</table>
+<div class="insight-box"><p><strong>KVM의 분류 논쟁</strong>: KVM은 리눅스 커널 모듈로 구현되어 표면적으로는 Type 2처럼 보이나, KVM이 로드되면 리눅스 커널 자체가 하이퍼바이저로 변환되어 하드웨어를 직접 제어하므로 학술적으로 <strong>Type 1</strong>으로 분류한다.</p></div>
+
+<h4>3.2 Type 2: Hosted 하이퍼바이저</h4>
+<div class="def-box"><p><strong>정의</strong>: 호스트 운영체제 위에 애플리케이션으로 설치되어 게스트 OS를 관리하는 하이퍼바이저이다.</p></div>
+<p><strong>동작 원리</strong>:</p>
+<ul>
+<li>호스트 OS가 먼저 부팅되어 하드웨어를 관리</li>
+<li>하이퍼바이저가 호스트 OS 위에 애플리케이션으로 실행</li>
+<li>게스트 OS의 하드웨어 접근 요청 → 하이퍼바이저 → 호스트 OS → 하드웨어 (2단계 중개)</li>
+<li>호스트 OS의 디바이스 드라이버를 활용하여 하드웨어 접근</li>
+</ul>
+<table>
+<thead><tr><th>제품</th><th>개발사</th><th>지원 호스트 OS</th><th>주요 용도</th></tr></thead>
+<tbody>
+<tr><td>VMware Workstation</td><td>VMware</td><td>Windows, Linux</td><td>개발/테스트 환경</td></tr>
+<tr><td>Oracle VirtualBox</td><td>Oracle</td><td>Windows, Linux, macOS</td><td>교육/개인 사용</td></tr>
+<tr><td>Parallels Desktop</td><td>Parallels</td><td>macOS</td><td>Mac에서 Windows 실행</td></tr>
+<tr><td>QEMU</td><td>오픈소스</td><td>Linux</td><td>에뮬레이션 + 가상화</td></tr>
+</tbody>
+</table>
+
+<h3>제4장 Type 1 vs Type 2 체계적 비교</h3>
+
+<h4>4.1 성능 및 자원 관리 효율성 비교</h4>
+<table>
+<thead><tr><th>비교 기준</th><th>Type 1 (Bare-metal)</th><th>Type 2 (Hosted)</th></tr></thead>
+<tbody>
+<tr><td><strong>아키텍처</strong></td><td>하드웨어 위 직접 설치</td><td>호스트 OS 위 애플리케이션</td></tr>
+<tr><td><strong>성능 오버헤드</strong></td><td>1~5% (낮음)</td><td>10~30% (높음)</td></tr>
+<tr><td><strong>하드웨어 접근</strong></td><td>직접 접근 (Direct I/O)</td><td>호스트 OS 경유 (2단계 중개)</td></tr>
+<tr><td><strong>메모리 관리</strong></td><td>직접 물리 메모리 할당</td><td>호스트 OS 메모리 관리자 경유</td></tr>
+<tr><td><strong>VM 간 격리</strong></td><td>하이퍼바이저 수준 강한 격리</td><td>호스트 OS 프로세스 수준 격리</td></tr>
+<tr><td><strong>보안성</strong></td><td>높음 (공격 표면 작음)</td><td>상대적 낮음 (호스트 OS 취약점 노출)</td></tr>
+<tr><td><strong>확장성</strong></td><td>수백 대 VM 운영 가능</td><td>수 대~수십 대 VM</td></tr>
+<tr><td><strong>설치 복잡도</strong></td><td>전용 서버 필요, 전문 지식</td><td>데스크톱에 간단 설치</td></tr>
+<tr><td><strong>주요 용도</strong></td><td>데이터센터, 클라우드, 프로덕션</td><td>개발/테스트, 교육, 개인 사용</td></tr>
+<tr><td><strong>대표 사례</strong></td><td>AWS(Xen→Nitro), Azure(Hyper-V)</td><td>개발자 로컬 테스트 환경</td></tr>
+</tbody>
+</table>
+
+<h4>4.2 성능 차이의 기술적 원인</h4>
+<p><strong>Type 1의 성능 우위 원인</strong>:</p>
+<ul>
+<li><strong>Ring 0 직접 실행</strong>: 하이퍼바이저가 CPU의 최상위 권한(Ring -1 또는 Ring 0)에서 실행되어, VM의 특권 명령어를 하드웨어 수준에서 직접 트래핑(Trapping) 처리</li>
+<li><strong>직접 메모리 매핑</strong>: EPT(Extended Page Table)/NPT(Nested Page Table)를 활용한 2단계 주소 변환으로 메모리 접근 오버헤드 최소화</li>
+<li><strong>SR-IOV 지원</strong>: 네트워크/스토리지 I/O를 하이퍼바이저 우회하여 VM에 직접 할당</li>
+</ul>
+<p><strong>Type 2의 성능 열세 원인</strong>:</p>
+<ul>
+<li><strong>이중 스케줄링</strong>: 호스트 OS의 프로세스 스케줄러 + 하이퍼바이저의 vCPU 스케줄러가 이중으로 동작</li>
+<li><strong>I/O 경로 증가</strong>: Guest OS → 하이퍼바이저 → 호스트 OS 커널 → 디바이스 드라이버 → 하드웨어 (4단계)</li>
+<li><strong>메모리 오버헤드</strong>: 호스트 OS 자체의 메모리 사용량이 가용 자원을 감소시킴</li>
+</ul>
+
+<h3>제5장 현대적 발전과 변형</h3>
+
+<h4>5.1 하드웨어 지원 가상화 (VT-x/AMD-V)</h4>
+<p>2006년 Intel과 AMD가 각각 VT-x와 AMD-V라는 하드웨어 가상화 확장을 도입하면서, x86 프로세서의 가상화 성능이 획기적으로 향상되었다. CPU에 <strong>Ring -1</strong>(VMX root mode)이라는 새로운 권한 계층이 추가되어, 하이퍼바이저가 Ring -1에서 실행되고 게스트 OS가 Ring 0에서 네이티브에 가깝게 실행될 수 있게 되었다.</p>
+
+<h4>5.2 전가상화 vs 반가상화</h4>
+<table>
+<thead><tr><th>구분</th><th>전가상화(Full)</th><th>반가상화(Para)</th></tr></thead>
+<tbody>
+<tr><td>게스트 OS 수정</td><td>불필요</td><td>필요 (하이퍼콜 삽입)</td></tr>
+<tr><td>특권 명령어 처리</td><td>바이너리 변환 또는 HW 지원</td><td>하이퍼콜(Hypercall)</td></tr>
+<tr><td>성능</td><td>HW 지원 시 우수</td><td>우수 (오버헤드 최소화)</td></tr>
+<tr><td>호환성</td><td>모든 OS 지원</td><td>수정된 OS만 지원</td></tr>
+<tr><td>대표</td><td>VMware ESXi, KVM+VT-x</td><td>Xen PV, Virtio</td></tr>
+</tbody>
+</table>
+
+<h4>5.3 컨테이너 가상화와의 비교</h4>
+<p>2013년 Docker의 등장 이후 컨테이너 기반 가상화가 급속히 확산되면서, 전통적인 하이퍼바이저 기반 가상화와의 비교가 중요해졌다.</p>
+<table>
+<thead><tr><th>비교 기준</th><th>하이퍼바이저 (VM)</th><th>컨테이너 (Docker/K8s)</th></tr></thead>
+<tbody>
+<tr><td>격리 수준</td><td>강함 (HW 수준 격리)</td><td>상대적 약함 (커널 공유)</td></tr>
+<tr><td>부팅 시간</td><td>수십 초~수 분</td><td>수 초 이내</td></tr>
+<tr><td>자원 오버헤드</td><td>GB 단위 (게스트 OS 포함)</td><td>MB 단위 (커널 공유)</td></tr>
+<tr><td>이미지 크기</td><td>GB 단위</td><td>MB 단위</td></tr>
+<tr><td>밀도</td><td>서버당 수십 VM</td><td>서버당 수백~수천 컨테이너</td></tr>
+<tr><td>보안</td><td>강한 격리 (멀티테넌트)</td><td>커널 취약점 공유 위험</td></tr>
+<tr><td>사용 사례</td><td>이종 OS 운영, 높은 격리</td><td>마이크로서비스, CI/CD</td></tr>
+</tbody>
+</table>
+
+<h4>5.4 AWS Nitro: 하이퍼바이저의 진화</h4>
+<p>AWS는 2017년 Nitro System을 도입하여 하이퍼바이저의 기능을 <strong>전용 하드웨어(Nitro Card)</strong>로 오프로딩하였다. 네트워크, 스토리지, 보안 기능을 별도의 하드웨어 칩에서 처리함으로써, 호스트 CPU의 거의 100%를 고객 VM에 할당할 수 있게 되었다.</p>
+
+<h3>제6장 적용 사례</h3>
+
+<h4>6.1 AWS EC2 (Type 1 - Xen → Nitro)</h4>
+<p>AWS는 2006년 EC2 서비스 출시 시 Xen 하이퍼바이저(Type 1)를 기반으로 시작하였다. 이후 2017년부터 자체 개발한 Nitro 시스템으로 전환하여, 2023년 기준 전 세계 IaaS 시장 점유율 31%(약 800억 달러 매출)를 달성하였다.</p>
+
+<h4>6.2 삼성SDS 클라우드 전환 프로젝트</h4>
+<p>삼성SDS는 2021년 약 3,000억 원 규모의 그룹사 클라우드 전환 프로젝트에서 VMware vSphere(Type 1)를 기반으로 약 15,000대의 VM을 운영하는 프라이빗 클라우드를 구축하였다. 레거시 시스템의 다양한 OS 지원이 필요하여 전가상화 기반 Type 1 하이퍼바이저를 선택하였으며, 서버 통합으로 물리 서버 수를 약 60% 절감하였다.</p>
+
+<h3>제7장 연관 이론 연결</h3>
+
+<h4>7.1 운영체제의 Ring 보호 모델</h4>
+<p>하이퍼바이저의 아키텍처는 CPU의 Ring 보호 모델과 직접 연관된다. x86 아키텍처의 Ring 0~3 구조에서 하이퍼바이저가 어느 권한에서 실행되느냐에 따라 Type 1/Type 2의 성능 차이가 결정된다. 특히 Intel VT-x의 Ring -1(VMX root mode) 도입은 하이퍼바이저 아키텍처의 패러다임을 변화시켰다.</p>
+
+<h4>7.2 클라우드 서비스 모델 (IaaS/PaaS/SaaS)</h4>
+<p>하이퍼바이저는 IaaS(Infrastructure as a Service)의 핵심 구현 기술이다. AWS EC2, Azure VM, GCP Compute Engine 등 모든 주요 클라우드의 IaaS 서비스가 Type 1 하이퍼바이저 위에 구축되어 있다.</p>
+
+<h4>7.3 마이크로서비스와 컨테이너 오케스트레이션</h4>
+<p>컨테이너 가상화의 등장으로 하이퍼바이저와 컨테이너의 혼용 아키텍처가 현대 클라우드의 표준이 되었다. Kubernetes가 컨테이너를 오케스트레이션하되, 각 워커 노드는 VM(하이퍼바이저) 위에서 실행되는 다중 가상화 구조가 일반적이다.</p>
+
+<h3>제8장 시험 출제 관점</h3>
+
+<h4>8.1 기출 연계 포인트</h4>
+<ul>
+<li><strong>1교시형</strong>: "하이퍼바이저의 유형을 비교하시오" → 제2~4장 중심</li>
+<li><strong>1교시형</strong>: "가상화 기술의 유형을 설명하시오" → 전가상화/반가상화 + Type 1/Type 2</li>
+<li><strong>2교시형 연계</strong>: "클라우드 인프라 설계 시 가상화 전략" → Type 1 + 컨테이너 비교</li>
+</ul>
+
+<h4>8.2 답안 구성 전략</h4>
+<p><strong>서론 (15%)</strong>: 클라우드 시대 가상화의 중요성 + 하이퍼바이저 정의</p>
+<p><strong>본론 (75%)</strong>:</p>
+<ul>
+<li>Type 1/Type 2 구조도 비교 (25%)</li>
+<li>성능·보안·자원관리 체계적 비교표 (20%)</li>
+<li>전가상화/반가상화/HW 지원 가상화 비교 (15%)</li>
+<li>컨테이너와의 비교 및 현대적 발전 (15%)</li>
+</ul>
+<p><strong>결론 (10%)</strong>: 하이퍼바이저+컨테이너 혼용 아키텍처 + Nitro 같은 HW 오프로딩 추세</p>
+
+</div>
+</div>
+</section>
+
+<section id="script" class="hidden">
+<div class="bg-white rounded-xl shadow-sm p-6 sm:p-8 border-l-4 border-amber-400">
+<div class="flex items-center gap-3 mb-4">
+<h2 class="text-xl font-bold text-gray-900">🎬 강의 스크립트</h2>
+<span class="bg-amber-100 text-amber-700 text-xs font-bold px-3 py-1 rounded-full border border-amber-300">🔒 멘토 전용</span>
+</div>
+<div class="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6 text-sm text-amber-800">
+ℹ️ 이 탭은 멘토 전용입니다. URL에 <code class="bg-amber-100 px-1 rounded">?mentor=true</code> 파라미터를 추가하면 표시됩니다.
+</div>
+<div class="textbook-content">
+
+<h4>🎬 도입부</h4>
+<p>안녕하세요, ZIP-UP 멘토링 수강생 여러분. 오늘은 가상화의 핵심인 하이퍼바이저 유형에 대해 이야기해보겠습니다.</p>
+<p>이 토픽은 CA/OS 영역에서 정말 자주 나오는 단골 주제예요. 클라우드 컴퓨팅 관련 문제가 나올 때마다 가상화가 빠지지 않고, 그 가상화의 핵심이 바로 하이퍼바이저거든요. 특히 Type 1과 Type 2의 구조를 그림으로 비교하라는 문제가 기출에서 반복적으로 출제되고 있어서, 이 구조도를 확실히 그릴 수 있어야 합니다.</p>
+
+<h4>🎬 하이퍼바이저 정의와 비유</h4>
+<p>먼저 하이퍼바이저가 뭔지부터 잡아볼게요. 하이퍼바이저는 VMM, Virtual Machine Monitor라고도 하는데요, 하나의 물리적 서버 위에 여러 개의 가상 머신을 만들어주는 소프트웨어예요. 쉽게 말해서 컴퓨터 안에 컴퓨터를 만드는 기술이에요. 비유를 하면요, 하나의 건물에 여러 개의 독립된 사무실을 만드는 건물 관리 시스템 같은 거예요. 각 사무실(VM)은 독립적으로 운영되지만, 건물의 전기, 수도, 인터넷(하드웨어 자원)은 관리 시스템(하이퍼바이저)이 분배해 주는 거죠.</p>
+
+<h4>🎬 Popek &amp; Goldberg 3대 요건</h4>
+<p>여기서 역사적 배경을 하나 알아두면 좋은데요, 1974년에 Popek과 Goldberg라는 학자가 가상화의 공식 요건 3가지를 정의했어요. <span class="highlight">"동효자"</span>로 외우세요. <span class="highlight">동</span>등성, <span class="highlight">효</span>율성, <span class="highlight">자</span>원 제어예요. 가상 머신에서 돌아가는 프로그램이 실제 하드웨어에서와 똑같이 동작해야 하고(동등성), 대부분의 명령어가 하이퍼바이저 개입 없이 직접 실행되어야 하고(효율성), 하이퍼바이저가 모든 자원을 완전히 통제해야 한다(자원 제어)는 거죠. 이걸 서론에 쓰면 이론적 깊이가 확 올라갑니다.</p>
+
+<h4>🎬 Type 1 vs Type 2 핵심 비교</h4>
+<p>자, 이제 본론으로 들어가서 Type 1과 Type 2를 비교해 봅시다. 여기가 제일 중요한 부분이에요.</p>
+<p>Type 1은 Bare-metal 하이퍼바이저라고 해요. "Bare-metal"이라는 이름에서 느낌이 오시죠? 하드웨어 위에 직접, 벌거벗은 금속 위에 바로 설치된다는 뜻이에요. 하드웨어 바로 위에 하이퍼바이저가 올라가고, 그 위에 가상 머신들이 올라가는 구조예요. 중간에 호스트 OS가 없어요. 대표적으로 VMware ESXi, Xen, KVM, Microsoft Hyper-V가 있고요, AWS, Azure, GCP 같은 모든 퍼블릭 클라우드의 IaaS가 이 Type 1 기반이에요.</p>
+<p>Type 2는 Hosted 하이퍼바이저예요. 호스트 OS 위에 "호스팅된다"는 뜻이죠. 먼저 Windows나 macOS 같은 호스트 OS가 설치되어 있고, 그 위에 하이퍼바이저가 일반 애플리케이션처럼 설치돼요. VirtualBox나 VMware Workstation, 맥에서 쓰는 Parallels가 대표적이에요.</p>
+
+<h4>🎬 성능 차이와 KVM 함정</h4>
+<p>자, 이 두 가지의 성능 차이가 시험에서 가장 중요한 포인트예요. Type 1은 오버헤드가 1~5% 정도로 아주 낮아요. 반면 Type 2는 10~30% 오버헤드가 발생해요. 왜냐면 게스트 OS의 하드웨어 요청이 하이퍼바이저를 거치고, 다시 호스트 OS를 거쳐서 하드웨어에 도달하는 이중 중개 구조이기 때문이에요. I/O 경로가 4단계나 되거든요. Guest OS → 하이퍼바이저 → 호스트 OS 커널 → 디바이스 드라이버 → 하드웨어. 이 4단계를 답안에 써주면 좋아요.</p>
+<p>여기서 시험에 잘 나오는 함정 포인트를 하나 알려드릴게요. KVM은 리눅스 커널 모듈이라서 겉보기에는 Type 2처럼 보여요. 그런데 KVM이 로드되면 리눅스 커널 자체가 하이퍼바이저로 변환돼요. 그래서 학술적으로는 Type 1으로 분류합니다. "KVM은 커널 모듈이지만 Type 1"이라고 명확히 쓰시면 돼요.</p>
+
+<h4>🎬 가상화 3방식: 전반하</h4>
+<p>다음으로 가상화 방식도 정리해 드릴게요. 전가상화, 반가상화, 하드웨어 지원 가상화, 이렇게 세 가지예요. <span class="highlight">"전반하"</span>로 외우시면 됩니다.</p>
+<p>전가상화(Full Virtualization)는 게스트 OS를 전혀 수정하지 않는 방식이에요. 대신 특권 명령어를 처리할 때 바이너리 변환이라는 기법이 필요해서 성능 오버헤드가 있어요.</p>
+<p>반가상화(Para-virtualization)는 게스트 OS를 수정해서 "하이퍼콜(Hypercall)"이라는 특수한 호출을 삽입하는 방식이에요. Xen이 2003년에 처음 도입한 개념인데요, 특권 명령어 대신 하이퍼콜을 직접 호출하니까 오버헤드가 줄어들어요. 대신 Windows 같은 소스코드 비공개 상용 OS에는 적용이 어렵다는 단점이 있죠.</p>
+<p>그리고 2006년에 게임 체인저가 나왔어요. Intel의 VT-x와 AMD의 AMD-V예요. Ring -1이라는 새로운 권한 레벨을 추가한 거예요. 하이퍼바이저가 Ring -1에서, 게스트 OS가 Ring 0에서 돌아가게 한 거예요. 이 Ring 구조를 답안에 그림으로 그리면 확실히 차별화가 됩니다.</p>
+
+<h4>🎬 실무 사례와 최신 트렌드</h4>
+<p>실무 사례도 하나 말씀드릴게요. 삼성SDS가 2021년에 약 3,000억 원 규모의 그룹사 클라우드 전환 프로젝트를 진행했는데요, VMware vSphere(Type 1) 기반으로 약 15,000대의 VM을 운영하는 프라이빗 클라우드를 구축했어요. 서버 통합으로 물리 서버를 약 60% 줄였습니다.</p>
+<p>최신 트렌드도 짚고 갈게요. AWS의 Nitro System이에요. 하이퍼바이저가 하던 네트워크, 스토리지, 보안 기능을 전용 하드웨어 칩(Nitro Card)으로 오프로딩한 거예요. 호스트 CPU의 거의 100%를 고객 VM에 할당할 수 있게 되었어요.</p>
+<p>컨테이너와의 비교도 중요해요. VM은 GB 단위로 무겁지만 격리가 강하고, 컨테이너는 MB 단위로 가볍지만 격리가 약해요. 현대적 아키텍처에서는 VM 위에서 K8s 컨테이너가 돌아가는 다중 가상화 구조가 표준이에요.</p>
+
+<h4>🎬 답안 작성 팁 및 마무리</h4>
+<p>답안 작성 팁 정리해 드릴게요. 서론에서 Popek &amp; Goldberg의 3대 요건을 간단히 언급하고, 본론에서 제일 중요한 건 Type 1과 Type 2의 구조도를 나란히 그리는 거예요. 그 다음에 비교표를 넣고, 전가상화/반가상화/HW지원 가상화 비교, 마지막으로 컨테이너 비교까지 넣으면 완벽해요.</p>
+<p>마지막으로 핵심 암기 포인트 확인하고 마칠게요. <span class="highlight">"동효자"</span> — Popek &amp; Goldberg 가상화 3대 요건. <span class="highlight">"전반하"</span> — 전가상화, 반가상화, 하드웨어 지원 가상화. Type 1은 오버헤드 1~5%, Type 2는 10~30%. KVM은 겉보기 Type 2지만 실제 Type 1. 그리고 답안에 구조도를 반드시 그린다! 이것만 확실히 잡으시면 됩니다. 수고하셨습니다!</p>
+
+</div>
+</div>
+</section>
+
+<div id="quiz" class="hidden">
+<!-- AI 실전 퀴즈 영역 -->
+<div class="bg-indigo-50 rounded-xl p-6 border border-indigo-100 mb-8">
+    <div class="flex items-center justify-between mb-4">
+        <h3 class="font-bold text-indigo-900 text-lg flex items-center"><span class="mr-2">🧠</span> AI 실전 문제 생성</h3>
+        <button onclick="generateQuiz()" id="btn-quiz-gen" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm transition-colors flex items-center gap-2"><span>✨ 새로운 문제 생성</span></button>
+    </div>
+    <div id="quiz-loading" class="hidden py-8 text-center">
+        <div class="typing-indicator flex justify-center mb-2"><span></span><span></span><span></span></div>
+        <p class="text-indigo-600 text-sm">AI가 문제를 출제하고 있습니다...</p>
+    </div>
+    <div id="quiz-container" class="hidden space-y-4">
+        <div class="bg-white p-5 rounded-lg shadow-sm border border-indigo-100">
+            <div class="flex items-start gap-2 mb-4">
+                <span id="quiz-type-badge" class="bg-indigo-100 text-indigo-800 text-xs font-bold px-2 py-1 rounded whitespace-nowrap mt-1">객관식</span>
+                <p id="quiz-question" class="font-bold text-gray-800 text-lg"></p>
+            </div>
+            <div id="quiz-options" class="space-y-2"></div>
+            <div id="quiz-input-area" class="hidden mt-4">
+                <div class="flex gap-2">
+                    <input type="text" id="quiz-answer-input" placeholder="정답을 입력하세요" class="flex-grow border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <button onclick="checkShortAnswer()" id="btn-short-submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-bold">제출</button>
+                </div>
+            </div>
+        </div>
+        <div id="quiz-feedback" class="hidden bg-white p-5 rounded-lg border-l-4"></div>
+    </div>
+    <div id="quiz-placeholder" class="text-center py-8 text-gray-500 border-2 border-dashed border-indigo-200 rounded-lg">
+        <p>'새로운 문제 생성' 버튼을 눌러 실력을 점검해보세요.</p>
+    </div>
+</div>
+
+<!-- 암기 노트 ① 두문자어 -->
+<div class="bg-white rounded-xl shadow-sm p-6 sm:p-8 mb-6">
+<h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">📝 암기 노트 ① — 두문자어 암기법</h3>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+<div class="bg-indigo-50 rounded-lg p-5 border border-indigo-200 text-center">
+<div class="text-3xl font-black text-indigo-700 mb-2">"동효자"</div>
+<div class="text-sm text-gray-700 font-medium">Popek &amp; Goldberg 가상화 3대 요건</div>
+<div class="mt-2 text-xs text-gray-600"><span class="highlight">동</span>등성, <span class="highlight">효</span>율성, <span class="highlight">자</span>원 제어</div>
+</div>
+<div class="bg-purple-50 rounded-lg p-5 border border-purple-200 text-center">
+<div class="text-3xl font-black text-purple-700 mb-2">"베호하"</div>
+<div class="text-sm text-gray-700 font-medium">Type 1 vs Type 2 핵심 차이</div>
+<div class="mt-2 text-xs text-gray-600"><span class="highlight">베</span>어메탈(직접) vs <span class="highlight">호</span>스트(경유), <span class="highlight">하</span>드웨어 접근 방식</div>
+</div>
+<div class="bg-teal-50 rounded-lg p-5 border border-teal-200 text-center">
+<div class="text-3xl font-black text-teal-700 mb-2">"전반하"</div>
+<div class="text-sm text-gray-700 font-medium">가상화 3가지 방식</div>
+<div class="mt-2 text-xs text-gray-600"><span class="highlight">전</span>가상화, <span class="highlight">반</span>가상화, <span class="highlight">하</span>드웨어 지원 가상화</div>
+</div>
+</div>
+</div>
+
+<!-- 암기 노트 ② 골격 답안 -->
+<div class="bg-white rounded-xl shadow-sm p-6 sm:p-8 mb-6">
+<h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">📝 암기 노트 ② — 골격 답안 구조</h3>
+<div class="overflow-x-auto">
+<table class="w-full text-sm border-collapse">
+<thead><tr class="bg-gray-100"><th class="border px-4 py-3 text-left w-1/6">구간</th><th class="border px-4 py-3 text-left w-1/6">비율</th><th class="border px-4 py-3 text-left">내용</th></tr></thead>
+<tbody>
+<tr><td class="border px-4 py-2 font-bold">서론</td><td class="border px-4 py-2">15%</td><td class="border px-4 py-2">클라우드 시대 가상화 중요성 → 하이퍼바이저 정의 → VMM 개념</td></tr>
+<tr class="bg-gray-50"><td class="border px-4 py-2 font-bold" rowspan="4">본론</td><td class="border px-4 py-2">25%</td><td class="border px-4 py-2">Type 1/Type 2 아키텍처 도식 + 계층 비교</td></tr>
+<tr class="bg-gray-50"><td class="border px-4 py-2">20%</td><td class="border px-4 py-2">성능(오버헤드), 보안(격리수준), 확장성, 용도 비교표</td></tr>
+<tr class="bg-gray-50"><td class="border px-4 py-2">15%</td><td class="border px-4 py-2">전가상화/반가상화/HW지원 비교표 + Ring 구조</td></tr>
+<tr class="bg-gray-50"><td class="border px-4 py-2">15%</td><td class="border px-4 py-2">컨테이너 비교 + AWS Nitro + 하이브리드 아키텍처</td></tr>
+<tr><td class="border px-4 py-2 font-bold">결론</td><td class="border px-4 py-2">10%</td><td class="border px-4 py-2">VM+컨테이너 혼용 아키텍처 + HW 오프로딩 추세</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<!-- 암기 노트 ③ 필수 도식 + 차별화 -->
+<div class="bg-white rounded-xl shadow-sm p-6 sm:p-8 mb-6">
+<h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">📝 암기 노트 ③ — 필수 도식 &amp; 차별화 포인트</h3>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+<div>
+<h4 class="font-bold text-gray-800 mb-3">📊 필수 도식/표 (4개)</h4>
+<ul class="space-y-2 text-sm text-gray-700">
+<li class="flex items-start gap-2"><span class="text-indigo-600 font-bold">1.</span> Type 1 vs Type 2 아키텍처 구조도 (가장 중요!)</li>
+<li class="flex items-start gap-2"><span class="text-indigo-600 font-bold">2.</span> 성능/보안/확장성 비교표 (6~8개 기준)</li>
+<li class="flex items-start gap-2"><span class="text-indigo-600 font-bold">3.</span> CPU Ring 구조도 (Ring -1 ~ Ring 3)</li>
+<li class="flex items-start gap-2"><span class="text-indigo-600 font-bold">4.</span> VM vs 컨테이너 비교표</li>
+</ul>
+</div>
+<div>
+<h4 class="font-bold text-gray-800 mb-3">⭐ 차별화 포인트</h4>
+<ul class="space-y-2 text-sm text-gray-700">
+<li class="flex items-start gap-2"><span class="text-amber-500">💡</span> Popek &amp; Goldberg의 3대 요건 서론 언급 → 이론적 깊이</li>
+<li class="flex items-start gap-2"><span class="text-amber-500">💡</span> KVM의 분류 논쟁 (겉보기 Type 2, 실제 Type 1)</li>
+<li class="flex items-start gap-2"><span class="text-amber-500">💡</span> Ring -1(VMX root mode) → 하드웨어 이해도 증명</li>
+<li class="flex items-start gap-2"><span class="text-amber-500">💡</span> AWS Nitro HW 오프로딩 → 최신 트렌드 반영</li>
+</ul>
+</div>
+</div>
+</div>
+
+<!-- 제2부 전체 -->
+<div class="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+<h3 class="text-lg font-bold text-gray-900 mb-2 flex items-center gap-2">📚 제2부 — 서술형 답안 암기 요약 (전체)</h3>
+<p class="text-sm text-gray-500 mb-6">시험 직전 최종 점검용 핵심 정리</p>
+<div class="textbook-content">
+
+<h4>한 줄 정의</h4>
+<div class="def-box"><p>하이퍼바이저는 물리적 하드웨어 위에서 다수의 가상 머신을 생성·관리하는 소프트웨어(VMM)로, 하드웨어에 직접 설치되는 Type 1(Bare-metal)과 호스트 OS 위에 설치되는 Type 2(Hosted)로 구분된다.</p></div>
+
+<h4>핵심 키워드 맵</h4>
+<div class="bg-gray-50 rounded-lg p-4 mb-4">
+<div class="text-center font-bold text-indigo-700 mb-3">하이퍼바이저</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
+<div class="bg-white rounded p-3 border-l-4 border-indigo-400">
+<div class="font-bold text-indigo-700 mb-1">Type 1 (Bare-metal)</div>
+<ul class="text-xs text-gray-600 space-y-1"><li>HW 직접 설치 → 1~5% 오버헤드</li><li>ESXi, Xen, KVM, Hyper-V</li><li>데이터센터/클라우드/프로덕션</li></ul>
+</div>
+<div class="bg-white rounded p-3 border-l-4 border-green-400">
+<div class="font-bold text-green-700 mb-1">Type 2 (Hosted)</div>
+<ul class="text-xs text-gray-600 space-y-1"><li>호스트 OS 위 설치 → 10~30%</li><li>VirtualBox, VMware Workstation</li><li>개발/테스트/교육</li></ul>
+</div>
+<div class="bg-white rounded p-3 border-l-4 border-purple-400">
+<div class="font-bold text-purple-700 mb-1">가상화 방식</div>
+<ul class="text-xs text-gray-600 space-y-1"><li>전가상화: 게스트 OS 수정 불필요</li><li>반가상화: 하이퍼콜, Xen PV</li><li>HW 지원: VT-x/AMD-V, Ring -1</li></ul>
+</div>
+<div class="bg-white rounded p-3 border-l-4 border-amber-400">
+<div class="font-bold text-amber-700 mb-1">현대적 발전</div>
+<ul class="text-xs text-gray-600 space-y-1"><li>Popek &amp; Goldberg: 동효자</li><li>AWS Nitro (HW 오프로딩)</li><li>컨테이너(Docker/K8s)와 혼용</li></ul>
+</div>
+</div>
+</div>
+
+<h4>두문자어 암기법</h4>
+<ul>
+<li><strong>"동효자"</strong> = Popek &amp; Goldberg 가상화 3대 요건: <strong>동</strong>등성, <strong>효</strong>율성, <strong>자</strong>원 제어</li>
+<li><strong>"베호하"</strong> = Type 1 vs Type 2 핵심 차이: <strong>베</strong>어메탈(직접) vs <strong>호</strong>스트(경유), <strong>하</strong>드웨어 접근 방식</li>
+<li><strong>"전반하"</strong> = 가상화 3가지 방식: <strong>전</strong>가상화, <strong>반</strong>가상화, <strong>하</strong>드웨어 지원 가상화</li>
+</ul>
+
+<h4>골격 답안 구조</h4>
+<p><strong>[서론 15%]</strong> 클라우드 시대 가상화 중요성 → 하이퍼바이저 정의 → VMM 개념</p>
+<p><strong>[본론 75%]</strong></p>
+<ul>
+<li>전체 구조 비교 (25%) — Type 1/Type 2 아키텍처 도식 + 계층 비교</li>
+<li>체계적 비교 (20%) — 성능(오버헤드), 보안(격리수준), 확장성, 용도 비교표</li>
+<li>가상화 방식 (15%) — 전가상화/반가상화/HW지원 비교표 + Ring 구조</li>
+<li>현대적 발전 (15%) — 컨테이너 비교 + AWS Nitro + 하이브리드 아키텍처</li>
+</ul>
+<p><strong>[결론 10%]</strong> VM+컨테이너 혼용 아키텍처 + HW 오프로딩 추세</p>
+
+<h4>필수 도식/표</h4>
+<ul>
+<li><strong>Type 1 vs Type 2 아키텍처 구조도</strong>: 계층 비교 (가장 중요!)</li>
+<li><strong>성능/보안/확장성 비교표</strong>: 6~8개 기준 비교</li>
+<li><strong>CPU Ring 구조도</strong>: Ring -1 ~ Ring 3</li>
+<li><strong>VM vs 컨테이너 비교표</strong></li>
+</ul>
+
+<h4>차별화 포인트</h4>
+<ul>
+<li><strong>Popek &amp; Goldberg의 3대 요건</strong>을 서론에 언급하면 이론적 깊이 확보</li>
+<li><strong>KVM의 분류 논쟁</strong>(겉보기 Type 2이지만 실제 Type 1)을 언급하면 차별화</li>
+<li><strong>Ring -1(VMX root mode)</strong> 개념을 설명하면 하드웨어 이해도 증명</li>
+<li><strong>AWS Nitro</strong>의 HW 오프로딩을 결론에 넣으면 최신 트렌드 반영</li>
+</ul>
+
+</div>
+</div>
+</div>
+
+</main>
+
+<!-- AI 튜터 플로팅 버튼 -->
+<button onclick="toggleChat()" class="fixed bottom-6 right-6 z-50 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all p-4 flex items-center gap-2 group">
+<span class="text-2xl">💬</span><span class="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 whitespace-nowrap text-sm font-bold">AI 튜터</span>
+</button>
+
+<!-- 채팅 사이드바 -->
+<div id="chat-sidebar" class="fixed top-0 right-0 w-80 sm:w-96 h-full bg-white shadow-2xl z-50 flex flex-col closed">
+<div class="p-4 bg-indigo-600 text-white flex justify-between items-center">
+<h3 class="font-bold">💬 AI 튜터</h3>
+<button onclick="toggleChat()" class="text-white hover:text-indigo-200 text-xl">&times;</button>
+</div>
+<div id="chat-messages" class="flex-grow overflow-y-auto p-4 flex flex-col space-y-2">
+<div class="chat-msg ai">안녕하세요! 하이퍼바이저 유형에 대해 궁금한 것을 물어보세요.</div>
+</div>
+<div class="p-4 border-t border-gray-200">
+<div class="flex gap-2">
+<input type="text" id="chat-input" onkeydown="handleChatKey(event)" placeholder="질문을 입력하세요..." class="flex-grow border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+<button onclick="sendChatMessage()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-bold">전송</button>
+</div>
+</div>
+</div>
+
+<!-- API Key 설정 모달 -->
+<div id="settings-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex justify-center items-center">
+<div class="bg-white rounded-lg p-6 w-full max-w-md mx-4 shadow-xl">
+<h3 class="text-lg font-bold mb-4">⚙️ API Key 설정</h3>
+<p class="text-sm text-gray-600 mb-4">AI 기능을 사용하기 위해 Google Gemini API Key를 입력하세요.</p>
+<input type="password" id="api-key-input" placeholder="API Key 입력" class="w-full border border-gray-300 rounded-lg px-4 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+<div class="flex gap-2">
+<button onclick="saveApiKey()" class="flex-1 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700">저장</button>
+<button onclick="toggleSettings()" class="flex-1 bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200">취소</button>
+</div>
+<p class="text-xs text-gray-400 mt-3">* API Key는 브라우저 로컬 스토리지에 저장됩니다.</p>
+</div>
+</div>
+
+<footer class="bg-white mt-12 py-8 border-t border-gray-200">
+<div class="max-w-6xl mx-auto px-4 text-center">
+<div class="flex flex-col md:flex-row justify-center items-center gap-2 md:gap-6 text-sm text-gray-600 mb-3 font-medium">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-indigo-500"></span>
+<span>박교익PE (132회 정보관리기술사, dr.code92@gmail.com)</span>
+</div>
+</div>
+<p class="text-xs text-gray-400">Copyright © KPC 정보관리기술사 ZIP-UP 심화반. All rights reserved.</p>
+</div>
+</footer>
+
+<script>
+// ── 멘토 모드 ──
+var isMentorMode = new URLSearchParams(window.location.search).get('mentor') === 'true';
+if(isMentorMode){document.getElementById('nav-script').classList.remove('hidden');}
+var sections = isMentorMode
+    ? ['overview','types','vmethod','modern','textbook','script','quiz']
+    : ['overview','types','vmethod','modern','textbook','quiz'];
+
+// ── 탭 네비게이션 ──
+function navTo(id){
+    document.querySelectorAll('.nav-item').forEach(function(el){el.classList.remove('active','text-indigo-600');});
+    document.getElementById('nav-'+id).classList.add('active','text-indigo-600');
+    sections.forEach(function(s){document.getElementById(s).classList.add('hidden');});
+    document.getElementById(id).classList.remove('hidden');
+    window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// ── API Key 관리 ──
+function getApiKey(){
+    var k=localStorage.getItem('gemini_api_key');
+    if(!k){var u=new URLSearchParams(window.location.search);k=u.get('key');}
+    return k;
+}
+function toggleSettings(){document.getElementById('settings-modal').classList.toggle('hidden');}
+function saveApiKey(){var k=document.getElementById('api-key-input').value.trim();if(k){localStorage.setItem('gemini_api_key',k);toggleSettings();alert('API Key가 저장되었습니다.');}else{alert('API Key를 입력해주세요.');}}
+
+// ── 채팅 ──
+function toggleChat(){var s=document.getElementById('chat-sidebar');s.classList.toggle('closed');s.classList.toggle('open');}
+function handleChatKey(e){if(e.key==='Enter')sendChatMessage();}
+function sendChatMessage(){
+    var input=document.getElementById('chat-input');var msg=input.value.trim();if(!msg)return;
+    var box=document.getElementById('chat-messages');
+    box.innerHTML+='<div class="chat-msg user">'+msg+'</div>';input.value='';
+    var key=getApiKey();
+    if(!key){box.innerHTML+='<div class="chat-msg ai">⚠️ API Key가 설정되지 않았습니다. 상단의 🔑 API 버튼을 눌러 설정해주세요.</div>';toggleSettings();return;}
+    box.innerHTML+='<div id="typing-ind" class="chat-msg ai"><div class="typing-indicator"><span></span><span></span><span></span></div></div>';
+    box.scrollTop=box.scrollHeight;
+    fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key='+key,{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({contents:[{parts:[{text:"당신은 정보관리기술사 시험 멘토입니다. '하이퍼바이저 유형' 관련 질문에 전문적이고 명쾌하게 답변해주세요. 300자 이내로 핵심만 요약. 질문: "+msg}]}]})
+    }).then(function(r){return r.json();}).then(function(d){
+        var el=document.getElementById('typing-ind');if(el)el.remove();
+        try{var t=d.candidates[0].content.parts[0].text;box.innerHTML+='<div class="chat-msg ai prose">'+marked.parse(t)+'</div>';}
+        catch(e){box.innerHTML+='<div class="chat-msg ai">⚠️ 응답 처리 중 오류가 발생했습니다.</div>';}
+        box.scrollTop=box.scrollHeight;
+    }).catch(function(){
+        var el=document.getElementById('typing-ind');if(el)el.remove();
+        box.innerHTML+='<div class="chat-msg ai">⚠️ API 호출 중 오류가 발생했습니다.</div>';
+    });
+}
+
+// ── 클릭 확장 ──
+function updateDetail(key){
+    document.querySelectorAll('.tech-block').forEach(function(el){el.classList.remove('selected','ring-2','ring-indigo-500','bg-indigo-50','border-indigo-500');});
+    var block=document.getElementById('block-'+key);
+    if(block)block.classList.add('selected','ring-2','ring-indigo-500','bg-indigo-50','border-indigo-500');
+    var panel=document.getElementById('detail-panel');
+    if(panel && typeof detailData!=='undefined' && detailData[key]){
+        panel.innerHTML='<h4 class="font-bold text-lg text-gray-900 mb-2">'+detailData[key].title+'</h4><div class="text-gray-600 text-sm leading-relaxed">'+detailData[key].content+'</div>';
+        panel.classList.remove('hidden');
+    }
+}
+
+// ── 퀴즈 (고정 템플릿 — QUIZ_TEMPLATE.md 기준) ──
+var geminiKey = (typeof getApiKey === 'function') ? (getApiKey() || '') : (localStorage.getItem('geminiKey') || localStorage.getItem('gemini_api_key') || '');
+var quizTypeHistory = [];
+var currentQuizData = null;
+var quizTopics = [
+    {category:"하이퍼바이저 기본 개념",keywords:"VMM, Virtual Machine Monitor, 가상 머신, 격리, 자원 할당"},
+    {category:"Type 1 Bare-metal",keywords:"ESXi, Xen, KVM, Hyper-V, 하드웨어 직접 설치, Ring -1, 1~5% 오버헤드"},
+    {category:"Type 2 Hosted",keywords:"VirtualBox, VMware Workstation, Parallels, 호스트 OS, 10~30% 오버헤드"},
+    {category:"Type 1 vs Type 2 비교",keywords:"성능, 보안, 격리, 확장성, 용도, 이중 스케줄링, SR-IOV"},
+    {category:"가상화 방식 비교",keywords:"전가상화, 반가상화, 하이퍼콜, 바이너리 변환, VT-x, AMD-V"},
+    {category:"Popek Goldberg 요건",keywords:"동등성, 효율성, 자원 제어, 1974, Fidelity, Equivalence"},
+    {category:"현대적 발전",keywords:"AWS Nitro, HW 오프로딩, Ring -1, EPT, NPT, SR-IOV, Firecracker"},
+    {category:"컨테이너 비교 및 사례",keywords:"Docker, Kubernetes, 격리 수준, 부팅 시간, 밀도, 삼성SDS, AWS EC2"}
+];
+
+async function generateQuiz() {
+    geminiKey = (typeof getApiKey === 'function') ? (getApiKey() || '') : (localStorage.getItem('geminiKey') || localStorage.getItem('gemini_api_key') || '');
+    if (!geminiKey) { alert('API Key를 먼저 설정해주세요.'); toggleSettings(); return; }
+    var btn = document.getElementById('btn-quiz-gen');
+    btn.disabled = true; btn.innerHTML = '<span>생성 중...</span>';
+    document.getElementById('quiz-placeholder').classList.add('hidden');
+    document.getElementById('quiz-container').classList.add('hidden');
+    document.getElementById('quiz-loading').classList.remove('hidden');
+    var isMC;
+    var recent = quizTypeHistory.slice(-2);
+    if (recent.length >= 2 && recent[0] === recent[1]) { isMC = !recent[1]; }
+    else { isMC = Math.random() > 0.5; }
+    quizTypeHistory.push(isMC);
+    var selected = quizTopics[Math.floor(Math.random() * quizTopics.length)];
+    var quizType = isMC ? '객관식 (4지선다)' : '단답형';
+    var format = isMC
+        ? '{"question":"문제","options":["A","B","C","D"],"correctIndex":0,"explanation":"해설"}'
+        : '{"question":"문제","correctAnswer":"정답","explanation":"해설"}';
+    var prompt = "다음 카테고리에 대한 " + quizType + " 퀴즈 1문제를 만드세요.\n"
+        + "카테고리: " + selected.category + "\n"
+        + "관련 키워드: " + selected.keywords + "\n"
+        + "규칙: 반드시 위 카테고리와 키워드에 직접 관련된 문제를 출제하세요.\n"
+        + "JSON 형식으로 응답: " + format;
+    try {
+        var r = await fetch(
+            'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=' + geminiKey,
+            { method:'POST', headers:{'Content-Type':'application/json'},
+              body: JSON.stringify({ contents:[{parts:[{text:prompt}]}], generationConfig:{responseMimeType:"application/json"} })
+            }
+        );
+        var d = await r.json();
+        var t = d.candidates[0].content.parts[0].text;
+        t = t.replace(/```json\s*/gi,"").replace(/```\s*/g,"").trim();
+        var depth=0, start=-1, end=-1;
+        for (var i=0;i<t.length;i++) {
+            if (t[i]==='{') { if(depth===0) start=i; depth++; }
+            else if (t[i]==='}') { depth--; if(depth===0 && start!==-1) { end=i; break; } }
+        }
+        if (start===-1||end===-1) throw new Error("No JSON found");
+        t = t.substring(start, end+1);
+        t = t.replace(/[\x00-\x1F\x7F]/g, function(c) { return c==='\n'||c==='\r'||c==='\t' ? ' ' : ''; });
+        currentQuizData = JSON.parse(t);
+        renderQuiz(isMC);
+    } catch(e) {
+        document.getElementById('quiz-loading').classList.add('hidden');
+        document.getElementById('quiz-placeholder').classList.remove('hidden');
+        document.getElementById('quiz-placeholder').innerHTML = '<p class="text-red-500">퀴즈 생성 오류: ' + e.message + '</p>';
+    }
+    btn.disabled = false; btn.innerHTML = '<span>✨ 새로운 문제 생성</span>';
+}
+function renderQuiz(isMC) {
+    document.getElementById('quiz-loading').classList.add('hidden');
+    document.getElementById('quiz-feedback').classList.add('hidden');
+    document.getElementById('quiz-container').classList.remove('hidden');
+    document.getElementById('quiz-type-badge').textContent = isMC ? '객관식' : '단답형';
+    document.getElementById('quiz-question').textContent = currentQuizData.question;
+    var optDiv = document.getElementById('quiz-options');
+    var inputDiv = document.getElementById('quiz-input-area');
+    if (isMC) {
+        optDiv.classList.remove('hidden'); inputDiv.classList.add('hidden');
+        var h = ''; var letters = ['A','B','C','D'];
+        currentQuizData.options.forEach(function(opt, i) {
+            h += '<button onclick="checkMultipleChoice(' + i + ', this)" class="w-full text-left p-4 rounded-lg border border-gray-200 hover:bg-indigo-50 hover:border-indigo-300 transition-all mb-2 flex items-center group">'
+                + '<span class="w-8 h-8 rounded-full bg-gray-100 group-hover:bg-indigo-100 flex items-center justify-center text-sm font-bold text-gray-500 group-hover:text-indigo-600 mr-3 flex-shrink-0">' + letters[i] + '</span>'
+                + '<span class="text-sm text-gray-700">' + opt + '</span></button>';
+        });
+        optDiv.innerHTML = h;
+    } else {
+        optDiv.classList.add('hidden'); inputDiv.classList.remove('hidden');
+        document.getElementById('quiz-answer-input').value = '';
+        document.getElementById('quiz-answer-input').focus();
+    }
+}
+function checkMultipleChoice(idx, btnEl) {
+    var correct = idx === currentQuizData.correctIndex;
+    document.querySelectorAll('#quiz-options button').forEach(function(b, i) {
+        b.disabled = true;
+        if (i === currentQuizData.correctIndex) { b.classList.add('bg-green-50','border-green-400'); b.querySelector('span:first-child').classList.add('bg-green-100','text-green-700'); }
+        else if (i === idx && !correct) { b.classList.add('bg-red-50','border-red-400'); b.querySelector('span:first-child').classList.add('bg-red-100','text-red-700'); }
+    });
+    showQuizFeedback(correct, currentQuizData.options[currentQuizData.correctIndex], currentQuizData.explanation);
+}
+async function checkShortAnswer() {
+    geminiKey = (typeof getApiKey === 'function') ? (getApiKey() || '') : (localStorage.getItem('geminiKey') || localStorage.getItem('gemini_api_key') || '');
+    var ans = document.getElementById('quiz-answer-input').value.trim();
+    if (!ans) { alert('답을 입력해주세요.'); return; }
+    var btn = document.getElementById('btn-short-submit');
+    btn.disabled = true; btn.textContent = '채점 중...';
+    try {
+        var gradingPrompt = "당신은 정보관리기술사 시험 채점관입니다. 아래 문제에 대해 사용자의 답안이 정답으로 인정될 수 있는지 판정하세요.\n\n"
+            + "문제: " + currentQuizData.question + "\n"
+            + "모범 정답: " + currentQuizData.correctAnswer + "\n"
+            + "사용자 답안: " + ans + "\n\n"
+            + "판정 기준:\n- 핵심 의미가 동일하면 정답\n- 약어/풀네임 모두 인정\n- 영어/한글 혼용 인정\n- 띄어쓰기/조사 차이는 무시\n- 의미가 명확히 다르면 오답\n\n"
+            + "Output JSON: {\"correct\":true/false,\"reason\":\"판정 이유\"}";
+        var r = await fetch(
+            'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=' + geminiKey,
+            { method:'POST', headers:{'Content-Type':'application/json'},
+              body: JSON.stringify({ contents:[{parts:[{text:gradingPrompt}]}], generationConfig:{responseMimeType:"application/json"} })
+            }
+        );
+        var d = await r.json();
+        var gt = d.candidates[0].content.parts[0].text;
+        gt = gt.replace(/```json\s*/gi,"").replace(/```\s*/g,"").trim();
+        var gd=0,gs=-1,ge=-1;
+        for(var i=0;i<gt.length;i++){if(gt[i]==='{'){if(gd===0)gs=i;gd++;}else if(gt[i]==='}'){gd--;if(gd===0&&gs!==-1){ge=i;break;}}}
+        if(gs===-1||ge===-1) throw new Error("No JSON");
+        gt=gt.substring(gs,ge+1);
+        gt=gt.replace(/[\x00-\x1F\x7F]/g,function(c){return c==='\n'||c==='\r'||c==='\t'?' ':'';});
+        var result = JSON.parse(gt);
+        showQuizFeedback(result.correct, currentQuizData.correctAnswer, currentQuizData.explanation + (result.reason ? ' (AI: ' + result.reason + ')' : ''));
+    } catch(e) {
+        var normalize = function(s){return s.replace(/\s/g,'').toLowerCase();};
+        var correct = normalize(currentQuizData.correctAnswer).includes(normalize(ans)) || normalize(ans).includes(normalize(currentQuizData.correctAnswer));
+        showQuizFeedback(correct, currentQuizData.correctAnswer, currentQuizData.explanation + ' (로컬 채점)');
+    }
+    btn.disabled = false; btn.textContent = '제출';
+}
+function showQuizFeedback(correct, answer, explanation) {
+    var fb = document.getElementById('quiz-feedback');
+    fb.classList.remove('hidden','border-green-500','bg-green-50','border-red-500','bg-red-50');
+    if (correct) {
+        fb.classList.add('border-green-500','bg-green-50');
+        fb.innerHTML = '<p class="font-bold text-green-700 mb-1">✅ 정답입니다!</p><p class="text-sm text-green-600">' + explanation + '</p>';
+    } else {
+        fb.classList.add('border-red-500','bg-red-50');
+        fb.innerHTML = '<p class="font-bold text-red-700 mb-1">❌ 오답입니다.</p><p class="text-sm text-red-700 mb-1">정답: ' + answer + '</p><p class="text-sm text-red-600">' + explanation + '</p>';
+    }
+}
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && document.getElementById('quiz-answer-input') === document.activeElement) { checkShortAnswer(); }
+});
+
+// ── Chart.js ──
+document.addEventListener('DOMContentLoaded', function() {
+    var ctx1 = document.getElementById('typeCompareChart');
+    if(ctx1){
+        new Chart(ctx1.getContext('2d'), {
+            type:'bar',
+            data:{
+                labels:['성능(높을수록 좋음)','보안/격리','확장성','설치 편의성','비용 효율'],
+                datasets:[
+                    {label:'Type 1 (Bare-metal)',data:[95,90,95,40,85],backgroundColor:'rgba(99,102,241,0.7)',borderColor:'#6366f1',borderWidth:1},
+                    {label:'Type 2 (Hosted)',data:[60,55,40,90,60],backgroundColor:'rgba(34,197,94,0.7)',borderColor:'#22c55e',borderWidth:1}
+                ]
+            },
+            options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true,max:100,ticks:{callback:function(v){return v+'점'}}}},plugins:{legend:{position:'bottom'}}}
+        });
+    }
+});
+</script>
+</body>
+</html>

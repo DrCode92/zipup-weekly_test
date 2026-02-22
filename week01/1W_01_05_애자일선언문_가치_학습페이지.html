@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>애자일 선언문(Agile Manifesto)과 4가지 핵심 가치</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+        body{font-family:'Noto Sans KR',sans-serif;background-color:#f5f5f4;color:#1f2937}
+        .chart-container{position:relative;width:100%;max-width:600px;margin-left:auto;margin-right:auto;height:350px;max-height:400px}
+        .nav-item.active{border-bottom:2px solid #4f46e5;color:#4f46e5;font-weight:700}
+        .tech-block{transition:all .3s ease;cursor:pointer}.tech-block:hover{transform:translateY(-2px);box-shadow:0 4px 6px -1px rgba(0,0,0,.1)}
+        .tech-block.selected{ring:2px;ring-color:#4f46e5;background-color:#eef2ff;border-color:#4f46e5}
+        .no-scrollbar::-webkit-scrollbar{display:none}.no-scrollbar{-ms-overflow-style:none;scrollbar-width:none}
+        #chat-sidebar{transition:transform .3s ease-in-out}#chat-sidebar.closed{transform:translateX(100%)}#chat-sidebar.open{transform:translateX(0)}
+        .def-box{background:linear-gradient(135deg,#eef2ff 0%,#e0e7ff 100%);border-left:4px solid #4f46e5;border-radius:8px;padding:1.25rem;margin-bottom:1rem}
+        .def-box p{color:#312e81;font-weight:500;margin:0;line-height:1.8}
+        .insight-box{background-color:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:1rem;margin:1rem 0}.insight-box::before{content:'💡';margin-right:.5rem}
+        .textbook-content h3{font-size:1.25rem;font-weight:700;color:#1e3a8a;margin-top:1.5rem;margin-bottom:.75rem;border-left:4px solid #4f46e5;padding-left:.75rem}
+        .textbook-content h4{font-size:1.1rem;font-weight:600;color:#374151;margin-top:1rem;margin-bottom:.5rem}
+        .textbook-content p{margin-bottom:1rem;line-height:1.8;color:#4b5563}
+        .textbook-content ul{list-style-type:disc;padding-left:1.5rem;margin-bottom:1rem;color:#4b5563}
+        .textbook-content li{margin-bottom:.5rem;line-height:1.7}
+        .textbook-content table{width:100%;border-collapse:collapse;margin-bottom:1.5rem;font-size:.95rem}
+        .textbook-content th,.textbook-content td{border:1px solid #e5e7eb;padding:.75rem;text-align:left}
+        .textbook-content th{background-color:#f9fafb;font-weight:600;color:#1f2937}
+        .textbook-content .highlight{background-color:#eef2ff;color:#4338ca;font-weight:600;padding:0 4px;border-radius:4px}
+        .textbook-content pre{background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:1rem;overflow-x:auto;margin-bottom:1rem;font-size:.85rem;line-height:1.6}
+        .textbook-content code{font-family:'Courier New',monospace}
+        .chat-msg{border-radius:12px;padding:10px 14px;margin-bottom:10px;max-width:85%;font-size:.95rem}
+        .chat-msg.user{background-color:#4f46e5;color:white;align-self:flex-end;margin-left:auto}
+        .chat-msg.ai{background-color:#f3f4f6;color:#1f2937;align-self:flex-start;border:1px solid #e5e7eb}
+        .typing-indicator span{display:inline-block;width:6px;height:6px;background-color:#4f46e5;border-radius:50%;animation:typing 1.4s infinite ease-in-out both;margin:0 2px}
+        .typing-indicator span:nth-child(1){animation-delay:-.32s}.typing-indicator span:nth-child(2){animation-delay:-.16s}
+        @keyframes typing{0%,80%,100%{transform:scale(0)}40%{transform:scale(1)}}
+        @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+        .animate-fade-in{animation:fadeIn .4s ease-out forwards}
+        .strategy-card{cursor:pointer;transition:all .3s ease}.strategy-card:hover{transform:translateY(-2px);box-shadow:0 4px 6px -1px rgba(0,0,0,.1)}
+    </style>
+</head>
+<body class="bg-stone-100 min-h-screen flex flex-col overflow-x-hidden">
+    <header class="bg-white shadow-sm sticky top-0 z-40">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center pt-3 pb-1">
+                <div class="flex flex-col justify-center min-w-0">
+                    <span class="text-[10px] sm:text-xs text-indigo-600 font-bold uppercase tracking-wider leading-tight">KPC 정보관리기술사 ZIP-UP 심화반</span>
+                    <div class="flex items-center gap-2">
+                        <span class="text-lg sm:text-xl font-bold text-gray-900 tracking-tight truncate">애자일 선언문(Agile Manifesto)과 4가지 핵심 가치</span>
+                        <span class="text-[10px] sm:text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-bold flex-shrink-0">2026</span>
+                    </div>
+                </div>
+            </div>
+            <nav class="flex space-x-1 sm:space-x-4 overflow-x-auto no-scrollbar pb-1 items-center">
+                <button onclick="navTo('overview')" id="nav-overview" class="nav-item active px-1 pt-1 pb-2 text-xs sm:text-sm font-medium whitespace-nowrap">개요 및 개념</button>
+                <button onclick="navTo('values')" id="nav-values" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium whitespace-nowrap">4가지 핵심 가치</button>
+                <button onclick="navTo('comparison')" id="nav-comparison" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium whitespace-nowrap">비교·연관이론</button>
+                <button onclick="navTo('textbook')" id="nav-textbook" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium whitespace-nowrap">원문 학습</button>
+                <button onclick="navTo('script')" id="nav-script" class="nav-item hidden px-1 pt-1 pb-2 text-xs sm:text-sm font-medium whitespace-nowrap text-amber-700">🎬 강의 스크립트</button>
+                <button onclick="navTo('quiz')" id="nav-quiz" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium whitespace-nowrap">퀴즈 &amp; 암기</button>
+                <span class="w-px h-4 bg-gray-300 flex-shrink-0"></span>
+                <button onclick="toggleSettings()" class="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium text-indigo-600 hover:bg-indigo-50 border border-indigo-200 hover:border-indigo-400 transition-all whitespace-nowrap flex-shrink-0" title="API Key 설정">🔑 API</button>
+            </nav>
+        </div>
+    </header>
+    <main class="flex-grow max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12 pb-24">
+
+    <section id="overview">
+        <div class="bg-white rounded-xl shadow-sm p-6 sm:p-8 animate-fade-in">
+            <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">📋 개요 및 개념</h2>
+            <div class="def-box mb-4">
+                <p><strong>애자일 소프트웨어 개발 선언문(Manifesto for Agile Software Development)</strong>이란 2001년 17명의 소프트웨어 개발자가 폭포수 모델의 구조적 한계를 극복하기 위해 발표한, 소프트웨어 개발의 <strong>4가지 핵심 가치(Core Values)</strong>와 <strong>12가지 원칙(Principles)</strong>을 담은 선언이다.</p>
+            </div>
+            <p class="text-gray-600 leading-relaxed mb-6">선언문의 핵심 구조는 <strong>"A보다 B를 더 가치 있게 여긴다(We value B over A)"</strong>의 형식으로, A를 부정하는 것이 아니라 <strong>B에 더 높은 가치를 부여</strong>하는 것입니다. 즉, 프로세스·문서·계약·계획도 중요하지만, 사람·소프트웨어·협력·적응에 더 높은 우선순위를 두는 개발 철학입니다.</p>
+
+            <div class="insight-box mb-8">
+                <span class="text-sm text-amber-800">Standish Group CHAOS Report(1994)에 따르면 IT 프로젝트 성공률은 <strong>16.2%</strong>에 불과하였으며, 31.1% 중도 취소, 52.7% 실패로 나타났다. 이러한 SW 위기가 애자일 선언문 탄생의 직접적 배경이다.</span>
+            </div>
+
+            <h3 class="text-lg font-bold text-gray-900 mb-4">📊 폭포수 모델의 4대 구조적 한계</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                <div class="bg-red-50 rounded-lg p-4 border border-red-200">
+                    <div class="text-red-600 font-bold text-sm mb-1">🚫 요구사항 변경 불가</div>
+                    <p class="text-xs text-red-800">요구사항의 35~50%가 프로젝트 중 변경됨(CHAOS Report)</p>
+                </div>
+                <div class="bg-red-50 rounded-lg p-4 border border-red-200">
+                    <div class="text-red-600 font-bold text-sm mb-1">💰 결함 수정 비용 폭증</div>
+                    <p class="text-xs text-red-800">유지보수 단계 수정 비용 = 요구분석의 100배(Boehm, 1981)</p>
+                </div>
+                <div class="bg-red-50 rounded-lg p-4 border border-red-200">
+                    <div class="text-red-600 font-bold text-sm mb-1">⏳ 고객 피드백 지연</div>
+                    <p class="text-xs text-red-800">평균 개발 기간 18개월 후 첫 고객 피드백</p>
+                </div>
+                <div class="bg-red-50 rounded-lg p-4 border border-red-200">
+                    <div class="text-red-600 font-bold text-sm mb-1">⚠️ 리스크 후반부 집중</div>
+                    <p class="text-xs text-red-800">전체 결함의 60%가 요구분석·설계 단계에서 유입</p>
+                </div>
+            </div>
+
+            <h3 class="text-lg font-bold text-gray-900 mb-4">📊 폭포수 vs 애자일 핵심 비교</h3>
+            <div class="chart-container mb-2"><canvas id="overviewChart"></canvas></div>
+            <p class="text-xs text-center text-gray-400 mb-2">* 점수는 상대적 비교를 위한 예시 값입니다.</p>
+        </div>
+    </section>
+    <script>
+    new Chart(document.getElementById('overviewChart'),{type:'radar',data:{labels:['고객 소통 빈도','변화 대응력','문서 부담','피드백 주기','팀 자율성','리스크 분산'],datasets:[{label:'폭포수 모델',data:[2,2,8,2,3,2],borderColor:'#94a3b8',backgroundColor:'rgba(148,163,184,0.1)',pointBackgroundColor:'#94a3b8'},{label:'애자일',data:[9,9,3,9,9,8],borderColor:'#6366f1',backgroundColor:'rgba(99,102,241,0.1)',pointBackgroundColor:'#6366f1'}]},options:{responsive:true,maintainAspectRatio:false,scales:{r:{beginAtZero:true,max:10,ticks:{stepSize:2,font:{size:10}},pointLabels:{font:{size:11}}}},plugins:{legend:{position:'bottom',labels:{font:{size:11}}}}}});
+    </script>
+
+    <section id="values" class="hidden">
+        <div class="bg-white rounded-xl shadow-sm p-6 sm:p-8 animate-fade-in">
+            <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">💎 4가지 핵심 가치 — <span class="highlight">"개동고변"</span></h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div id="block-individual" class="tech-block selected bg-white rounded-lg p-4 border-2 border-blue-300 shadow-sm" onclick="updateValueDetail('individual')">
+                    <div class="text-blue-600 font-bold text-2xl mb-1">🤝</div>
+                    <div class="text-sm font-bold text-gray-900">개인과 상호작용</div>
+                    <p class="text-xs text-gray-500 mt-1">over 프로세스·도구</p>
+                </div>
+                <div id="block-working" class="tech-block bg-white rounded-lg p-4 border-2 border-gray-200 shadow-sm" onclick="updateValueDetail('working')">
+                    <div class="text-green-600 font-bold text-2xl mb-1">⚙️</div>
+                    <div class="text-sm font-bold text-gray-900">동작하는 SW</div>
+                    <p class="text-xs text-gray-500 mt-1">over 포괄적 문서</p>
+                </div>
+                <div id="block-customer" class="tech-block bg-white rounded-lg p-4 border-2 border-gray-200 shadow-sm" onclick="updateValueDetail('customer')">
+                    <div class="text-purple-600 font-bold text-2xl mb-1">👥</div>
+                    <div class="text-sm font-bold text-gray-900">고객 협력</div>
+                    <p class="text-xs text-gray-500 mt-1">over 계약 협상</p>
+                </div>
+                <div id="block-change" class="tech-block bg-white rounded-lg p-4 border-2 border-gray-200 shadow-sm" onclick="updateValueDetail('change')">
+                    <div class="text-amber-600 font-bold text-2xl mb-1">🔄</div>
+                    <div class="text-sm font-bold text-gray-900">변화에 대응</div>
+                    <p class="text-xs text-gray-500 mt-1">over 계획 따르기</p>
+                </div>
+            </div>
+            <div id="value-detail-content" class="mb-8">
+                <div class="p-5 rounded-lg border-l-4 border-blue-500 bg-blue-50 animate-fade-in">
+                    <h3 class="text-lg font-bold text-gray-900 mb-3">개인과 상호작용(Individuals and Interactions)</h3>
+                    <p class="text-sm text-gray-700 leading-relaxed mb-2"><strong>의미:</strong> 표준 프로세스 준수보다 팀원 간 직접적 소통과 협업이 더 중요하다.</p>
+                    <p class="text-sm text-gray-700 leading-relaxed mb-2"><strong>폭포수의 한계:</strong> 단계별 공식 문서 전달에 의존 → 개발자 간 직접 소통 부재 → 해석 차이로 오류 발생</p>
+                    <p class="text-sm text-gray-700 leading-relaxed mb-2"><strong>애자일의 해결:</strong> Daily Standup, Pair Programming, Co-Location으로 실시간 소통 강화</p>
+                    <p class="text-sm text-gray-700 leading-relaxed"><strong>실무 사례:</strong> Spotify의 Squad 모델 — 8~12명 자율 팀이 직접 소통하며 기능 개발</p>
+                </div>
+            </div>
+
+            <h3 class="text-lg font-bold text-gray-900 mb-4">📊 폭포수 문제점과 애자일 가치의 대응 관계</h3>
+            <div class="overflow-x-auto">
+                <table class="w-full border-collapse text-sm mb-4">
+                    <thead><tr><th class="border border-gray-200 bg-gray-50 p-3 font-bold text-left">폭포수의 문제점</th><th class="border border-gray-200 bg-indigo-50 p-3 font-bold text-left">대응하는 애자일 가치</th><th class="border border-gray-200 bg-green-50 p-3 font-bold text-left">구체적 해결 메커니즘</th></tr></thead>
+                    <tbody>
+                        <tr><td class="border border-gray-200 p-3">문서 중심 소통 → 해석 차이</td><td class="border border-gray-200 p-3 font-medium text-indigo-700">개인과 상호작용</td><td class="border border-gray-200 p-3">Daily Standup, Pair Programming</td></tr>
+                        <tr><td class="border border-gray-200 p-3">과도한 문서 작성 공수</td><td class="border border-gray-200 p-3 font-medium text-indigo-700">동작하는 소프트웨어</td><td class="border border-gray-200 p-3">Sprint Increment 우선 전달</td></tr>
+                        <tr><td class="border border-gray-200 p-3">요구사항 변경 계약 갈등</td><td class="border border-gray-200 p-3 font-medium text-indigo-700">고객 협력</td><td class="border border-gray-200 p-3">Product Owner 상주, Sprint Review</td></tr>
+                        <tr><td class="border border-gray-200 p-3">계획 경직성 → 시장 변화 미반영</td><td class="border border-gray-200 p-3 font-medium text-indigo-700">변화에 대응</td><td class="border border-gray-200 p-3">Sprint Planning, Backlog Grooming</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <section id="comparison" class="hidden">
+        <div class="bg-white rounded-xl shadow-sm p-6 sm:p-8 animate-fade-in">
+            <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">🔗 비교 분석 · 연관 이론</h2>
+
+            <h3 class="text-lg font-bold text-gray-900 mb-4">📋 12가지 원칙 중 핵심 4선 — <span class="highlight">"고빈매반"</span></h3>
+            <div class="overflow-x-auto mb-8">
+                <table class="w-full border-collapse text-sm">
+                    <thead><tr><th class="border border-gray-200 bg-gray-50 p-3 font-bold">원칙</th><th class="border border-gray-200 bg-gray-50 p-3 font-bold">핵심 내용</th><th class="border border-gray-200 bg-gray-50 p-3 font-bold">연결 가치</th></tr></thead>
+                    <tbody>
+                        <tr><td class="border border-gray-200 p-3 font-medium">원칙 1</td><td class="border border-gray-200 p-3">고객 만족을 최우선으로, 가치 있는 소프트웨어를 조기/지속 전달</td><td class="border border-gray-200 p-3">동작하는 SW + 고객 협력</td></tr>
+                        <tr><td class="border border-gray-200 p-3 font-medium">원칙 3</td><td class="border border-gray-200 p-3">동작하는 소프트웨어를 자주 전달 (2주~2개월, 짧을수록 좋음)</td><td class="border border-gray-200 p-3">동작하는 SW</td></tr>
+                        <tr><td class="border border-gray-200 p-3 font-medium">원칙 4</td><td class="border border-gray-200 p-3">비즈니스 관계자와 개발자가 매일 함께 일해야 함</td><td class="border border-gray-200 p-3">개인과 상호작용 + 고객 협력</td></tr>
+                        <tr><td class="border border-gray-200 p-3 font-medium">원칙 12</td><td class="border border-gray-200 p-3">팀이 정기적으로 더 효과적으로 일하는 방법을 반성하고 조율</td><td class="border border-gray-200 p-3">변화에 대응</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3 class="text-lg font-bold text-gray-900 mb-4">🏢 적용 사례</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                <div class="bg-indigo-50 rounded-lg p-5 border border-indigo-200">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="bg-indigo-100 text-indigo-700 text-xs font-bold px-2 py-0.5 rounded-full">해외 사례</span>
+                        <span class="font-bold text-gray-900">ING Bank (2015)</span>
+                    </div>
+                    <ul class="text-sm text-gray-700 space-y-1">
+                        <li>• 전통적 부서 구조 → <strong>350개 자율형 Squad</strong>로 재편</li>
+                        <li>• Time-to-Market: 9개월 → 3개월 (<strong>66% 단축</strong>)</li>
+                        <li>• 직원 만족도 <strong>30% 향상</strong></li>
+                    </ul>
+                </div>
+                <div class="bg-amber-50 rounded-lg p-5 border border-amber-200">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="bg-amber-100 text-amber-700 text-xs font-bold px-2 py-0.5 rounded-full">한국 현실</span>
+                        <span class="font-bold text-gray-900">공공 SI 한계</span>
+                    </div>
+                    <ul class="text-sm text-gray-700 space-y-1">
+                        <li>• 감사원 감사 대응 위한 공식 산출물 필수</li>
+                        <li>• 순수 애자일 직접 적용에 한계</li>
+                        <li>• 행정안전부: <strong>하이브리드 방법론</strong> 권장 (2020)</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3 class="text-lg font-bold text-gray-900 mb-4">📚 연관 이론</h3>
+            <div class="space-y-4">
+                <div class="strategy-card bg-white rounded-lg border border-green-200 p-5 shadow-sm" onclick="toggleStrategy(this)">
+                    <div class="strategy-summary flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <span class="bg-green-100 text-green-700 font-bold text-lg w-10 h-10 rounded-full flex items-center justify-center">🏭</span>
+                            <div><p class="font-bold text-gray-900">린(Lean) 사상과의 연결</p><p class="text-xs text-gray-500">도요타 생산 방식(TPS)의 SW 적용</p></div>
+                        </div>
+                        <span class="text-gray-400">▼</span>
+                    </div>
+                    <div class="strategy-detail hidden mt-4 pt-4 border-t border-green-100">
+                        <p class="text-sm text-gray-700 leading-relaxed mb-2">애자일의 철학적 기반은 도요타 생산 방식(TPS)에서 유래한 <strong>린(Lean) 사상</strong>이다.</p>
+                        <p class="text-sm text-gray-700 leading-relaxed mb-2">"낭비 제거(Eliminate Waste)", "흐름 최적화(Optimize Flow)", "지속적 개선(Kaizen)"이라는 린 원칙이 애자일의 반복 개발, 최소 문서, 지속적 개선(Retrospective)과 직접 연결된다.</p>
+                        <p class="text-sm text-gray-700 leading-relaxed">Mary & Tom Poppendieck의 "Lean Software Development(2003)"이 이 연결을 체계화하였다.</p>
+                    </div>
+                </div>
+                <div class="strategy-card bg-white rounded-lg border border-purple-200 p-5 shadow-sm" onclick="toggleStrategy(this)">
+                    <div class="strategy-summary flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <span class="bg-purple-100 text-purple-700 font-bold text-lg w-10 h-10 rounded-full flex items-center justify-center">📏</span>
+                            <div><p class="font-bold text-gray-900">브룩스의 법칙과 소규모 팀</p><p class="text-xs text-gray-500">커뮤니케이션 채널 N(N-1)/2</p></div>
+                        </div>
+                        <span class="text-gray-400">▼</span>
+                    </div>
+                    <div class="strategy-detail hidden mt-4 pt-4 border-t border-purple-100">
+                        <p class="text-sm text-gray-700 leading-relaxed mb-2">Frederick Brooks의 <strong>"늦어진 프로젝트에 인력을 추가하면 더 늦어진다"</strong>(The Mythical Man-Month, 1975)는 커뮤니케이션 오버헤드의 비선형적 증가(<strong>N(N-1)/2</strong>)에 기인한다.</p>
+                        <p class="text-sm text-gray-700 leading-relaxed mb-2">애자일이 5~9명의 소규모 자율 팀을 강조하는 이유가 바로 이 법칙의 교훈이다.</p>
+                        <div class="bg-purple-50 rounded-lg p-3 mt-2">
+                            <p class="text-xs text-purple-800"><strong>5명 팀:</strong> 채널 10개 | <strong>10명 팀:</strong> 채널 45개 | <strong>20명 팀:</strong> 채널 190개</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="strategy-card bg-white rounded-lg border border-teal-200 p-5 shadow-sm" onclick="toggleStrategy(this)">
+                    <div class="strategy-summary flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <span class="bg-teal-100 text-teal-700 font-bold text-lg w-10 h-10 rounded-full flex items-center justify-center">🏗️</span>
+                            <div><p class="font-bold text-gray-900">대규모 확장 — SAFe</p><p class="text-xs text-gray-500">Scaled Agile Framework</p></div>
+                        </div>
+                        <span class="text-gray-400">▼</span>
+                    </div>
+                    <div class="strategy-detail hidden mt-4 pt-4 border-t border-teal-100">
+                        <p class="text-sm text-gray-700 leading-relaxed mb-2">애자일은 원래 5~9명 소규모 팀을 전제로 설계되었으므로, 대규모 프로젝트(100명+)에서는 스케일링 프레임워크가 필요하다.</p>
+                        <p class="text-sm text-gray-700 leading-relaxed"><strong>SAFe(Scaled Agile Framework)</strong>는 Team, Program, Large Solution, Portfolio 4개 레벨로 애자일을 확장한다. LeSS, Nexus 등의 대안도 존재한다.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="textbook" class="hidden">
+        <div class="bg-white rounded-xl shadow-sm p-6 sm:p-8 animate-fade-in">
+            <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">📖 원문 학습</h2>
+            <div class="textbook-content">
+
+                <h3>제1장 개요 및 배경</h3>
+
+                <h4>1.1 애자일 선언문의 역사적 맥락</h4>
+                <p>2001년 2월, 미국 유타주 스노우버드 리조트에 17명의 소프트웨어 개발자가 모여 <strong>"애자일 소프트웨어 개발 선언문(Manifesto for Agile Software Development)"</strong>을 발표하였다. Kent Beck, Martin Fowler, Robert C. Martin, Jeff Sutherland, Ken Schwaber 등 당대 최고의 소프트웨어 사상가들이 참여하였다.</p>
+                <p>이 선언문이 등장한 배경에는 1990년대 소프트웨어 산업의 <strong>위기(Software Crisis)</strong>가 있었다. Standish Group의 CHAOS Report(1994)에 따르면, IT 프로젝트의 성공률은 16.2%에 불과하였고, 31.1%는 중도 취소, 52.7%는 일정·비용·기능 면에서 실패로 판정되었다. 이러한 실패의 주요 원인으로 <strong>폭포수 모델(Waterfall Model)의 경직된 요구사항 관리</strong>가 지목되었다.</p>
+
+                <h4>1.2 폭포수 모델의 구조적 한계</h4>
+                <p>Winston Royce(1970)가 제안한 폭포수 모델은 요구분석 → 설계 → 구현 → 테스트 → 유지보수의 <strong>선형 순차 구조</strong>로, 각 단계의 완료 후 다음 단계로 이행한다. 이 구조에는 다음과 같은 본질적 한계가 있었다.</p>
+                <table>
+                    <thead><tr><th>한계</th><th>설명</th><th>수치적 근거</th></tr></thead>
+                    <tbody>
+                        <tr><td>요구사항 변경 불가</td><td>초기 확정 후 변경이 극히 어려움</td><td>요구사항의 35~50%가 프로젝트 중 변경(CHAOS Report)</td></tr>
+                        <tr><td>결함 수정 비용 폭증</td><td>후반부 발견 시 수정 비용 기하급수적 증가</td><td>유지보수 단계 수정 비용 = 요구분석 단계의 100배(Boehm, 1981)</td></tr>
+                        <tr><td>고객 피드백 지연</td><td>최종 산출물이 나와야 고객 확인 가능</td><td>평균 개발 기간 18개월 후 첫 고객 피드백</td></tr>
+                        <tr><td>리스크 후반부 집중</td><td>테스트 단계에서야 문제 가시화</td><td>전체 결함의 60%가 요구분석·설계 단계에서 유입</td></tr>
+                    </tbody>
+                </table>
+
+                <h3>제2장 애자일 선언문의 4가지 핵심 가치</h3>
+
+                <h4>2.1 선언문 원문과 구조</h4>
+                <p>애자일 선언문은 4가지 핵심 가치(Core Values)와 12가지 원칙(Principles)으로 구성된다. 선언문의 핵심 구조는 "<strong>A보다 B를 더 가치 있게 여긴다(We value B over A)</strong>"의 형식으로, A를 부정하는 것이 아니라 <strong>B에 더 높은 가치를 부여</strong>하는 것이다.</p>
+
+                <h4>2.2 4가지 핵심 가치 상세</h4>
+                <p><strong>[가치 1] 프로세스와 도구보다 → 개인과 상호작용</strong></p>
+                <table>
+                    <thead><tr><th>항목</th><th>내용</th></tr></thead>
+                    <tbody>
+                        <tr><td>의미</td><td>표준 프로세스 준수보다 팀원 간 직접적 소통과 협업이 더 중요하다</td></tr>
+                        <tr><td>폭포수의 한계</td><td>단계별 공식 문서 전달에 의존 → 개발자 간 직접 소통 부재 → 해석 차이로 오류 발생</td></tr>
+                        <tr><td>애자일의 해결</td><td>Daily Standup, Pair Programming, Co-Location으로 실시간 소통 강화</td></tr>
+                        <tr><td>실무 적용</td><td>Spotify의 Squad 모델: 8~12명 자율 팀이 직접 소통하며 기능 개발</td></tr>
+                    </tbody>
+                </table>
+                <p><strong>[가치 2] 포괄적인 문서보다 → 동작하는 소프트웨어</strong></p>
+                <table>
+                    <thead><tr><th>항목</th><th>내용</th></tr></thead>
+                    <tbody>
+                        <tr><td>의미</td><td>방대한 산출물 문서보다 실제 동작하는 소프트웨어의 전달이 더 중요하다</td></tr>
+                        <tr><td>폭포수의 한계</td><td>SRS, SDD, STP 등 공식 문서 작성에 전체 공수의 30~40% 소비(Jones, 2013)</td></tr>
+                        <tr><td>애자일의 해결</td><td>2~4주 Sprint마다 동작하는 소프트웨어(Increment) 전달, 필수 문서만 최소화</td></tr>
+                        <tr><td>실무 적용</td><td>Netflix의 Continuous Delivery: 하루 수십 회 배포로 고객 가치 즉시 전달</td></tr>
+                    </tbody>
+                </table>
+                <p><strong>[가치 3] 계약 협상보다 → 고객 협력</strong></p>
+                <table>
+                    <thead><tr><th>항목</th><th>내용</th></tr></thead>
+                    <tbody>
+                        <tr><td>의미</td><td>계약서 기반의 형식적 관계보다 고객과의 지속적 협력 관계가 더 중요하다</td></tr>
+                        <tr><td>폭포수의 한계</td><td>초기 요구사항 계약으로 확정 → 변경 시 CCB(Change Control Board) 공식 절차 → 변경 저항</td></tr>
+                        <tr><td>애자일의 해결</td><td>Product Owner가 팀에 상주하며 매 Sprint Review에서 직접 피드백 제공</td></tr>
+                        <tr><td>실무 적용</td><td>카카오뱅크 MSA 전환: 현업 담당자가 Scrum 팀에 상주하여 요구사항 실시간 조정</td></tr>
+                    </tbody>
+                </table>
+                <p><strong>[가치 4] 계획 따르기보다 → 변화에 대응</strong></p>
+                <table>
+                    <thead><tr><th>항목</th><th>내용</th></tr></thead>
+                    <tbody>
+                        <tr><td>의미</td><td>초기 계획의 엄격한 이행보다 환경 변화에 유연하게 대응하는 것이 더 중요하다</td></tr>
+                        <tr><td>폭포수의 한계</td><td>초기 WBS(Work Breakdown Structure) 확정 후 변경 불가 → 시장 변화 미반영</td></tr>
+                        <tr><td>애자일의 해결</td><td>Sprint 단위 계획(Sprint Planning) + Backlog 우선순위 재조정으로 지속적 적응</td></tr>
+                        <tr><td>실무 적용</td><td>Spotify의 Release Train: 2주 주기로 우선순위를 재조정하여 시장 반응에 즉시 대응</td></tr>
+                    </tbody>
+                </table>
+
+                <h3>제3장 폭포수 모델 문제점과 애자일 가치의 대응 관계</h3>
+                <h4>3.1 체계적 비교표</h4>
+                <table>
+                    <thead><tr><th>폭포수의 문제점</th><th>대응하는 애자일 가치</th><th>구체적 해결 메커니즘</th></tr></thead>
+                    <tbody>
+                        <tr><td>문서 중심 소통 → 해석 차이</td><td>개인과 상호작용</td><td>Daily Standup, Pair Programming</td></tr>
+                        <tr><td>과도한 문서 작성 공수</td><td>동작하는 소프트웨어</td><td>Sprint Increment 우선 전달</td></tr>
+                        <tr><td>요구사항 변경 계약 갈등</td><td>고객 협력</td><td>Product Owner 상주, Sprint Review</td></tr>
+                        <tr><td>계획 경직성 → 시장 변화 미반영</td><td>변화에 대응</td><td>Sprint Planning, Backlog Grooming</td></tr>
+                    </tbody>
+                </table>
+
+                <h3>제4장 12가지 원칙과 핵심 가치의 연결</h3>
+                <p>4가지 가치는 12가지 원칙으로 구체화된다. 핵심 원칙 중 답안에 반드시 포함해야 할 것들은 다음과 같다.</p>
+                <table>
+                    <thead><tr><th>원칙</th><th>핵심 내용</th><th>연결 가치</th></tr></thead>
+                    <tbody>
+                        <tr><td>원칙 1</td><td>고객 만족을 최우선으로, 가치 있는 소프트웨어를 조기/지속 전달</td><td>동작하는 SW + 고객 협력</td></tr>
+                        <tr><td>원칙 3</td><td>동작하는 소프트웨어를 자주 전달 (2주~2개월, 짧을수록 좋음)</td><td>동작하는 SW</td></tr>
+                        <tr><td>원칙 4</td><td>비즈니스 관계자와 개발자가 매일 함께 일해야 함</td><td>개인과 상호작용 + 고객 협력</td></tr>
+                        <tr><td>원칙 12</td><td>팀이 정기적으로 더 효과적으로 일하는 방법을 반성하고 조율</td><td>변화에 대응</td></tr>
+                    </tbody>
+                </table>
+
+                <h3>제5장 적용 사례</h3>
+                <h4>5.1 ING Bank의 애자일 전환 (2015)</h4>
+                <p>네덜란드 ING Bank는 2015년 전사적 애자일 전환을 단행하여, 전통적 부서 구조를 350개의 <strong>자율형 Squad</strong>로 재편하였다. 결과적으로 시장 출시 기간(Time-to-Market)이 평균 9개월에서 3개월로 66% 단축되었고, 직원 만족도가 30% 향상되었다.</p>
+                <h4>5.2 한국 공공SI에서의 애자일 도입 한계</h4>
+                <p>한국 공공 SI 프로젝트에서는 감사원 감사 대응을 위한 공식 산출물이 필수적이므로, 순수 애자일의 직접 적용에 한계가 있다. 행정안전부의 "SW 개발 방법론 적용 가이드(2020)"에서는 하이브리드 방법론(폭포수+애자일)의 적용을 권장하고 있다.</p>
+
+                <h3>제6장 연관 이론 연결</h3>
+                <h4>6.1 린(Lean) 사상과의 연결</h4>
+                <p>애자일의 철학적 기반은 도요타 생산 방식(TPS)에서 유래한 <strong>린(Lean) 사상</strong>이다. "낭비 제거(Eliminate Waste)", "흐름 최적화(Optimize Flow)", "지속적 개선(Kaizen)"이라는 린 원칙이 애자일의 반복 개발, 최소 문서, 지속적 개선(Retrospective)과 직접 연결된다. Mary & Tom Poppendieck의 "Lean Software Development(2003)"이 이 연결을 체계화하였다.</p>
+                <h4>6.2 브룩스의 법칙과 애자일의 소규모 팀</h4>
+                <p>Frederick Brooks의 <strong>"늦어진 프로젝트에 인력을 추가하면 더 늦어진다"</strong>(The Mythical Man-Month, 1975)는 커뮤니케이션 오버헤드의 비선형적 증가(N(N-1)/2)에 기인한다. 애자일이 5~9명의 소규모 자율 팀을 강조하는 이유가 바로 이 법칙의 교훈이다. 5명 팀의 커뮤니케이션 채널은 10개이지만, 20명 팀은 190개로 급증한다.</p>
+
+                <h3>제7장 시험 출제 관점</h3>
+                <p><strong>기출 연계</strong>: 애자일 관련 문제는 정보관리기술사 1교시와 2교시 모두에서 출제된다. 1교시에서는 "애자일 선언문", "Scrum의 3-5-3", "XP의 12가지 실천법" 등이 단독 출제되며, 2교시에서는 "폭포수 vs 애자일 비교", "테일러링", "하이브리드 방법론" 등 복합 문제로 출제된다.</p>
+                <p><strong>답안 구성 전략</strong>:</p>
+                <ul>
+                    <li>서론(15%): SW 위기 배경 → 폭포수의 한계 → 애자일 등장</li>
+                    <li>본론(75%): 4가지 가치 정의 + 폭포수 문제점 대응 비교표 + 12원칙 핵심 + 사례</li>
+                    <li>결론(10%): 하이브리드 방법론 필요성, 대규모 프로젝트에서의 확장(SAFe) 연결</li>
+                </ul>
+
+            </div>
+        </div>
+    </section>
+
+    <section id="script" class="hidden">
+        <div class="bg-white rounded-xl shadow-sm p-6 sm:p-8 animate-fade-in border-l-4 border-amber-400">
+            <div class="flex items-center gap-3 mb-6">
+                <h2 class="text-xl font-bold text-gray-900 flex items-center gap-2">🎬 강의 스크립트</h2>
+                <span class="bg-amber-100 text-amber-800 text-xs font-bold px-3 py-1 rounded-full border border-amber-300">🔒 멘토 전용</span>
+            </div>
+            <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6 text-sm text-amber-800">
+                <strong>📌 접근 방법:</strong> URL 뒤에 <code class="bg-amber-100 px-1.5 py-0.5 rounded text-xs">?mentor=true</code>를 추가하면 이 탭이 표시됩니다.
+            </div>
+            <div class="textbook-content">
+
+                <h4>🎬 [도입부 — 약 3분]</h4>
+                <p>안녕하세요, 여러분. 오늘은 소프트웨어 공학의 가장 중요한 전환점 중 하나인 <strong>애자일 선언문(Agile Manifesto)</strong>을 다뤄보겠습니다.</p>
+                <p>이 토픽이 왜 중요하냐면요, 기술사 시험에서 방법론 문제가 나오면 거의 무조건 애자일이 연관돼요. 1교시에서 "애자일 선언문의 4가지 핵심 가치를 설명하시오"라고 단독으로 나올 수도 있고, 2교시에서 "폭포수 vs 애자일 비교"로 나올 수도 있고, "테일러링"이나 "하이브리드 방법론" 문제의 기초가 되기도 하거든요. 그러니까 이 토픽을 확실히 잡아두면 여러 문제에 응용할 수 있어요. 소프트웨어공학 파트에서 가성비가 가장 좋은 토픽 중 하나라고 보시면 돼요.</p>
+                <p>자, 2001년 2월에 무슨 일이 있었냐면, 미국 유타주 스노우버드라는 리조트에 17명의 소프트웨어 개발 대가들이 모였어요. Kent Beck, Martin Fowler, Jeff Sutherland 같은 사람들이에요. XP(eXtreme Programming)를 만든 사람, Scrum을 만든 사람들이 한자리에 모인 거예요. 이 사람들이 "소프트웨어 개발을 이대로는 안 되겠다"고 모여서 만든 게 애자일 선언문이에요. 4가지 핵심 가치와 12가지 원칙으로 구성되어 있죠.</p>
+                <p>왜 이런 선언을 했냐면, 당시 소프트웨어 프로젝트의 성공률이 처참했거든요. Standish Group의 CHAOS Report에 따르면 1994년 기준 IT 프로젝트 성공률이 16.2%밖에 안 됐어요. 31%는 중도 취소, 53%는 일정이나 비용이 초과된 실패 프로젝트였어요. 이 숫자를 서론에 꼭 넣으세요. 임팩트가 확실하거든요. 채점관이 "아, 이 사람은 근거를 가지고 논리를 전개하는구나" 하고 느끼게 되는 포인트예요.</p>
+
+                <h4>🎬 [핵심 설명 — 4가지 가치 (약 7분)]</h4>
+                <p>자, 핵심으로 가봅시다. 4가지 가치를 <span class="highlight">"개동고변"</span>으로 외우세요. 개인과 상호작용, 동작하는 소프트웨어, 고객 협력, 변화에 대응.</p>
+                <p>중요한 건요, 이 선언문의 구조가 "A보다 B를 더 가치있게 여긴다"는 거지, "A를 버린다"는 게 아니에요. 프로세스도 중요하고, 문서도 중요하고, 계약도 중요하고, 계획도 중요해요. 다만 B에 <strong>더 높은 가치</strong>를 둔다는 거예요. 이걸 정확히 써주면 "이 사람은 선언문을 제대로 이해했구나" 하는 인상을 줄 수 있어요. 많은 수험생이 이 뉘앙스를 놓치거든요.</p>
+                <p>첫 번째, <strong>프로세스와 도구보다 개인과 상호작용</strong>. 폭포수 모델에서는 각 단계가 공식 문서로 연결돼요. 요구분석서 → 설계서 → 구현 → 테스트 계획서. 문서를 통해 소통하는 거죠. 근데 문서로 소통하면 해석 차이가 생기잖아요? 애자일은 이걸 Daily Standup, Pair Programming, 같은 공간에서 직접 대화하는 방식으로 해결한 거예요.</p>
+                <p>두 번째, <strong>포괄적인 문서보다 동작하는 소프트웨어</strong>. 폭포수에서는 SRS, SDD, STP 같은 공식 문서 작성에 전체 공수의 30~40%가 소비된다는 통계가 있어요. 애자일은 "문서를 안 쓴다"가 아니라 "동작하는 소프트웨어를 먼저 전달하고, 필수 문서만 최소화한다"는 거예요. 2~4주 Sprint마다 실제로 돌아가는 소프트웨어(Increment)를 보여주니까 고객도 빨리 확인할 수 있죠.</p>
+                <p>세 번째, <strong>계약 협상보다 고객 협력</strong>. 폭포수에서는 요구사항을 계약서로 확정해놓고, 변경하려면 CCB(Change Control Board)라는 공식 절차를 거쳐야 해요. 시간도 오래 걸리고 관계도 딱딱해지죠. 애자일에서는 Product Owner가 개발팀에 상주하면서 매 Sprint Review에서 직접 피드백을 줘요. 카카오뱅크가 MSA 전환할 때 현업 담당자를 Scrum 팀에 상주시킨 게 좋은 사례예요.</p>
+                <p>네 번째, <strong>계획 따르기보다 변화에 대응</strong>. 폭포수는 초기 WBS를 확정하면 바꾸기가 정말 어렵거든요. 프로젝트 초기에 간트 차트 그려놓고 "이대로 간다" 하는 건데, 문제는 시장이 계속 변하잖아요? 18개월 뒤에 나온 제품이 이미 시장에서 필요 없는 제품이 되어 있을 수 있어요. 요즘 같은 VUCA 시대에 18개월 전의 계획이 유효할 리가 없잖아요. 애자일은 Sprint 단위로 계획을 세우고, Backlog 우선순위를 계속 재조정해서 시장 변화에 적응하는 거예요. Spotify가 2주 주기로 Release Train을 운영하면서 우선순위를 계속 바꾸는 게 대표적인 사례죠.</p>
+
+                <h4>🎬 [핵심 설명 — 비교 및 연관 이론 (약 5분)]</h4>
+                <p>자, 이제 비교표를 정리해볼게요. 답안에 반드시 비교표를 넣어야 해요.</p>
+                <p>폭포수의 4대 한계를 <span class="highlight">"요결피리"</span>로 외우세요. 요구사항 변경 불가, 결함 수정 비용 폭증, 피드백 지연, 리스크 후반 집중. 이 네 가지 한계에 대응하는 애자일 가치를 매핑해서 표로 그리면 됩니다.</p>
+                <p>여기서 Boehm의 Cost of Change Curve를 꼭 한 줄 써주세요. "요구사항 오류를 유지보수 단계에서 발견하면 요구분석 단계의 100배 비용이 든다." 이 숫자를 쓰면 폭포수의 한계가 정량적으로 와닿거든요.</p>
+                <p>연관 이론으로는 두 가지를 꼭 쓰세요.</p>
+                <p>첫 번째는 <strong>린(Lean) 사상</strong>과의 연결이에요. 애자일의 철학적 뿌리가 도요타 생산 방식(TPS)이에요. "낭비 제거", "흐름 최적화", "카이젠(지속적 개선)" — 이 린 원칙이 애자일의 반복 개발, 최소 문서, Retrospective와 직접 연결되거든요. Mary Poppendieck의 "Lean Software Development(2003)"를 인용하면 이론적 깊이가 한층 올라가요.</p>
+                <p>두 번째는 <strong>브룩스의 법칙</strong>이에요. "늦어진 프로젝트에 인력을 추가하면 더 늦어진다." 커뮤니케이션 채널이 N(N-1)/2로 증가하기 때문이에요. 애자일이 5~9명의 소규모 팀을 강조하는 이유가 바로 이 법칙의 교훈이에요. 5명이면 채널 10개, 20명이면 190개. 이 숫자 비교를 한 줄 넣으면 "이 사람은 연관 이론까지 알고 있구나" 하는 인상을 줄 수 있어요.</p>
+                <p>사례로는 ING Bank를 추천해요. 2015년에 전사적 애자일 전환을 해서, 전통 부서를 350개 Squad로 재편했고, 시장 출시 기간이 9개월에서 3개월로 66% 단축됐어요. 이런 해외 대형 사례에 숫자가 포함되면 설득력이 확실히 올라가거든요. 금융권이라는 게 포인트예요. "보수적인 금융 산업에서도 애자일이 성공했다"는 게 강력한 논거가 되잖아요.</p>
+                <p>한국 사례로는 카카오뱅크 MSA 전환을 쓸 수 있어요. 현업 담당자를 Scrum 팀에 상주시켜서 요구사항을 실시간으로 조정한 거예요. 이게 "고객 협력" 가치의 국내 적용 사례가 되는 거죠. 다만 한국 공공 SI에서는 감사원 감사 대응을 위한 공식 산출물이 필수적이라 순수 애자일 적용에 한계가 있다는 점도 알아두세요. 행정안전부에서 하이브리드 방법론을 권장하는 이유가 여기에 있어요.</p>
+
+                <h4>🎬 [답안 작성 팁 — 약 3분]</h4>
+                <p>실전 팁 정리할게요. 이 부분이 실제 시험장에서 점수를 좌우하는 부분이니까 집중해주세요.</p>
+                <p>분량 배분은 서론 15%, 본론 75%, 결론 10%예요. 서론에서 CHAOS Report 수치(성공률 16.2%)를 넣고, 폭포수 모델의 한계를 2~3줄로 요약한 다음에 "이러한 한계를 극복하기 위해 2001년 애자일 선언문이 등장하였다"로 연결하세요.</p>
+                <p>본론에서 4가지 가치 정의, 비교표, 12원칙 핵심, 사례를 차례로 쓰시면 되는데요, 가치를 설명할 때 단순히 정의만 쓰면 합격선 턱걸이에요. 반드시 "폭포수의 어떤 문제를 해결하는가"를 매핑해서 써야 해요. 이게 차별화 포인트거든요.</p>
+                <p>답안에서 가장 중요한 건 <strong>비교표</strong>예요. 폭포수 한계와 애자일 가치의 대응 관계를 4행 비교표로 깔끔하게 정리하면 본론의 핵심이 한눈에 들어와요. 각 행에 "폭포수 문제 → 애자일 가치 → 구체적 해결 방법"을 쓰면 돼요. 비교표를 그릴 때 열(column)을 3개로 하면 보기가 깔끔해요. 표 하나가 텍스트 반 페이지 분량의 설명을 대체해주거든요.</p>
+                <p>12가지 원칙은 전부 외울 필요 없어요. 핵심 4개만 기억하세요. <span class="highlight">"고빈매반"</span> — 고객 만족 최우선, 빈번한 SW 전달, 매일 함께 일하기, 반성과 조율. 이 4개가 시험에서 가장 자주 언급되는 원칙이에요.</p>
+                <p>결론에서는 두 가지를 언급하세요. 첫째, 대규모 프로젝트에서의 확장. 애자일은 원래 5~9명 소규모 팀을 전제로 했기 때문에, SAFe(Scaled Agile Framework)나 LeSS 같은 스케일링 프레임워크가 필요하다는 점. 브룩스의 법칙을 여기서 한 줄 연결하면 아주 좋아요. 둘째, 한국 공공 SI에서의 한계. 감사원 감사를 위한 공식 산출물이 필수적이므로 하이브리드 방법론이 현실적이라는 점. 이 두 가지를 쓰면 이론과 현실 모두를 아는 균형 잡힌 답안이 돼요.</p>
+
+                <h4>🎬 [마무리 — 약 2분]</h4>
+                <p>자, 오늘 핵심을 정리합니다.</p>
+                <p>4가지 핵심 가치 <span class="highlight">"개동고변"</span>, 폭포수 4대 한계 <span class="highlight">"요결피리"</span>, 12원칙 핵심 <span class="highlight">"고빈매반"</span>. 이 세 개를 외우면 뼈대가 잡혀요.</p>
+                <p>숫자도 기억하세요. CHAOS Report "프로젝트 성공률 16.2%", Boehm "결함 수정 비용 100배", ING Bank "350개 Squad, TTM 66% 단축", Jones "문서 작성 공수 30~40%". 이런 숫자들이 답안의 설득력을 만들어주거든요.</p>
+                <p>마지막으로 한 가지, 이 토픽은 단독으로도 나오지만 다른 방법론 문제의 <strong>기초가 되는 토픽</strong>이에요. 2교시형으로 "폭포수 vs 애자일 비교 + 테일러링 + 하이브리드"가 나오면, 이 교재의 내용이 소문제 1의 베이스가 되는 거예요. DevOps 문제가 나와도 애자일이 전제가 되고, CI/CD 문제가 나와도 애자일의 "빈번한 SW 전달" 원칙이 근거가 돼요. 그러니까 이 토픽 하나를 확실히 잡아두면 최소 3~4개 문제에 응용할 수 있는 거예요.</p>
+                <p>오늘 외울 것 딱 세 가지. <span class="highlight">"개동고변"</span>, <span class="highlight">"요결피리"</span>, <span class="highlight">"고빈매반"</span>. 이 세 개 두문자어와 CHAOS Report 16.2%, Boehm 100배, ING Bank 350개 Squad — 이 숫자들만 확실히 기억하시면 어떤 형태로 출제되든 대응할 수 있습니다.</p>
+                <p>다음 강의에서 뵙겠습니다. 화이팅하세요!</p>
+
+            </div>
+        </div>
+    </section>
+
+    <section id="quiz" class="hidden">
+                    <!-- AI 실전 퀴즈 영역 -->
+            <div class="bg-indigo-50 rounded-xl p-6 border border-indigo-100 mb-8">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-bold text-indigo-900 text-lg flex items-center"><span class="mr-2">🧠</span> AI 실전 문제 생성</h3>
+                    <button onclick="generateQuiz()" id="btn-quiz-gen" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm transition-colors flex items-center gap-2"><span>✨ 새로운 문제 생성</span></button>
+                </div>
+                <div id="quiz-loading" class="hidden py-8 text-center">
+                    <div class="typing-indicator flex justify-center mb-2"><span></span><span></span><span></span></div>
+                    <p class="text-indigo-600 text-sm">AI가 문제를 출제하고 있습니다...</p>
+                </div>
+                <div id="quiz-container" class="hidden space-y-4">
+                    <div class="bg-white p-5 rounded-lg shadow-sm border border-indigo-100">
+                        <div class="flex items-start gap-2 mb-4">
+                            <span id="quiz-type-badge" class="bg-indigo-100 text-indigo-800 text-xs font-bold px-2 py-1 rounded whitespace-nowrap mt-1">객관식</span>
+                            <p id="quiz-question" class="font-bold text-gray-800 text-lg"></p>
+                        </div>
+                        <div id="quiz-options" class="space-y-2"></div>
+                        <div id="quiz-input-area" class="hidden mt-4">
+                            <div class="flex gap-2">
+                                <input type="text" id="quiz-answer-input" placeholder="정답을 입력하세요" class="flex-grow border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <button onclick="checkShortAnswer()" id="btn-short-submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-bold">제출</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="quiz-feedback" class="hidden bg-white p-5 rounded-lg border-l-4"></div>
+                </div>
+                <div id="quiz-placeholder" class="text-center py-8 text-gray-500 border-2 border-dashed border-indigo-200 rounded-lg">
+                    <p>&#39;새로운 문제 생성&#39; 버튼을 눌러 실력을 점검해보세요.</p>
+                </div>
+            </div>
+
+📝 암기 노트</h3>
+                <div class="bg-indigo-50 rounded-lg p-5 border border-indigo-200 mb-4">
+                    <h4 class="font-bold text-indigo-800 mb-2">1단락 요약 (서론용)</h4>
+                    <p class="text-sm text-indigo-900 leading-relaxed">애자일 소프트웨어 개발 선언문은 2001년 17명의 개발자가 폭포수 모델의 구조적 한계(CHAOS Report 성공률 16.2%)를 극복하기 위해 발표한, 4가지 핵심 가치와 12가지 원칙을 담은 소프트웨어 개발 철학의 전환점이다.</p>
+                </div>
+                <div class="bg-green-50 rounded-lg p-5 border border-green-200 mb-4">
+                    <h4 class="font-bold text-green-800 mb-2">2단락 요약 (본론 핵심)</h4>
+                    <p class="text-sm text-green-900 leading-relaxed">4가지 핵심 가치 "개동고변"(개인과상호작용-동작하는SW-고객협력-변화대응)은 각각 폭포수의 문서중심소통, 과도한문서공수, 요구사항갈등, 계획경직성 문제에 대응한다. "A보다 B를 더 가치 있게 여긴다"의 구조로 A도 가치가 있음을 전제한다.</p>
+                </div>
+                <div class="bg-purple-50 rounded-lg p-5 border border-purple-200 mb-4">
+                    <h4 class="font-bold text-purple-800 mb-2">3단락 요약 (사례+결론)</h4>
+                    <p class="text-sm text-purple-900 leading-relaxed">ING Bank(350개 Squad, TTM 66% 단축) 등 글로벌 성공 사례가 있으며, 린(Lean) 사상과 브룩스 법칙이 이론적 기반이다. 대규모 확장을 위한 SAFe, 한국 공공SI의 하이브리드 방법론 필요성이 결론의 핵심이다.</p>
+                </div>
+            </div>
+
+            <hr class="my-8 border-gray-200">
+
+            <div class="textbook-content">
+                <h3>제2부 — 서술형 답안 암기 요약</h3>
+
+                <h4>1. 한 줄 정의</h4>
+                <table>
+                    <thead><tr><th>토픽</th><th>한 줄 정의</th></tr></thead>
+                    <tbody>
+                        <tr><td><strong>애자일 선언문</strong></td><td>2001년 17명의 개발자가 폭포수 모델의 한계를 극복하기 위해 발표한, 소프트웨어 개발의 4가지 핵심 가치와 12가지 원칙을 담은 선언</td></tr>
+                    </tbody>
+                </table>
+
+                <h4>2. 핵심 키워드 맵</h4>
+                <p><strong>가치 키워드</strong>: 개인과 상호작용 / 동작하는 소프트웨어 / 고객 협력 / 변화에 대응</p>
+                <p><strong>실천 키워드</strong>: Daily Standup / Sprint / Product Owner / Backlog Grooming / Retrospective / Pair Programming</p>
+                <p><strong>연관 키워드</strong>: Lean / TPS / Brooks 법칙 / SAFe / Scrum / XP / CHAOS Report</p>
+
+                <h4>3. 두문자어 암기법</h4>
+                <ul>
+                    <li><strong>4가지 핵심 가치</strong>: <span class="highlight">"개동고변"</span> (개인과상호작용-동작하는SW-고객협력-변화대응)</li>
+                    <li><strong>폭포수 4대 한계</strong>: <span class="highlight">"요결피리"</span> (요구사항변경불가-결함수정비용폭증-피드백지연-리스크후반집중)</li>
+                    <li><strong>12원칙 핵심 4선</strong>: <span class="highlight">"고빈매반"</span> (고객만족최우선-빈번한SW전달-매일함께일하기-반성과조율)</li>
+                </ul>
+
+                <h4>4. 골격 답안 구조</h4>
+                <p><strong>1교시형 — 단일 답안 구조</strong></p>
+                <table>
+                    <thead><tr><th>구분</th><th>핵심 내용</th><th>분량 비중</th></tr></thead>
+                    <tbody>
+                        <tr><td><strong>서론</strong></td><td>SW 위기 + 폭포수 한계(CHAOS Report 16.2%) → 애자일 등장</td><td>15%</td></tr>
+                        <tr><td><strong>본론 1</strong></td><td>4가지 핵심 가치 정의("개동고변") + 각 가치별 의미</td><td>25%</td></tr>
+                        <tr><td><strong>본론 2</strong></td><td>폭포수 문제점과 애자일 가치의 대응 비교표</td><td>30%</td></tr>
+                        <tr><td><strong>본론 3</strong></td><td>12원칙 핵심 + ING Bank 사례 + 린(Lean) 연결</td><td>20%</td></tr>
+                        <tr><td><strong>결론</strong></td><td>대규모 프로젝트 확장(SAFe) + 하이브리드 필요성</td><td>10%</td></tr>
+                    </tbody>
+                </table>
+
+                <h4>5. 필수 도식</h4>
+                <p><strong>도식 1: 4가지 핵심 가치와 폭포수 대응 관계표</strong></p>
+                <p>[답안지에 4행 비교표: 폭포수 한계 → 애자일 가치 → 해결 메커니즘]</p>
+                <p><strong>도식 2: 12가지 원칙 중 핵심 원칙 요약표</strong></p>
+                <p>[답안지에 4행 표: 원칙 번호/내용/연결 가치]</p>
+
+                <h4>6. 차별화 포인트</h4>
+                <ul>
+                    <li><strong>CHAOS Report 수치</strong>(성공률 16.2%)와 <strong>Boehm의 결함 수정 비용 100배</strong>를 인용하면 폭포수 한계가 정량적으로 와닿는다.</li>
+                    <li>선언문의 구조가 "A보다 B를 더 가치 있게 여기지만, <strong>A도 가치가 있다</strong>"라는 점을 명시하면 정확한 이해를 보여줄 수 있다.</li>
+                    <li><strong>린(Lean) 사상</strong>과의 연결, <strong>브룩스의 법칙</strong>과의 연결을 통해 이론적 깊이를 확보할 수 있다.</li>
+                    <li>결론에서 <strong>SAFe(Scaled Agile Framework)</strong>를 언급하여 대규모 프로젝트 확장 관점을 제시하면 실무적 시야를 어필할 수 있다.</li>
+                </ul>
+            </div>
+
+        </div>
+    </section>
+    </main>
+
+    <footer class="bg-white mt-12 py-8 border-t border-gray-200">
+        <div class="max-w-6xl mx-auto px-4 text-center">
+            <div class="flex flex-col md:flex-row justify-center items-center gap-2 md:gap-6 text-sm text-gray-600 mb-3 font-medium">
+                <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
+                    <span>박교익PE (132회 정보관리기술사, dr.code92@gmail.com)</span>
+                </div>
+            </div>
+            <p class="text-xs text-gray-400">Copyright © KPC 정보관리기술사 ZIP-UP 심화반. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- 플로팅 채팅 버튼 -->
+    <button onclick="toggleChat()" class="fixed bottom-6 right-6 w-14 h-14 bg-indigo-600 text-white rounded-full shadow-lg hover:bg-indigo-700 transition-all z-50 flex items-center justify-center text-2xl" title="AI 튜터">💬</button>
+
+    <!-- 채팅 사이드바 -->
+    <div id="chat-sidebar" class="closed fixed top-0 right-0 w-full sm:w-96 h-full bg-white shadow-2xl z-50 flex flex-col">
+        <div class="flex items-center justify-between p-4 border-b bg-indigo-600 text-white">
+            <h3 class="font-bold">🤖 AI 튜터</h3>
+            <button onclick="toggleChat()" class="text-white hover:text-indigo-200 text-xl">&times;</button>
+        </div>
+        <div id="chat-messages" class="flex-1 overflow-y-auto p-4 flex flex-col gap-2">
+            <div class="chat-msg ai">안녕하세요! 애자일 선언문과 4가지 핵심 가치에 대해 궁금한 점을 질문해주세요.</div>
+        </div>
+        <div class="p-3 border-t flex gap-2">
+            <input id="chat-input" type="text" placeholder="질문을 입력하세요..." class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" onkeypress="if(event.key==='Enter')sendChat()">
+            <button onclick="sendChat()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700">전송</button>
+        </div>
+    </div>
+
+    <!-- API 설정 모달 -->
+    <div id="settings-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold">🔑 API Key 설정</h3>
+                <button onclick="toggleSettings()" class="text-gray-500 hover:text-gray-700 text-xl">&times;</button>
+            </div>
+            <p class="text-sm text-gray-600 mb-4">AI 퀴즈 및 채팅 기능을 사용하려면 Gemini API Key를 입력하세요.</p>
+            <input id="api-key-input" type="password" placeholder="Gemini API Key 입력" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <div class="flex gap-2">
+                <button onclick="saveApiKey()" class="flex-1 bg-indigo-600 text-white py-2 rounded-lg font-medium hover:bg-indigo-700 text-sm">저장</button>
+                <button onclick="toggleSettings()" class="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg font-medium hover:bg-gray-200 text-sm">취소</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+// ─── 멘토 모드 ───
+var isMentorMode = new URLSearchParams(window.location.search).get('mentor') === 'true';
+if(isMentorMode){document.getElementById('nav-script').classList.remove('hidden');}
+var sections = isMentorMode ? ['overview','values','comparison','textbook','script','quiz'] : ['overview','values','comparison','textbook','quiz'];
+
+// ─── URL 파라미터에서 API Key ───
+var urlKey = new URLSearchParams(window.location.search).get('key');
+if(urlKey){localStorage.setItem('gemini_api_key', urlKey);}
+
+// ─── 탭 전환 ───
+function navTo(id){
+    document.querySelectorAll('.nav-item').forEach(function(el){el.classList.remove('active','text-indigo-600');});
+    document.getElementById('nav-'+id).classList.add('active','text-indigo-600');
+    sections.forEach(function(s){document.getElementById(s).classList.add('hidden');});
+    document.getElementById(id).classList.remove('hidden');
+    window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// ─── 설정 모달 ───
+function toggleSettings(){
+    var m=document.getElementById('settings-modal');m.classList.toggle('hidden');
+    var k=localStorage.getItem('gemini_api_key');if(k)document.getElementById('api-key-input').value=k;
+}
+function saveApiKey(){
+    var k=document.getElementById('api-key-input').value.trim();
+    if(k){localStorage.setItem('gemini_api_key',k);toggleSettings();alert('API Key가 저장되었습니다.');}
+    else{alert('API Key를 입력해주세요.');}
+}
+function getApiKey(){
+    var k=localStorage.getItem('gemini_api_key');
+    if(!k){toggleSettings();return null;}return k;
+}
+
+// ─── 채팅 ───
+function toggleChat(){var s=document.getElementById('chat-sidebar');s.classList.toggle('open');s.classList.toggle('closed');}
+function sendChat(){
+    var input=document.getElementById('chat-input');var msg=input.value.trim();if(!msg)return;
+    var key=getApiKey();if(!key)return;input.value='';
+    var box=document.getElementById('chat-messages');
+    box.innerHTML+='<div class="chat-msg user">'+msg+'</div>';
+    box.innerHTML+='<div id="typing" class="chat-msg ai"><div class="typing-indicator"><span></span><span></span><span></span></div></div>';
+    box.scrollTop=box.scrollHeight;
+    fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key='+key,{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({contents:[{role:'user',parts:[{text:'당신은 정보관리기술사 시험 멘토입니다. "애자일 선언문과 4가지 핵심 가치" 관련 질문에 전문적이고 명쾌하게 답변해주세요. 300자 이내로 핵심만 요약.\n\n질문: '+msg}]}]})
+    }).then(function(r){return r.json();}).then(function(d){
+        var el=document.getElementById('typing');if(el)el.remove();
+        var t=d.candidates[0].content.parts[0].text;
+        var div=document.createElement('div');div.className='chat-msg ai';div.innerHTML=marked.parse(t);box.appendChild(div);box.scrollTop=box.scrollHeight;
+    }).catch(function(e){var el=document.getElementById('typing');if(el)el.remove();box.innerHTML+='<div class="chat-msg ai">⚠️ 오류: '+e.message+'</div>';});
+}
+
+// ─── 4가지 가치 상세 (tech-block) ───
+var valueDetails = {
+    'individual':{title:'개인과 상호작용(Individuals and Interactions)',colorClass:'border-blue-500 bg-blue-50',content:'<p class="text-sm text-gray-700 leading-relaxed mb-2"><strong>의미:</strong> 표준 프로세스 준수보다 팀원 간 직접적 소통과 협업이 더 중요하다.</p><p class="text-sm text-gray-700 leading-relaxed mb-2"><strong>폭포수의 한계:</strong> 단계별 공식 문서 전달에 의존 → 개발자 간 직접 소통 부재 → 해석 차이로 오류 발생</p><p class="text-sm text-gray-700 leading-relaxed mb-2"><strong>애자일의 해결:</strong> Daily Standup, Pair Programming, Co-Location으로 실시간 소통 강화</p><p class="text-sm text-gray-700 leading-relaxed"><strong>실무 사례:</strong> Spotify의 Squad 모델 — 8~12명 자율 팀이 직접 소통하며 기능 개발</p>'},
+    'working':{title:'동작하는 소프트웨어(Working Software)',colorClass:'border-green-500 bg-green-50',content:'<p class="text-sm text-gray-700 leading-relaxed mb-2"><strong>의미:</strong> 방대한 산출물 문서보다 실제 동작하는 소프트웨어의 전달이 더 중요하다.</p><p class="text-sm text-gray-700 leading-relaxed mb-2"><strong>폭포수의 한계:</strong> SRS, SDD, STP 등 공식 문서 작성에 전체 공수의 30~40% 소비(Jones, 2013)</p><p class="text-sm text-gray-700 leading-relaxed mb-2"><strong>애자일의 해결:</strong> 2~4주 Sprint마다 동작하는 소프트웨어(Increment) 전달, 필수 문서만 최소화</p><p class="text-sm text-gray-700 leading-relaxed"><strong>실무 사례:</strong> Netflix의 Continuous Delivery — 하루 수십 회 배포로 고객 가치 즉시 전달</p>'},
+    'customer':{title:'고객 협력(Customer Collaboration)',colorClass:'border-purple-500 bg-purple-50',content:'<p class="text-sm text-gray-700 leading-relaxed mb-2"><strong>의미:</strong> 계약서 기반의 형식적 관계보다 고객과의 지속적 협력 관계가 더 중요하다.</p><p class="text-sm text-gray-700 leading-relaxed mb-2"><strong>폭포수의 한계:</strong> 초기 요구사항 계약으로 확정 → 변경 시 CCB 공식 절차 → 변경 저항</p><p class="text-sm text-gray-700 leading-relaxed mb-2"><strong>애자일의 해결:</strong> Product Owner가 팀에 상주하며 매 Sprint Review에서 직접 피드백 제공</p><p class="text-sm text-gray-700 leading-relaxed"><strong>실무 사례:</strong> 카카오뱅크 MSA 전환 — 현업 담당자가 Scrum 팀에 상주하여 요구사항 실시간 조정</p>'},
+    'change':{title:'변화에 대응(Responding to Change)',colorClass:'border-amber-500 bg-amber-50',content:'<p class="text-sm text-gray-700 leading-relaxed mb-2"><strong>의미:</strong> 초기 계획의 엄격한 이행보다 환경 변화에 유연하게 대응하는 것이 더 중요하다.</p><p class="text-sm text-gray-700 leading-relaxed mb-2"><strong>폭포수의 한계:</strong> 초기 WBS 확정 후 변경 불가 → 시장 변화 미반영</p><p class="text-sm text-gray-700 leading-relaxed mb-2"><strong>애자일의 해결:</strong> Sprint 단위 계획 + Backlog 우선순위 재조정으로 지속적 적응</p><p class="text-sm text-gray-700 leading-relaxed"><strong>실무 사례:</strong> Spotify의 Release Train — 2주 주기로 우선순위를 재조정하여 시장 반응에 즉시 대응</p>'}
+};
+function updateValueDetail(key){
+    document.querySelectorAll('.tech-block').forEach(function(el){el.classList.remove('selected');});
+    document.getElementById('block-'+key).classList.add('selected');
+    var d=valueDetails[key];
+    document.getElementById('value-detail-content').innerHTML='<div class="p-5 rounded-lg border-l-4 '+d.colorClass+' animate-fade-in"><h3 class="text-lg font-bold text-gray-900 mb-3">'+d.title+'</h3>'+d.content+'</div>';
+}
+
+// ─── 퀴즈 시스템 ───
+var quizTopics=[
+    {category:'애자일 선언문 배경',keywords:'2001년, 스노우버드, 17명, CHAOS Report, 16.2%, 폭포수 한계'},
+    {category:'4가지 핵심 가치',keywords:'개인과상호작용, 동작하는SW, 고객협력, 변화대응, 개동고변'},
+    {category:'폭포수 모델 한계',keywords:'요구사항변경, 결함수정비용, Boehm 100배, 피드백지연, 리스크후반집중, 요결피리'},
+    {category:'12가지 원칙',keywords:'고객만족최우선, 빈번한전달, 매일함께, 반성과조율, 고빈매반'},
+    {category:'적용 사례',keywords:'ING Bank, 350개 Squad, TTM 66% 단축, 카카오뱅크, 하이브리드방법론'},
+    {category:'연관 이론',keywords:'린사상, TPS, 카이젠, 브룩스법칙, N(N-1)/2, SAFe, LeSS'}
+];
+    function toggleStrategy(el){
+    var d=el.querySelector('.strategy-detail');var s=el.querySelector('.strategy-summary');
+    if(d.classList.contains('hidden')){
+        document.querySelectorAll('.strategy-card').forEach(function(card){
+            card.querySelector('.strategy-detail').classList.add('hidden');
+            card.querySelector('.strategy-summary').classList.remove('hidden');
+        });
+        d.classList.remove('hidden');s.classList.add('hidden');
+    }else{d.classList.add('hidden');s.classList.remove('hidden');}
+}
+
+    // ── 퀴즈 ──
+    // Bridge: connect quiz JS to existing API key management
+    var geminiKey = (typeof getApiKey === 'function') ? (getApiKey() || '') : '';
+
+    var quizTypeHistory = [];
+    var currentQuizData = null;
+    var quizTopics=[
+    {category:'애자일 선언문 배경',keywords:'2001년, 스노우버드, 17명, CHAOS Report, 16.2%, 폭포수 한계'},
+    {category:'4가지 핵심 가치',keywords:'개인과상호작용, 동작하는SW, 고객협력, 변화대응, 개동고변'},
+    {category:'폭포수 모델 한계',keywords:'요구사항변경, 결함수정비용, Boehm 100배, 피드백지연, 리스크후반집중, 요결피리'},
+    {category:'12가지 원칙',keywords:'고객만족최우선, 빈번한전달, 매일함께, 반성과조율, 고빈매반'},
+    {category:'적용 사례',keywords:'ING Bank, 350개 Squad, TTM 66% 단축, 카카오뱅크, 하이브리드방법론'},
+    {category:'연관 이론',keywords:'린사상, TPS, 카이젠, 브룩스법칙, N(N-1)/2, SAFe, LeSS'}
+];
+    async function generateQuiz() {
+        geminiKey = (typeof getApiKey === 'function') ? (getApiKey() || '') : geminiKey;
+        if (!geminiKey) { alert('API Key를 먼저 설정해주세요.'); toggleSettings(); return; }
+        var btn = document.getElementById('btn-quiz-gen');
+        btn.disabled = true; btn.innerHTML = '<span>생성 중...</span>';
+        document.getElementById('quiz-placeholder').classList.add('hidden');
+        document.getElementById('quiz-container').classList.add('hidden');
+        document.getElementById('quiz-loading').classList.remove('hidden');
+        var isMC;
+        var recent = quizTypeHistory.slice(-2);
+        if (recent.length >= 2 && recent[0] === recent[1]) { isMC = !recent[1]; }
+        else { isMC = Math.random() > 0.5; }
+        quizTypeHistory.push(isMC);
+        var selected = quizTopics[Math.floor(Math.random() * quizTopics.length)];
+        var quizType = isMC ? '객관식 (4지선다)' : '단답형';
+        var format = isMC
+            ? '{"question":"문제","options":["A","B","C","D"],"correctIndex":0,"explanation":"해설"}'
+            : '{"question":"문제","correctAnswer":"정답","explanation":"해설"}';
+        var prompt = "다음 카테고리에 대한 " + quizType + " 퀴즈 1문제를 만드세요.\n"
+            + "카테고리: " + selected.category + "\n"
+            + "관련 키워드: " + selected.keywords + "\n"
+            + "규칙: 반드시 위 카테고리와 키워드에 직접 관련된 문제를 출제하세요.\n"
+            + "JSON 형식으로 응답: " + format;
+        try {
+            var r = await fetch(
+                'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=' + geminiKey,
+                { method:'POST', headers:{'Content-Type':'application/json'},
+                  body: JSON.stringify({ contents:[{parts:[{text:prompt}]}], generationConfig:{responseMimeType:"application/json"} })
+                }
+            );
+            var d = await r.json();
+            var t = d.candidates[0].content.parts[0].text;
+            t = t.replace(/```json\s*/gi,"").replace(/```\s*/g,"").trim();
+            var depth=0, start=-1, end=-1;
+            for (var i=0;i<t.length;i++) {
+                if (t[i]==='{') { if(depth===0) start=i; depth++; }
+                else if (t[i]==='}') { depth--; if(depth===0 && start!==-1) { end=i; break; } }
+            }
+            if (start===-1||end===-1) throw new Error("No JSON found");
+            t = t.substring(start, end+1);
+            t = t.replace(/[\x00-\x1F\x7F]/g, function(c) { return c==='\n'||c==='\r'||c==='\t' ? ' ' : ''; });
+            currentQuizData = JSON.parse(t);
+            renderQuiz(isMC);
+        } catch(e) {
+            document.getElementById('quiz-loading').classList.add('hidden');
+            document.getElementById('quiz-placeholder').classList.remove('hidden');
+            document.getElementById('quiz-placeholder').innerHTML = '<p class="text-red-500">퀴즈 생성 오류: ' + e.message + '</p>';
+        }
+        btn.disabled = false; btn.innerHTML = '<span>✨ 새로운 문제 생성</span>';
+    }
+    function renderQuiz(isMC) {
+        document.getElementById('quiz-loading').classList.add('hidden');
+        document.getElementById('quiz-feedback').classList.add('hidden');
+        document.getElementById('quiz-container').classList.remove('hidden');
+        document.getElementById('quiz-type-badge').textContent = isMC ? '객관식' : '단답형';
+        document.getElementById('quiz-question').textContent = currentQuizData.question;
+        var optDiv = document.getElementById('quiz-options');
+        var inputDiv = document.getElementById('quiz-input-area');
+        if (isMC) {
+            optDiv.classList.remove('hidden');
+            inputDiv.classList.add('hidden');
+            var h = '';
+            var letters = ['A','B','C','D'];
+            currentQuizData.options.forEach(function(opt, i) {
+                h += '<button onclick="checkMultipleChoice(' + i + ', this)" class="w-full text-left p-4 rounded-lg border border-gray-200 hover:bg-indigo-50 hover:border-indigo-300 transition-all mb-2 flex items-center group">'
+                    + '<span class="w-8 h-8 rounded-full bg-gray-100 group-hover:bg-indigo-100 flex items-center justify-center text-sm font-bold text-gray-500 group-hover:text-indigo-600 mr-3 flex-shrink-0">' + letters[i] + '</span>'
+                    + '<span class="text-sm text-gray-700">' + opt + '</span></button>';
+            });
+            optDiv.innerHTML = h;
+        } else {
+            optDiv.classList.add('hidden');
+            inputDiv.classList.remove('hidden');
+            document.getElementById('quiz-answer-input').value = '';
+            document.getElementById('quiz-answer-input').focus();
+        }
+    }
+    function checkMultipleChoice(idx, btnEl) {
+        var correct = idx === currentQuizData.correctIndex;
+        document.querySelectorAll('#quiz-options button').forEach(function(b, i) {
+            b.disabled = true;
+            if (i === currentQuizData.correctIndex) { b.classList.add('bg-green-50','border-green-400'); b.querySelector('span:first-child').classList.add('bg-green-100','text-green-700'); }
+            else if (i === idx && !correct) { b.classList.add('bg-red-50','border-red-400'); b.querySelector('span:first-child').classList.add('bg-red-100','text-red-700'); }
+        });
+        showQuizFeedback(correct, currentQuizData.options[currentQuizData.correctIndex], currentQuizData.explanation);
+    }
+    async function checkShortAnswer() {
+        geminiKey = (typeof getApiKey === 'function') ? (getApiKey() || '') : geminiKey;
+        var ans = document.getElementById('quiz-answer-input').value.trim();
+        if (!ans) { alert('답을 입력해주세요.'); return; }
+        var btn = document.getElementById('btn-short-submit');
+        btn.disabled = true; btn.textContent = '채점 중...';
+        try {
+            var gradingPrompt = "당신은 정보관리기술사 시험 채점관입니다. 아래 문제에 대해 사용자의 답안이 정답으로 인정될 수 있는지 판정하세요.\n\n"
+                + "문제: " + currentQuizData.question + "\n"
+                + "모범 정답: " + currentQuizData.correctAnswer + "\n"
+                + "사용자 답안: " + ans + "\n\n"
+                + "판정 기준:\n- 핵심 의미가 동일하면 정답\n- 약어/풀네임 모두 인정\n- 영어/한글 혼용 인정\n- 띄어쓰기/조사 차이는 무시\n- 의미가 명확히 다르면 오답\n\n"
+                + "Output JSON: {\"correct\":true/false,\"reason\":\"판정 이유\"}";
+            var r = await fetch(
+                'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=' + geminiKey,
+                { method:'POST', headers:{'Content-Type':'application/json'},
+                  body: JSON.stringify({ contents:[{parts:[{text:gradingPrompt}]}], generationConfig:{responseMimeType:"application/json"} })
+                }
+            );
+            var d = await r.json();
+            var gt = d.candidates[0].content.parts[0].text;
+            gt = gt.replace(/```json\s*/gi,"").replace(/```\s*/g,"").trim();
+            var gd=0,gs=-1,ge=-1;
+            for(var i=0;i<gt.length;i++){if(gt[i]==='{'){if(gd===0)gs=i;gd++;}else if(gt[i]==='}'){gd--;if(gd===0&&gs!==-1){ge=i;break;}}}
+            if(gs===-1||ge===-1) throw new Error("No JSON");
+            gt=gt.substring(gs,ge+1);
+            gt=gt.replace(/[\x00-\x1F\x7F]/g,function(c){return c==='\n'||c==='\r'||c==='\t'?' ':'';});
+            var result = JSON.parse(gt);
+            showQuizFeedback(result.correct, currentQuizData.correctAnswer, currentQuizData.explanation + (result.reason ? ' (AI: ' + result.reason + ')' : ''));
+        } catch(e) {
+            var normalize = function(s){return s.replace(/\s/g,'').toLowerCase();};
+            var correct = normalize(currentQuizData.correctAnswer).includes(normalize(ans)) || normalize(ans).includes(normalize(currentQuizData.correctAnswer));
+            showQuizFeedback(correct, currentQuizData.correctAnswer, currentQuizData.explanation + ' (로컬 채점)');
+        }
+        btn.disabled = false; btn.textContent = '제출';
+    }
+    function showQuizFeedback(correct, answer, explanation) {
+        var fb = document.getElementById('quiz-feedback');
+        fb.classList.remove('hidden','border-green-500','bg-green-50','border-red-500','bg-red-50');
+        if (correct) {
+            fb.classList.add('border-green-500','bg-green-50');
+            fb.innerHTML = '<p class="font-bold text-green-700 mb-1">✅ 정답입니다!</p><p class="text-sm text-green-600">' + explanation + '</p>';
+        } else {
+            fb.classList.add('border-red-500','bg-red-50');
+            fb.innerHTML = '<p class="font-bold text-red-700 mb-1">❌ 오답입니다.</p><p class="text-sm text-red-700 mb-1">정답: ' + answer + '</p><p class="text-sm text-red-600">' + explanation + '</p>';
+        }
+    }
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && document.getElementById('quiz-answer-input') === document.activeElement) { checkShortAnswer(); }
+    });
+</script>
+</body></html>

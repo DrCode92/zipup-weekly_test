@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZIP-UP 1주차 학습 대시보드</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Noto Sans KR', sans-serif; }
+        body { background: #f8f9fa; margin: 0; min-height: 100vh; }
+        .top-bar { background: #1e1b4b; padding: 10px 0; }
+        .main-header { background: linear-gradient(135deg, #312e81 0%, #4338ca 60%, #6366f1 100%); }
+        .dash-tab {
+            padding: 12px 24px; font-size: 0.875rem; font-weight: 500;
+            cursor: pointer; transition: all 0.2s; white-space: nowrap;
+            border-bottom: 3px solid transparent; color: rgba(255,255,255,0.55);
+        }
+        .dash-tab:hover { color: rgba(255,255,255,0.9); }
+        .dash-tab.active { color: white; border-bottom-color: #fbbf24; font-weight: 700; }
+        .topic-card {
+            background: white; border-radius: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+            transition: all 0.25s ease; overflow: hidden; cursor: pointer;
+        }
+        .topic-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.1); }
+        .topic-card .card-accent { height: 4px; width: 100%; }
+        .badge-1교시 { background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; }
+        .badge-2교시 { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+        .subject-tag { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 0.7rem; font-weight: 600; }
+        .tag-sw { background: #dbeafe; color: #1e40af; }
+        .tag-db { background: #d1fae5; color: #065f46; }
+        .tag-os { background: #fce7f3; color: #9d174d; }
+        .tag-ds { background: #fef3c7; color: #92400e; }
+        .filter-btn { transition: all 0.15s; cursor: pointer; }
+        .list-row {
+            display: grid; grid-template-columns: 50px 1fr 80px 100px 80px;
+            align-items: center; padding: 14px 20px;
+            border-bottom: 1px solid #f3f4f6; transition: background 0.15s; cursor: pointer;
+        }
+        .list-row:hover { background: #f9fafb; }
+        .list-header {
+            display: grid; grid-template-columns: 50px 1fr 80px 100px 80px;
+            padding: 10px 20px; font-size: 0.7rem; font-weight: 600; color: #9ca3af; letter-spacing: 0.5px;
+        }
+        .quiz-option {
+            border: 2px solid #e5e7eb; border-radius: 12px; padding: 12px 16px;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .quiz-option:hover { border-color: #a5b4fc; background: #eef2ff; }
+        .quiz-option.correct { border-color: #22c55e; background: #f0fdf4; }
+        .quiz-option.wrong { border-color: #ef4444; background: #fef2f2; }
+        .quiz-option.disabled { pointer-events: none; opacity: 0.7; }
+        .viewer-overlay {
+            position: fixed; inset: 0; z-index: 100;
+            background: #f8f9fa;
+            transform: translateX(100%);
+            transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .viewer-overlay.open { transform: translateX(0); }
+        .viewer-topbar {
+            background: white; border-bottom: 1px solid #e5e7eb;
+            padding: 0 24px; height: 56px;
+            display: flex; align-items: center; justify-content: space-between;
+            position: sticky; top: 0; z-index: 10;
+        }
+        .viewer-nav-btn {
+            width: 36px; height: 36px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.15s; cursor: pointer; font-size: 18px;
+            background: #f3f4f6; color: #6b7280;
+        }
+        .viewer-nav-btn:hover { background: #e5e7eb; color: #374151; }
+        .viewer-nav-btn.disabled { opacity: 0.3; pointer-events: none; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in { animation: fadeInUp 0.35s ease forwards; }
+        .spinner { display: inline-block; width: 20px; height: 20px; border: 2.5px solid #e5e7eb; border-top-color: #6366f1; border-radius: 50%; animation: spin 0.6s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        /* API Modal */
+        .modal-bg { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; }
+        .modal-box { background: white; border-radius: 20px; padding: 32px; width: 420px; max-width: 90vw; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
+    </style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="top-bar">
+    <div class="max-w-7xl mx-auto px-6 flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+            <div class="w-7 h-7 bg-indigo-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                <span class="text-white text-xs font-black">Z</span>
+            </div>
+            <span class="text-white/80 text-sm font-medium">KPC 정보관리기술사 ZIP-UP 심화반</span>
+            <span class="bg-amber-400 text-indigo-950 text-[10px] font-extrabold px-2 py-0.5 rounded ml-1">2026</span>
+        </div>
+        <button onclick="toggleApiModal()" class="flex items-center gap-1.5 bg-white/10 hover:bg-white/15 text-white/70 hover:text-white/90 text-xs px-3 py-1.5 rounded-lg transition">
+            🔑 API 설정
+        </button>
+    </div>
+</div>
+
+<!-- MAIN HEADER -->
+<header class="main-header text-white">
+    <div class="max-w-7xl mx-auto px-6 pt-5 pb-0">
+        <div class="flex items-end justify-between mb-5">
+            <div>
+                <h1 class="text-[1.65rem] font-extrabold tracking-tight leading-tight" id="dashTitle"></h1>
+                <p class="text-indigo-200/80 text-sm mt-1" id="dashSubtitle"></p>
+            </div>
+            <button onclick="toggleView()" class="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 text-white/80 text-sm px-3.5 py-2 rounded-xl transition mb-1">
+                <span id="viewIcon">📋</span>
+                <span id="viewLabel" class="text-xs font-medium">리스트</span>
+            </button>
+        </div>
+        <div class="flex gap-0" id="dashTabs">
+            <div class="dash-tab active" onclick="switchTab('topics', this)">📚 토픽 목록</div>
+            <div class="dash-tab" onclick="switchTab('quiz', this)">🧠 통합 퀴즈</div>
+        </div>
+    </div>
+</header>
+
+<!-- MAIN -->
+<main class="max-w-7xl mx-auto px-6 py-6">
+
+    <!-- 토픽 목록 -->
+    <div id="section-topics">
+        <div class="flex items-center justify-between mb-5">
+            <div class="flex gap-2 flex-wrap" id="filterBar"></div>
+            <span class="text-sm text-gray-400"><span id="filteredCount">0</span>개 토픽</span>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5" id="cardGrid"></div>
+        <div id="listView" class="bg-white rounded-2xl shadow-sm overflow-hidden" style="display:none;">
+            <div class="list-header border-b border-gray-200">
+                <div>#</div><div>토픽명</div><div>교시</div><div>출제영역</div><div></div>
+            </div>
+            <div id="listBody"></div>
+        </div>
+    </div>
+
+    <!-- 통합 퀴즈 -->
+    <div id="section-quiz" style="display:none;">
+        <div class="bg-white rounded-2xl shadow-sm p-8">
+            <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center gap-3">
+                    <span class="text-2xl">🧠</span>
+                    <div>
+                        <h2 class="text-lg font-bold text-gray-900">통합 퀴즈</h2>
+                        <p class="text-sm text-gray-500" id="quizDesc"></p>
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <button class="bg-gray-100 text-gray-600 text-sm font-medium px-4 py-2.5 rounded-xl hover:bg-gray-200 transition" onclick="generateQuiz('short')">
+                        ✏️ 단답형
+                    </button>
+                    <button class="bg-indigo-600 text-white text-sm font-medium px-5 py-2.5 rounded-xl hover:bg-indigo-700 transition shadow-sm" onclick="generateQuiz('multiple')">
+                        🎲 객관식
+                    </button>
+                </div>
+            </div>
+            <div class="flex gap-2 mb-6 flex-wrap" id="quizScopeBar"></div>
+            <div id="quizArea">
+                <div class="border-2 border-dashed border-gray-200 rounded-xl p-12 text-center" id="quizPlaceholder">
+                    <div class="text-4xl mb-3">🎯</div>
+                    <h3 class="text-lg font-bold text-gray-700 mb-2">퀴즈를 시작해보세요</h3>
+                    <p class="text-sm text-gray-500">객관식 또는 단답형 버튼을 클릭하면 AI가 문제를 출제합니다</p>
+                    <p class="text-xs text-gray-400 mt-2">Gemini API Key 필요 · 🔑 API 설정에서 입력</p>
+                </div>
+            </div>
+            <!-- 퀴즈 히스토리 -->
+            <div id="quizHistory" class="mt-6" style="display:none;">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-sm font-bold text-gray-700">📊 퀴즈 결과</span>
+                    <span class="text-xs text-gray-400" id="quizScore"></span>
+                </div>
+                <div id="quizHistoryList" class="space-y-2"></div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<!-- FOOTER -->
+<footer class="mt-10">
+    <div class="bg-gray-900">
+        <div class="max-w-7xl mx-auto px-6 py-8">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div>
+                    <div class="flex items-center gap-2.5 mb-3">
+                        <div class="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center">
+                            <span class="text-white text-sm font-black">Z</span>
+                        </div>
+                        <div>
+                            <div class="text-white font-bold text-sm">ZIP-UP 심화반</div>
+                            <div class="text-xs text-gray-500">정보관리기술사 시험 대비</div>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-600 leading-relaxed mt-3">KPC 정보관리기술사 ZIP-UP 심화반은<br>실전 중심 멘토링으로 합격을 지원합니다.</p>
+                </div>
+                <div>
+                    <div class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-3">멘토</div>
+                    <div class="text-sm font-medium text-white">박교익PE</div>
+                    <div class="text-xs text-gray-500 mt-1">132회 정보관리기술사</div>
+                    <a href="mailto:dr.code92@gmail.com" class="text-xs text-gray-600 hover:text-indigo-400 transition mt-2 inline-block">dr.code92@gmail.com</a>
+                </div>
+                <div>
+                    <div class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-3">학습 자료</div>
+                    <div class="space-y-2.5">
+                        <div class="text-sm text-gray-500 hover:text-white transition cursor-pointer">📚 주간 토픽 교재</div>
+                        <div class="text-sm text-gray-500 hover:text-white transition cursor-pointer">🧠 AI 퀴즈 학습</div>
+                        <div class="text-sm text-gray-500 hover:text-white transition cursor-pointer">💬 AI 튜터 상담</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="bg-gray-950">
+        <div class="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
+            <span class="text-[11px] text-gray-600">Copyright &copy; 2026 KPC 정보관리기술사 ZIP-UP 심화반. All rights reserved.</span>
+            <span class="text-[11px] text-gray-700">Powered by AI-Enhanced Learning</span>
+        </div>
+    </div>
+</footer>
+
+<!-- VIEWER OVERLAY -->
+<div class="viewer-overlay" id="viewerOverlay">
+    <div class="viewer-topbar">
+        <div class="flex items-center gap-3">
+            <button class="viewer-nav-btn" onclick="closeViewer()" title="목록으로">←</button>
+            <div class="flex items-center gap-2.5">
+                <span id="vBadge" class="text-xs font-bold px-2.5 py-1 rounded-full"></span>
+                <span id="vSubject" class="subject-tag"></span>
+                <h3 id="vTitle" class="text-sm font-bold text-gray-800"></h3>
+            </div>
+        </div>
+        <div class="flex items-center gap-2">
+            <button class="viewer-nav-btn" id="btnPrev" onclick="navTopic(-1)">‹</button>
+            <span class="text-xs text-gray-400 min-w-[40px] text-center" id="vCounter"></span>
+            <button class="viewer-nav-btn" id="btnNext" onclick="navTopic(1)">›</button>
+            <div class="w-px h-6 bg-gray-200 mx-2"></div>
+            <a id="vNewTab" href="#" target="_blank" class="text-xs text-gray-400 hover:text-indigo-600 transition whitespace-nowrap">새 탭 ↗</a>
+        </div>
+    </div>
+    <iframe id="vFrame" class="w-full border-none" style="height: calc(100vh - 56px);"></iframe>
+</div>
+
+<!-- API KEY MODAL -->
+<div class="modal-bg" id="apiModal" style="display:none;" onclick="if(event.target===this)toggleApiModal()">
+    <div class="modal-box">
+        <h3 class="text-lg font-bold text-gray-900 mb-2">🔑 Gemini API 설정</h3>
+        <p class="text-sm text-gray-500 mb-4">통합 퀴즈 기능을 사용하려면 Gemini API Key가 필요합니다.</p>
+        <input type="password" id="apiKeyInput" placeholder="AIza..." class="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 mb-4">
+        <div class="flex gap-2">
+            <button onclick="saveApiKey()" class="flex-1 bg-indigo-600 text-white text-sm font-medium py-2.5 rounded-xl hover:bg-indigo-700 transition">저장</button>
+            <button onclick="clearApiKey()" class="px-4 bg-red-50 text-red-600 text-sm font-medium py-2.5 rounded-xl hover:bg-red-100 transition">삭제</button>
+            <button onclick="toggleApiModal()" class="px-4 bg-gray-100 text-gray-600 text-sm font-medium py-2.5 rounded-xl hover:bg-gray-200 transition">닫기</button>
+        </div>
+        <p class="text-[11px] text-gray-400 mt-3" id="apiStatus"></p>
+    </div>
+</div>
+
+<!-- ══════════ JS ══════════ -->
+<script>
+// ══════════ DATA (빌드 스크립트가 주입) ══════════
+const WEEK_INFO = {"week": 1, "year": 2026};
+// GitHub Pages 배포 시 자동 경로 감지
+// URL 파라미터 ?base=xxx 로 수동 지정 가능 (예: ?base=https://user.github.io/repo/week01/html/)
+// 경로 자동 감지: 로컬(week01/html/) vs GitHub Pages(같은 폴더)
+// 대시보드가 week01/ 폴더에 배포되고, 토픽 HTML도 같은 week01/ 폴더에 있는 구조
+// URL 파라미터 ?base=xxx 로 수동 오버라이드 가능
+const HTML_BASE_DIR = (() => {
+    const params = new URLSearchParams(location.search);
+    if (params.has('base')) return params.get('base').replace(/\/?$/, '/');
+    // file:// 프로토콜 (로컬) → week01/html/ 하위
+    if (location.protocol === 'file:') return 'week01/html/';
+    // GitHub Pages → 대시보드와 토픽 HTML이 같은 폴더(week01/)에 있음
+    return '';
+})();
+const TOPICS = [
+  {
+    "num": "01",
+    "id": "1W_01_01",
+    "name": "소프트웨어 위기(Software Crisis)와 브룩스의 법칙(Brooks' Law)",
+    "fullName": "소프트웨어 위기(Software Crisis)와 브룩스의 법칙(Brooks' Law)",
+    "shortTitle": "",
+    "session": "1",
+    "subject": "sw",
+    "intent": "소프트웨어 공학의 태동 배경인 '소프트웨어 위기'를 현대적인 관점에서 재해석할 수 있는지 묻는다. 특히 프로젝트 대형화 시 인력 투입의 비효율성을 통찰력 있게 설명할 수 있는지 평가한다.",
+    "aiPrompt": "당신은 IT 기술사 수석 출제위원입니다. '소프트웨어 위기'의 정의와 원인을 기술하고, '브룩스의 법칙'을 의사소통 비용 관점에서 수식 또는 그래프로 설명하시오. 나아가 이 법칙이 초거대 AI 모델 개발과 같은 현대 프로젝트에서도 유효한지 비평을 포함하여 1.5페이지 분량으로 작성하시오.",
+    "file": "1W_01_01_SW위기_브룩스법칙_학습페이지.html"
+  },
+  {
+    "num": "02",
+    "id": "1W_01_02",
+    "name": "데이터 독립성(Data Independence)과 3단계 스키마 구조",
+    "fullName": "데이터 독립성(Data Independence)과 3단계 스키마 구조",
+    "shortTitle": "",
+    "session": "1",
+    "subject": "db",
+    "intent": "데이터베이스의 가장 근본적인 존재 이유인 추상화 개념과 스키마 간의 논리적/물리적 매핑 독립성을 명확히 이해하고 있는지 평가한다.",
+    "aiPrompt": "ANSI/SPARC 3단계 스키마 아키텍처를 도식화하여 설명하고, 논리적 데이터 독립성과 물리적 데이터 독립성의 차이를 구체적인 데이터베이스 운영 예시를 들어 서술하시오. 이 개념이 현대의 데이터 레이크하우스 아키텍처에서 어떻게 계승되는지 간략히 언급하시오.",
+    "file": "1W_01_02_데이터독립성_3단계스키마_학습페이지.html"
+  },
+  {
+    "num": "03",
+    "id": "1W_01_03",
+    "name": "인터럽트(Interrupt) 처리 메커니즘과 PCB",
+    "fullName": "인터럽트(Interrupt) 처리 메커니즘과 PCB",
+    "shortTitle": "",
+    "session": "1",
+    "subject": "os",
+    "intent": "운영체제 커널의 동작 원리를 묻는 핵심 문제로, 문맥 교환 과정에서의 마이크로적인 레지스터 백업 과정을 서술할 수 있는지 평가한다.",
+    "aiPrompt": "운영체제에서 인터럽트 발생 시 CPU 내부에서 일어나는 처리 과정을 단계별로 기술하시오. 특히 문맥 교환(Context Switching) 과정에서 PCB(Process Control Block)의 역할과 저장되는 주요 정보를 구체적으로 명시하시오.",
+    "file": "1W_01_03_인터럽트_PCB_학습페이지.html"
+  },
+  {
+    "num": "04",
+    "id": "1W_01_04",
+    "name": "에이전틱 AI (Agentic AI)",
+    "fullName": "에이전틱 AI (Agentic AI)",
+    "shortTitle": "",
+    "session": "1",
+    "subject": "ds",
+    "intent": "단순 생성형 AI를 넘어 자율적으로 도구를 사용하고 계획을 수립하는 '에이전틱 AI'가 2026년 핵심 화두임을 반영하여, 답변 생성과 과제 수행의 차이를 묻는다.",
+    "aiPrompt": "2026년 핵심 기술 트렌드인 '에이전트 AI(Agentic AI)'의 개념을 정의하고, 기존 생성형 AI와의 차이점을 자율성(Autonomy), 도구 사용(Tool Use), 계획 수립(Planning) 측면에서 비교표로 작성하시오.",
+    "file": "1W_01_04_에이전틱AI_학습페이지.html"
+  },
+  {
+    "num": "05",
+    "id": "1W_01_05",
+    "name": "애자일 선언문(Agile Manifesto)과 가치",
+    "fullName": "애자일 선언문(Agile Manifesto)과 가치",
+    "shortTitle": "",
+    "session": "1",
+    "subject": "sw",
+    "intent": "애자일의 4가지 핵심 가치를 통해 기존 폭포수 모델의 문제점을 어떻게 해결하려 했는지 소프트웨어 공학 사상을 묻는다.",
+    "aiPrompt": "애자일 소프트웨어 개발 선언문의 4가지 핵심 가치를 나열하고, 각 가치가 전통적 폭포수 모델의 어떤 문제점을 해결하기 위해 제시되었는지 비교하여 설명하시오.",
+    "file": "1W_01_05_애자일선언문_가치_학습페이지.html"
+  },
+  {
+    "num": "06",
+    "id": "1W_01_06",
+    "name": "트랜잭션 격리 수준(Isolation Level)과 Dirty Read",
+    "fullName": "트랜잭션 격리 수준(Isolation Level)과 Dirty Read",
+    "shortTitle": "",
+    "session": "1",
+    "subject": "db",
+    "intent": "동시성 제어의 핵심인 격리 수준 4단계를 이해하고, 낮은 격리 수준에서 발생하는 부정합 문제의 메커니즘을 설명할 수 있어야 한다.",
+    "aiPrompt": "ANSI SQL 표준에서 정의한 트랜잭션 격리 수준 4단계를 정의하고, 각 단계에서 발생 가능한 읽기 이상 현상을 매트릭스로 정리하시오. 특히 'Dirty Read'가 발생하는 과정을 트랜잭션 흐름도로 도식화하시오.",
+    "file": "1W_01_06_트랜잭션격리수준_학습페이지.html"
+  },
+  {
+    "num": "07",
+    "id": "1W_01_07",
+    "name": "CXL(Compute Express Link) 3.0",
+    "fullName": "CXL(Compute Express Link) 3.0",
+    "shortTitle": "",
+    "session": "1",
+    "subject": "os",
+    "intent": "데이터센터의 '메모리 장벽' 문제를 해결하기 위한 차세대 인터페이스 기술인 CXL의 개념과 하위 프로토콜을 묻는다.",
+    "aiPrompt": "기존 서버 아키텍처의 메모리 병목 문제를 설명하고, 이를 해결하기 위한 CXL(Compute Express Link) 3.0의 개념과 3대 프로토콜(.io,.cache,.mem)의 역할을 비교하여 기술하시오.",
+    "file": "1W_01_07_CXL3.0_학습페이지.html"
+  },
+  {
+    "num": "08",
+    "id": "1W_01_08",
+    "name": "플랫폼 엔지니어링 (Platform Engineering)",
+    "fullName": "플랫폼 엔지니어링 (Platform Engineering)",
+    "shortTitle": "",
+    "session": "1",
+    "subject": "sw",
+    "intent": "DevOps의 복잡성으로 인한 인지 부하를 해결하기 위해 2026년 대두된 내부 개발자 플랫폼 구축 트렌드 숙지 여부를 평가한다.",
+    "aiPrompt": "개발자의 인지 부하를 줄이고 셀프 서비스 환경을 제공하기 위한 플랫폼 엔지니어링의 개념을 정의하고, 핵심 구성요소인 IDP(Internal Developer Platform)의 주요 기능 4가지를 기술하시오.",
+    "file": "1W_01_08_플랫폼엔지니어링_학습페이지.html"
+  },
+  {
+    "num": "09",
+    "id": "1W_01_09",
+    "name": "DevOps와 CALMS 프레임워크",
+    "fullName": "DevOps와 CALMS 프레임워크",
+    "shortTitle": "",
+    "session": "1",
+    "subject": "sw",
+    "intent": "DevOps를 단순한 도구가 아닌 문화로 이해하는지 묻는다. CALMS 프레임워크의 각 요소를 실무적 관점에서 설명해야 한다.",
+    "aiPrompt": "DevOps의 성공적인 도입을 위한 CALMS 프레임워크의 5가지 요소를 정의하시오. 각 요소별로 구체적인 실천 방안(예: Automation - CI/CD 파이프라인 구축)을 매핑하여 설명하시오.",
+    "file": "1W_01_09_DevOps_CALMS_학습페이지.html"
+  },
+  {
+    "num": "10",
+    "id": "1W_01_10",
+    "name": "NoSQL의 CAP 이론과 PACELC 이론",
+    "fullName": "NoSQL의 CAP 이론과 PACELC 이론",
+    "shortTitle": "",
+    "session": "1",
+    "subject": "db",
+    "intent": "분산 데이터베이스의 기본 원리인 CAP 이론의 한계를 지적하고, 네트워크 분할이 없는 정상 상황에서의 트레이드오프를 설명할 수 있는지 평가한다.",
+    "aiPrompt": "분산 시스템의 CAP 이론을 설명하고, 3가지를 모두 만족할 수 없는 이유를 증명하시오. 이를 보완하기 위해 제시된 PACELC 이론의 개념과 정상 상태(E)에서의 선택 전략을 설명하시오.",
+    "file": "1W_01_10_CAP_PACELC_학습페이지.html"
+  },
+  {
+    "num": "11",
+    "id": "1W_01_11",
+    "name": "하이퍼바이저(Hypervisor) 유형",
+    "fullName": "하이퍼바이저(Hypervisor) 유형",
+    "shortTitle": "",
+    "session": "1",
+    "subject": "os",
+    "intent": "가상화 기술의 근간인 하이퍼바이저의 두 가지 유형(베어메탈 vs 호스트형)을 구조적, 성능적 측면에서 비교하는 고전적인 문제이다.",
+    "aiPrompt": "가상화 기술의 핵심인 하이퍼바이저 Type 1(Bare-metal)과 Type 2(Hosted)의 아키텍처를 그림으로 비교하고, 성능 및 자원 관리 효율성 측면에서 차이점을 기술하시오.",
+    "file": "1W_01_11_하이퍼바이저유형_학습페이지.html"
+  },
+  {
+    "num": "12",
+    "id": "1W_01_12",
+    "name": "디지털 권리장전 (Digital Bill of Rights)",
+    "fullName": "디지털 권리장전 (Digital Bill of Rights)",
+    "shortTitle": "",
+    "session": "1",
+    "subject": "ds",
+    "intent": "디지털 심화 시대에 맞춰 한국 정부가 발표한 디지털 권리장전의 5대 원칙을 묻는 정책 문제이다.",
+    "aiPrompt": "대한민국 정부가 발표한 '디지털 권리장전'의 배경과 목적을 설명하고, 5대 대원칙(자유, 공정, 안전, 혁신, 연대)의 핵심 내용을 요약하시오.",
+    "file": "1W_01_12_디지털권리장전_학습페이지.html"
+  },
+  {
+    "num": "13",
+    "id": "1W_01_13",
+    "name": "리팩토링(Refactoring)과 코드 스멜(Code Smell)",
+    "fullName": "리팩토링(Refactoring)과 코드 스멜(Code Smell)",
+    "shortTitle": "",
+    "session": "1",
+    "subject": "sw",
+    "intent": "유지보수성을 높이기 위한 리팩토링의 정의를 명확히 하고, 리팩토링이 필요한 징후인 '코드 스멜'의 구체적인 사례를 알고 있는지 평가한다.",
+    "aiPrompt": "소프트웨어 리팩토링(Refactoring)의 정의를 기술하고, 대표적인 코드 스멜(Code Smell) 3가지를 제시한 후 각각에 대한 리팩토링 기법을 설명하시오.",
+    "file": "1W_01_13_리팩토링_코드스멜_학습페이지.html"
+  },
+  {
+    "num": "14",
+    "id": "1W_01_14",
+    "name": "벡터 데이터베이스(Vector DB)와 HNSW",
+    "fullName": "벡터 데이터베이스(Vector DB)와 HNSW",
+    "shortTitle": "",
+    "session": "1",
+    "subject": "db",
+    "intent": "RAG의 핵심 인프라인 벡터 DB의 개념을 묻는다. 고차원 데이터의 유사도 검색을 위한 HNSW 인덱싱 원리 이해를 묻는 고난이도 문제이다.",
+    "aiPrompt": "벡터 데이터베이스(Vector DB)의 개념과 임베딩 저장 방식을 설명하고, 고차원 벡터의 고속 검색을 위한 ANN 알고리즘 중 표준인 HNSW의 인덱싱 구조를 기술하시오.",
+    "file": "1W_01_14_벡터DB_HNSW_학습페이지.html"
+  },
+  {
+    "num": "15",
+    "id": "1W_01_15",
+    "name": "암달의 법칙(Amdahl's Law)",
+    "fullName": "암달의 법칙(Amdahl's Law)",
+    "shortTitle": "",
+    "session": "1",
+    "subject": "os",
+    "intent": "병렬 처리의 한계를 수치적으로 이해하고 있는지 묻는 계산 문제로, 순차 처리 부분 때문에 성능 향상이 제한됨을 증명할 수 있어야 한다.",
+    "aiPrompt": "컴퓨터 시스템 성능 향상의 한계를 설명하는 암달의 법칙(Amdahl's Law) 수식을 제시하고, 전체 시스템의 40%가 순차 처리될 때 프로세서를 무한대로 늘렸을 경우 달성 가능한 최대 성능 향상비(Speedup)를 계산하시오.",
+    "file": "1W_01_15_암달의법칙_학습페이지.html"
+  },
+  {
+    "num": "01",
+    "id": "1W_02_01",
+    "name": "대규모 차세대 프로젝트는 안정성을 중시하는 전통적 방식과 혁신을 요구하는 현대적 방식이 혼재하여 단일 방법론 적용에 한계가 있다.\n1. 폭포수(Waterfall) 모델과 애자일(Agile) 모델 비교\n2. 테일러링(Tailoring) 필요성과 4단계 수행 절차\n3. 금융 차세대 프로젝트 대상 하이브리드(Hybrid) 방법론 적용 전략",
+    "fullName": "대규모 차세대 프로젝트는 안정성을 중시하는 전통적 방식과 혁신을 요구하는 현대적 방식이 혼재하여 단일 방법론 적용에 한계가 있다. 성공적인 프로젝트 수행을 위해 다음을 설명하시오.1. 폭포수(Waterfall) 모델과 애자일(Agile) 모델 비교2. 테일러링(Tailoring) 필요성과 4단계 수행 절차3. 금융 차세대 프로젝트 대상 하이브리드(Hybrid) 방법론 적용 전략",
+    "shortTitle": "폭포수vs애자일 / 테일러링 / 하이브리드",
+    "session": "2",
+    "subject": "sw",
+    "intent": "단순 비교를 넘어, 현실적인 프로젝트 상황에서 두 방법론을 융합하고 최적화(테일러링)하는 실무적 관리 능력을 평가한다.",
+    "aiPrompt": "소프트웨어 개발 방법론의 양대 산맥인 폭포수 모델과 애자일 모델을 비교표(요구사항 불확실성 대응, 리스크 가시화 시점 등)로 정리하시오. 이어 방법론 테일러링의 절차를 도식화하고, 금융 차세대 시스템의 하이브리드 전략 타당성을 논하시오.",
+    "file": "1W_02_01_폭포수vs애자일_테일러링_하이브리드_학습페이지.html"
+  },
+  {
+    "num": "02",
+    "id": "1W_02_02",
+    "name": "엔터프라이즈 DB 설계 시 무결성 확보를 위한 정규화는 필수적이나, 대용량 조회 시 과도한 조인으로 성능 저하를 유발할 수 있다.\n1. 1NF~BCNF 단계별 정의 및 이상현상(Anomaly) 제거 과정\n2. 반정규화(De-normalization) 정의 및 주요 적용 기법\n3. 반정규화에 따른 데이터 불일치 문제 해결 및 무결성 유지 방안",
+    "fullName": "엔터프라이즈 DB 설계 시 무결성 확보를 위한 정규화는 필수적이나, 대용량 조회 시 과도한 조인으로 성능 저하를 유발할 수 있다. 무결성과 성능의 최적화된 균형을 위해 다음을 설명하시오.1. 1NF~BCNF 단계별 정의 및 이상현상(Anomaly) 제거 과정2. 반정규화(De-normalization) 정의 및 주요 적용 기법3. 반정규화에 따른 데이터 불일치 문제 해결 및 무결성 유지 방안",
+    "shortTitle": "정규화 / 반정규화 / 무결성유지",
+    "session": "2",
+    "subject": "db",
+    "intent": "DB 설계의 핵심인 정규화 이론을 확인하고, 반정규화 수행 시 발생하는 무결성 훼손에 대한 대안 제시 능력을 평가한다.",
+    "aiPrompt": "정규화 과정을 예시를 들어 1NF부터 BCNF까지 도식화하시오. 반정규화 기법을 설명하고, 적용 시 수반되어야 할 데이터 무결성 보장 방안(Trigger, Application Logic 등)을 제시하시오.",
+    "file": "1W_02_02_정규화_반정규화_무결성유지_학습페이지.html"
+  },
+  {
+    "num": "03",
+    "id": "1W_02_03",
+    "name": "클라우드 환경에서는 다수 프로세스 간 CPU 경합이 심화되므로, 공평하고 효율적인 자원 할당을 보장하는 스케줄링이 필수적이다.\n1. 선점형(Preemptive)과 비선점형(Non-Preemptive) 스케줄링 비교\n2. RR, MLQ, MLFQ 알고리즘 동작 원리 및 장단점\n3. 기아(Starvation) 현상 원인 및 에이징(Aging) 기법 해결 방안",
+    "fullName": "클라우드 환경에서는 다수 프로세스 간 CPU 경합이 심화되므로, 공평하고 효율적인 자원 할당을 보장하는 스케줄링이 필수적이다. 시스템 처리량 극대화와 응답성 확보를 위해 다음을 설명하시오.1. 선점형(Preemptive)과 비선점형(Non-Preemptive) 스케줄링 비교2. RR, MLQ, MLFQ 알고리즘 동작 원리 및 장단점3. 기아(Starvation) 현상 원인 및 에이징(Aging) 기법 해결 방안",
+    "shortTitle": "스케줄링 / RR / MLQ / MLFQ / 에이징",
+    "session": "2",
+    "subject": "os",
+    "intent": "OS 스케줄링의 진화 과정을 이해하고, 특히 MLFQ의 프로세스 성격 구분 및 기아 현상 해결책을 평가한다.",
+    "aiPrompt": "선점/비선점 방식을 비교하고, 대표 알고리즘인 RR, MLQ, MLFQ의 작동 메커니즘을 기술하시오. 기아 현상을 해결하기 위한 에이징 기법을 HRN 스케줄링 공식과 연계하여 서술하시오.",
+    "file": "1W_02_03_스케줄링_RR_MLQ_MLFQ_에이징_학습페이지.html"
+  },
+  {
+    "num": "04",
+    "id": "1W_02_04",
+    "name": "클라우드 전면 전환 이후 무분별한 자원 사용에 따른 비용 폭증과 글로벌 빅테크 종속에 따른 데이터 주권 우려가 심화되고 있다.\n1. 책임 공유 모델 관점의 IaaS, PaaS, SaaS 비교\n2. 핀옵스(FinOps) 개념과 3단계 라이프사이클\n3. 소버린 클라우드(Sovereign Cloud) 필요성 및 핵심 기술 요건",
+    "fullName": "클라우드 전면 전환 이후 무분별한 자원 사용에 따른 비용 폭증과 글로벌 빅테크 종속에 따른 데이터 주권 우려가 심화되고 있다. 클라우드의 효율적 비용 통제와 운영 거버넌스 확립을 위해 다음을 설명하시오.1. 책임 공유 모델 관점의 IaaS, PaaS, SaaS 비교2. 핀옵스(FinOps) 개념과 3단계 라이프사이클3. 소버린 클라우드(Sovereign Cloud) 필요성 및 핵심 기술 요건",
+    "shortTitle": "클라우드서비스모델 / FinOps / 소버린클라우드",
+    "session": "2",
+    "subject": "ds",
+    "intent": "최신 클라우드 운영 트렌드(FinOps)와 정책 트렌드(Sovereign Cloud)를 결합하여 비용 효율성과 규제 대응 능력을 묻는다.",
+    "aiPrompt": "3대 클라우드 서비스 모델의 책임 범위를 다이어그램으로 표현하시오. FinOps 프레임워크를 설명하고, 데이터 보호 규제 강화에 대응하기 위한 소버린 클라우드의 기술적 요건을 논하시오.",
+    "file": "1W_02_04_클라우드서비스모델_FinOps_소버린클라우드_학습페이지.html"
+  },
+  {
+    "num": "05",
+    "id": "1W_02_05",
+    "name": "자율주행 등 안전 최우선 시스템(Safety-Critical System)은 미세한 결함이 치명적 사고로 직결되므로, 국제 기능안전 표준에...\n1. 명세 기반 테스트 주요 기법(동등 분할, 경계값 분석, 결정 테이블) 설명\n2. 구조 기반 테스트 커버리지(구문, 분기, 조건) 비교\n3. MC/DC 개념 및 마스킹 효과(Masking Effect) 방지 원리",
+    "fullName": "자율주행 등 안전 최우선 시스템(Safety-Critical System)은 미세한 결함이 치명적 사고로 직결되므로, 국제 기능안전 표준에 따른 엄격한 테스트가 필수적이다. 고신뢰성 품질 확보를 위해 다음을 설명하시오.1. 명세 기반 테스트 주요 기법(동등 분할, 경계값 분석, 결정 테이블) 설명2. 구조 기반 테스트 커버리지(구문, 분기, 조건) 비교3. MC/DC 개념 및 마스킹 효과(Masking Effect) 방지 원리",
+    "shortTitle": "명세기반테스트 / 구조기반테스트 / MCDC",
+    "session": "2",
+    "subject": "sw",
+    "intent": "고신뢰성 SW 개발의 필수 요건인 MC/DC를 통해 조건 간의 독립적 영향을 검증할 수 있는지를 평가한다.",
+    "aiPrompt": "명세/구조 기반 테스트 기법을 정의하고 예시를 드시오. 심화 토픽으로 MC/DC의 정의를 기술하고, 단순 커버리지만으로는 마스킹 효과를 탐지할 수 없는 이유를 논리식을 사용하여 증명하시오.",
+    "file": "1W_02_05_명세기반테스트_구조기반테스트_MCDC_학습페이지.html"
+  },
+  {
+    "num": "06",
+    "id": "1W_02_06",
+    "name": "다중 사용자 환경에서 트랜잭션 간 간섭을 제어하지 않으면 데이터 일관성이 훼손되며, 과도한 락(Lock)은 교착상태를 유발한다.\n1. 동시성 제어 미수행 시 3대 문제점(갱신 손실, 현황 파악 오류, 모순성)\n2. 로킹(Locking) 기법 개념과 2PL의 직렬 가능성 보장 원리\n3. 교착상태(Deadlock) 발생 4조건 및 해결 기법(예방, 회피, 탐지, 복구)",
+    "fullName": "다중 사용자 환경에서 트랜잭션 간 간섭을 제어하지 않으면 데이터 일관성이 훼손되며, 과도한 락(Lock)은 교착상태를 유발한다. 안정적인 동시성 제어와 장애 예방을 위해 다음을 설명하시오.1. 동시성 제어 미수행 시 3대 문제점(갱신 손실, 현황 파악 오류, 모순성)2. 로킹(Locking) 기법 개념과 2PL의 직렬 가능성 보장 원리3. 교착상태(Deadlock) 발생 4조건 및 해결 기법(예방, 회피, 탐지, 복구)",
+    "shortTitle": "동시성제어 / 2PL / 교착상태",
+    "session": "2",
+    "subject": "db",
+    "intent": "2PL의 원리를 파악하고, 락의 부작용인 교착상태 해소 메커니즘을 묻는 정통 DB 문제이다.",
+    "aiPrompt": "동시성 제어 미수행 시 발생하는 3대 문제점을 시나리오로 설명하시오. 2PL 프로토콜을 도식화하여 직렬 가능성 보장 원리를 논하고, 교착상태 해결을 위한 탐지/예방 기법을 비교 설명하시오.",
+    "file": "1W_02_06_동시성제어_2PL_교착상태_학습페이지.html"
+  },
+  {
+    "num": "07",
+    "id": "1W_02_07",
+    "name": "한정된 물리 메모리의 크기를 극복하기 위해 가상 메모 기법이 쓰이나, 과도한 다중 프로그래밍은 잦은 페이지 교체로 인한 병목을 초래한다.\n1. 페이징(Paging) 주소 변환 과정 (TLB 및 페이지 테이블 포함)\n2. 페이지 부재(Page Fault) 발생 시 커널의 처리 절차\n3. 스레싱(Thrashing) 발생 원인 분석 및 워킹셋(Working Set) 예방 방안",
+    "fullName": "한정된 물리 메모리의 크기를 극복하기 위해 가상 메모 기법이 쓰이나, 과도한 다중 프로그래밍은 잦은 페이지 교체로 인한 병목을 초래한다. 최적화된 메모리 운영을 위해 다음을 설명하시오.1. 페이징(Paging) 주소 변환 과정 (TLB 및 페이지 테이블 포함)2. 페이지 부재(Page Fault) 발생 시 커널의 처리 절차3. 스레싱(Thrashing) 발생 원인 분석 및 워킹셋(Working Set) 예방 방안",
+    "shortTitle": "페이징 / 페이지부재 / 스레싱 / 워킹셋",
+    "session": "2",
+    "subject": "os",
+    "intent": "하드웨어(MMU)와 OS의 상호작용을 파악하고, 스레싱 발생 메커니즘을 논리적으로 설명할 수 있는지 확인한다.",
+    "aiPrompt": "TLB를 포함한 가상 주소 변환 과정을 상세 도식화하시오. 페이지 부재 처리 과정(Trap -> Disk I/O)을 서술하고, 스레싱 메커니즘을 그래프로 설명한 후 워킹셋 알고리즘의 예방 원리를 작성하시오.",
+    "file": "1W_02_07_페이징_페이지부재_스레싱_워킹셋_학습페이지.html"
+  },
+  {
+    "num": "08",
+    "id": "1W_02_08",
+    "name": "AI가 주요 의사결정에 도입됨에 따라 블랙박스 문제 해결과 투명성 요구가 커지고 있으며, 글로벌 규제가 법제화되고 있다.\n1. 보편적 AI 윤리 가이드라인의 3대 원칙과 핵심 요건\n2. XAI(Explainable AI) 개념 및 주요 모델(LIME, SHAP) 원리 비교\n3. EU AI Act의 4단계 위험 기반 규제 체계 및 상세 내용",
+    "fullName": "AI가 주요 의사결정에 도입됨에 따라 블랙박스 문제 해결과 투명성 요구가 커지고 있으며, 글로벌 규제가 법제화되고 있다. AI의 윤리적 활용과 법적 준수를 위해 다음을 설명하시오.1. 보편적 AI 윤리 가이드라인의 3대 원칙과 핵심 요건2. XAI(Explainable AI) 개념 및 주요 모델(LIME, SHAP) 원리 비교3. EU AI Act의 4단계 위험 기반 규제 체계 및 상세 내용",
+    "shortTitle": "AI윤리 / XAI / EU / AI / Act",
+    "session": "2",
+    "subject": "ds",
+    "intent": "2026년 본격화되는 AI 규제에 맞춰 EU AI Act의 등급 분류와 XAI의 기술적 원리를 논리적으로 연결해야 한다.",
+    "aiPrompt": "기술적 측면에서는 XAI의 필요성과 LIME, SHAP의 작동 원리를 비교 설명하시오. 제도적 측면에서는 EU AI Act의 4단계 위험 분류 체계와 고위험 AI 시스템에 요구되는 필수 요건을 상세히 기술하시오.",
+    "file": "1W_02_08_AI윤리_XAI_EU_AI_Act_학습페이지.html"
+  },
+  {
+    "num": "09",
+    "id": "1W_02_09",
+    "name": "대형화된 IT 프로젝트는 단순 진척률 체크만으로 상태 파악이 어려워, 예산과 일정을 통합한 정량적 성과 측정이 필수적이다.\n1. EVM(Earned Value Management)의 3대 기본 변수(PV, EV, AC) 정의\n2. 성과 측정 지표(SV, CV, SPI, CPI) 산출 공식 및 실무적 의미\n3. SPI > 1.0 이고 CPI < 1.0 인 상황의 프로젝트 상태 진단 및 관리 전략",
+    "fullName": "대형화된 IT 프로젝트는 단순 진척률 체크만으로 상태 파악이 어려워, 예산과 일정을 통합한 정량적 성과 측정이 필수적이다. 성공적인 프로젝트 통제를 위해 다음을 설명하시오.1. EVM(Earned Value Management)의 3대 기본 변수(PV, EV, AC) 정의2. 성과 측정 지표(SV, CV, SPI, CPI) 산출 공식 및 실무적 의미3. SPI > 1.0 이고 CPI < 1.0 인 상황의 프로젝트 상태 진단 및 관리 전략",
+    "shortTitle": "EVM / 성과지표 / 프로젝트진단",
+    "session": "2",
+    "subject": "sw",
+    "intent": "지표의 공식을 암기하는 것을 넘어, 실무적 의미를 해석하여 관리적 판단 능력을 제시할 수 있는지 평가한다.",
+    "aiPrompt": "획득 가치 관리(EVM)의 핵심 변수와 성과 지표 공식을 정리하시오. 특정 시점에서의 측정값이 'SPI=1.2, CPI=0.8'일 때의 프로젝트 상태를 분석하고, 이에 대한 PM의 대응 전략을 시나리오별로 제시하시오.",
+    "file": "1W_02_09_EVM_성과지표_프로젝트진단_학습페이지.html"
+  },
+  {
+    "num": "10",
+    "id": "1W_02_10",
+    "name": "대용량 분석 환경에서 DB 옵티마이저는 시스템 자원을 최적화하여 쿼리 실행 계획을 수립해야 하며, 조인 방식의 원리 이해가 필수적이다.\n1. 규칙 기반 옵티마이저(RBO)와 비용 기반 옵티마이저(CBO) 차이 비교\n2. 3대 조인 기법(Nested Loop, Sort Merge, Hash Join) 동작 메커니즘\n3. Hash Join의 대용량 처리 선호 이유 및 Temp Spill 발생 시 해결 방안",
+    "fullName": "대용량 분석 환경에서 DB 옵티마이저는 시스템 자원을 최적화하여 쿼리 실행 계획을 수립해야 하며, 조인 방식의 원리 이해가 필수적이다. 조회 성능 극대화를 위해 다음을 설명하시오.1. 규칙 기반 옵티마이저(RBO)와 비용 기반 옵티마이저(CBO) 차이 비교2. 3대 조인 기법(Nested Loop, Sort Merge, Hash Join) 동작 메커니즘3. Hash Join의 대용량 처리 선호 이유 및 Temp Spill 발생 시 해결 방안",
+    "shortTitle": "옵티마이저 / 조인기법 / HashJoin",
+    "session": "2",
+    "subject": "db",
+    "intent": "대용량 빅데이터 환경에서 조인 연산의 부하 특성을 이해하고 Hash Join의 한계(Temp Disk Spill)를 설명할 수 있어야 한다.",
+    "aiPrompt": "옵티마이저 발전 과정을 설명하고 CBO의 비용 산정 요소를 기술하시오. 3대 조인 방식의 알고리즘을 도식화하여 성능 특성을 비교표로 정리하시오. Hash Join 수행 시 Build/Probe Input 선정 기준을 명시하시오.",
+    "file": "1W_02_10_옵티마이저_조인기법_HashJoin_학습페이지.html"
+  },
+  {
+    "num": "11",
+    "id": "1W_02_11",
+    "name": "엔터프라이즈 스토리지는 I/O 성능과 내결함성을 높이기 위해 RAID를 활용하나, 특정 레벨에서는 전원 차단 시 패리티 불일치 한계가 존재한다.\n1. RAID 0, 1, 5, 6 레벨별 아키텍처 구조, 가용 용량 및 내결함성 비교\n2. RAID 5, 6 환경에서 발생하는 Write Hole 현상의 메커니즘\n3. Write Hole 문제 극복을 위한 하드웨어 및 소프트웨어적 해결 방안",
+    "fullName": "엔터프라이즈 스토리지는 I/O 성능과 내결함성을 높이기 위해 RAID를 활용하나, 특정 레벨에서는 전원 차단 시 패리티 불일치 한계가 존재한다. 무중단 스토리지 설계를 위해 다음을 설명하시오.1. RAID 0, 1, 5, 6 레벨별 아키텍처 구조, 가용 용량 및 내결함성 비교2. RAID 5, 6 환경에서 발생하는 Write Hole 현상의 메커니즘3. Write Hole 문제 극복을 위한 하드웨어 및 소프트웨어적 해결 방안",
+    "shortTitle": "RAID / WriteHole / 해결방안",
+    "session": "2",
+    "subject": "os",
+    "intent": "패리티 업데이트 중 전원 차단 시 데이터가 깨지는 'Write Hole' 심화 토픽과 대응 방안을 모두 알고 있어야 한다.",
+    "aiPrompt": "RAID 레벨별 아키텍처 다이어그램을 그리고 효율성을 비교하시오. RAID 5의 치명적 약점인 'Write Hole' 시나리오를 설명하고, 배터리 백업 캐시(BBU)나 ZFS의 Copy-on-Write 메커니즘을 기술하시오.",
+    "file": "1W_02_11_RAID_WriteHole_해결방안_학습페이지.html"
+  },
+  {
+    "num": "12",
+    "id": "1W_02_12",
+    "name": "기존의 벡터 기반 RAG 기술은 단순 의미적 유사성만 찾아 복잡한 인과관계 추론에 한계가 있다.\n1. 기존 벡터 임베딩 기반 RAG(Naive RAG) 아키텍처 한계점\n2. 지식 그래프(Knowledge Graph) 기반 GraphRAG의 개념 및 동작 원리\n3. 복합 질문(Global Question) 처리 시 GraphRAG가 우수한 논리적 근거",
+    "fullName": "기존의 벡터 기반 RAG 기술은 단순 의미적 유사성만 찾아 복잡한 인과관계 추론에 한계가 있다. 초거대 AI의 환각 차단 및 다층적 추론 능력 향상을 위해 다음을 설명하시오.1. 기존 벡터 임베딩 기반 RAG(Naive RAG) 아키텍처 한계점2. 지식 그래프(Knowledge Graph) 기반 GraphRAG의 개념 및 동작 원리3. 복합 질문(Global Question) 처리 시 GraphRAG가 우수한 논리적 근거",
+    "shortTitle": "NaiveRAG한계 / GraphRAG / 복합질문처리",
+    "session": "2",
+    "subject": "ds",
+    "intent": "2026년 핵심 트렌드인 GraphRAG를 묻는다. 그래프 탐색이 개체 간의 관계를 따라가며 맥락을 찾는다는 점을 강조해야 한다.",
+    "aiPrompt": "기존 Vector DB 기반 RAG의 한계를 지적하고, 이를 극복하기 위한 GraphRAG 아키텍처(엔티티 추출 -> 그래프 구축 -> 답변 생성)를 상세히 기술하시오. 복합 질문에서 우수한 이유를 논리적 근거로 제시하시오.",
+    "file": "1W_02_12_NaiveRAG한계_GraphRAG_복합질문처리_학습페이지.html"
+  },
+  {
+    "num": "13",
+    "id": "1W_02_13",
+    "name": "디자인 패턴의 적절한 활용은 효율을 높이지만, 무분별한 도입은 기술 부채를 초래한다.\n1. GoF 디자인 패턴 23종의 3대 분류(생성, 구조, 행위) 및 목적\n2. 싱글톤, 어댑터, 옵저버 패턴의 적용 목적 및 UML 내부 구조\n3. 안티 패턴(Anti-Pattern) 정의 및 구체적 위험 사례(God Object 등)",
+    "fullName": "디자인 패턴의 적절한 활용은 효율을 높이지만, 무분별한 도입은 기술 부채를 초래한다. 성공적인 아키텍처 설계와 안티 패턴 방지를 위해 다음을 설명하시오.1. GoF 디자인 패턴 23종의 3대 분류(생성, 구조, 행위) 및 목적2. 싱글톤, 어댑터, 옵저버 패턴의 적용 목적 및 UML 내부 구조3. 안티 패턴(Anti-Pattern) 정의 및 구체적 위험 사례(God Object 등)",
+    "shortTitle": "GoF디자인패턴 / UML구조 / 안티패턴",
+    "session": "2",
+    "subject": "sw",
+    "intent": "디자인 패턴을 UML 다이어그램으로 표현할 수 있어야 하며, 잘못된 설계 관행(Anti-Pattern)을 경계하는 식견을 묻는다.",
+    "aiPrompt": "GoF 디자인 패턴 23가지를 3가지 범주로 분류표를 작성하시오. Singleton, Adapter, Observer 패턴에 대해 UML 클래스 다이어그램 구조를 묘사하고, 피해야 할 Anti-Pattern의 대표 예시 2가지를 설명하시오.",
+    "file": "1W_02_13_GoF디자인패턴_UML구조_안티패턴_학습페이지.html"
+  },
+  {
+    "num": "14",
+    "id": "1W_02_14",
+    "name": "MSA 전환과 함께 등장한 컨테이너 기술은 초경량 격리 환경을 제공하며 클라우드 운영의 표준이 되었다.\n1. 가상 머신(VM)과 컨테이너(Container)의 아키텍처 및 성능적 특징 비교\n2. 컨테이너 격리를 위한 리눅스 커널 기술(Namespaces, Cgroups) 작동 원리\n3. 쿠버네티스(Kubernetes) 아키텍처 및 핵심 배포 단위(Pod) 개념",
+    "fullName": "MSA 전환과 함께 등장한 컨테이너 기술은 초경량 격리 환경을 제공하며 클라우드 운영의 표준이 되었다. 대규모 클라우드 현대화 구축을 위해 다음을 설명하시오.1. 가상 머신(VM)과 컨테이너(Container)의 아키텍처 및 성능적 특징 비교2. 컨테이너 격리를 위한 리눅스 커널 기술(Namespaces, Cgroups) 작동 원리3. 쿠버네티스(Kubernetes) 아키텍처 및 핵심 배포 단위(Pod) 개념",
+    "shortTitle": "VM / 컨테이너 / K8s아키텍처",
+    "session": "2",
+    "subject": "os",
+    "intent": "리눅스 커널 레벨(Namespace, Cgroups)에서의 격리 원리를 명확히 설명할 수 있어야 깊이 있는 답안이 된다.",
+    "aiPrompt": "VM과 Container의 구조적 차이를 비교하시오. 리눅스 컨테이너의 기술적 기반인 Namespaces와 Cgroups의 작동 원리를 커널 레벨에서 설명하시오. 쿠버네티스 클러스터 아키텍처를 도식화하여 설명하시오.",
+    "file": "1W_02_14_VM_컨테이너_K8s아키텍처_학습페이지.html"
+  },
+  {
+    "num": "15",
+    "id": "1W_02_15",
+    "name": "초거대 AI 모델의 등장으로 기존 서버 아키텍처는 메모리 용량 한계와 고립(Stranded Memory) 문제에 직면했다.\n1. 메모리 분리(Memory Disaggregation) 개념 및 등장 배경\n2. CXL 3.0의 특징 및 핵심 프로토콜(CXL.io,.cache,.mem) 세부 역할\n3. CXL 스위치 기반 랙 단위(Rack-Scale) 메모리 풀링 아키텍처 및 기대 효과",
+    "fullName": "초거대 AI 모델의 등장으로 기존 서버 아키텍처는 메모리 용량 한계와 고립(Stranded Memory) 문제에 직면했다. 차세대 AI 데이터센터의 성능 혁신을 위해 다음을 설명하시오.1. 메모리 분리(Memory Disaggregation) 개념 및 등장 배경2. CXL 3.0의 특징 및 핵심 프로토콜(CXL.io,.cache,.mem) 세부 역할3. CXL 스위치 기반 랙 단위(Rack-Scale) 메모리 풀링 아키텍처 및 기대 효과",
+    "shortTitle": "CXL / 메모리분리 / 풀링아키텍처",
+    "session": "2",
+    "subject": "os",
+    "intent": "CXL의 프로토콜 세부 내용과 메모리를 서버에 종속시키지 않고 공유하는 아키텍처 설계 능력을 묻는다.",
+    "aiPrompt": "기존 로컬 메모리 종속성을 탈피하는 Memory Disaggregation 트렌드를 설명하시오. CXL 3.0의 3대 서브 프로토콜 특징을 서술하고, CXL Switch를 활용한 랙 단위 풀링 아키텍처를 그려 기대효과를 분석하시오.",
+    "file": "1W_02_15_CXL_메모리분리_풀링아키텍처_학습페이지.html"
+  }
+];
+
+// ══════════ SUBJECT CONFIG ══════════
+const SUBJECT_CONFIG = {
+    sw: { label: 'SW공학', class: 'tag-sw', accent: 'bg-indigo-500', color: 'text-indigo-500' },
+    db: { label: 'DB', class: 'tag-db', accent: 'bg-emerald-500', color: 'text-emerald-500' },
+    os: { label: 'CA/OS', class: 'tag-os', accent: 'bg-pink-500', color: 'text-pink-500' },
+    ds: { label: '디지털서비스', class: 'tag-ds', accent: 'bg-amber-500', color: 'text-amber-500' },
+};
+
+// ══════════ INIT ══════════
+let currentIdx = -1;
+let filteredIndices = [];
+let quizScope = 'all';
+let quizCorrect = 0, quizTotal = 0;
+let usedTopicIds = new Set();  // 출제된 토픽 ID 추적
+
+document.addEventListener('DOMContentLoaded', () => {
+    const w = WEEK_INFO;
+    document.getElementById('dashTitle').textContent = w.week + '주차 학습 대시보드';
+    document.getElementById('dashSubtitle').textContent =
+        '주간 모의고사 · ' + TOPICS.length + '개 토픽 · ' + Object.keys(getSubjectCounts()).length + '개 출제영역';
+    document.getElementById('quizDesc').textContent =
+        w.week + '주차 ' + TOPICS.length + '개 토픽에서 AI 출제 · Gemini API 연동';
+
+    renderFilters();
+    renderCards();
+    renderList();
+    renderQuizScope();
+    filterTopics('all');
+    updateApiStatus();
+});
+
+function getSubjectCounts() {
+    const m = {};
+    TOPICS.forEach(t => { m[t.subject] = (m[t.subject] || 0) + 1; });
+    return m;
+}
+
+// ══════════ RENDER ══════════
+function renderFilters() {
+    const bar = document.getElementById('filterBar');
+    const counts = getSubjectCounts();
+    let html = '<button class="filter-btn text-sm px-3.5 py-1.5 rounded-full bg-indigo-600 text-white font-medium shadow-sm" onclick="filterTopics(\'all\')">전체</button>';
+    for (const [key, cfg] of Object.entries(SUBJECT_CONFIG)) {
+        if (!counts[key]) continue;
+        html += `<button class="filter-btn text-sm px-3.5 py-1.5 rounded-full bg-white text-gray-500 shadow-sm border border-gray-200" onclick="filterTopics('${key}')">${cfg.label}</button>`;
+    }
+    bar.innerHTML = html;
+}
+
+function renderCards() {
+    const grid = document.getElementById('cardGrid');
+    grid.innerHTML = TOPICS.map((t, i) => {
+        const cfg = SUBJECT_CONFIG[t.subject] || SUBJECT_CONFIG.sw;
+        const delay = Math.min(i % 6, 5);
+        return `
+        <div class="topic-card fade-in" style="animation-delay:${delay*0.04}s;opacity:0" data-subject="${t.subject}" onclick="openViewer(${i})">
+            <div class="card-accent ${cfg.accent}"></div>
+            <div class="p-5">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="badge-${t.session}교시 text-xs font-bold px-2.5 py-1 rounded-full">${t.session}교시</span>
+                    <span class="subject-tag ${cfg.class}">${cfg.label}</span>
+                </div>
+                <h3 class="font-bold text-gray-900 mb-1 leading-snug text-sm">${t.name.split('\n')[0]}</h3>
+                ${t.session === '2' && t.name.includes('\n') ? `<div class="text-xs text-gray-600 mt-1 space-y-0.5">${t.name.split('\n').slice(1).map(l => `<div>${l}</div>`).join('')}</div>` : ''}
+                <p class="text-xs text-gray-500 line-clamp-2">${t.intent || ''}</p>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function renderList() {
+    const body = document.getElementById('listBody');
+    body.innerHTML = TOPICS.map((t, i) => {
+        const cfg = SUBJECT_CONFIG[t.subject] || SUBJECT_CONFIG.sw;
+        return `
+        <div class="list-row" data-subject="${t.subject}" onclick="openViewer(${i})">
+            <div class="text-sm font-bold text-gray-300">${t.num}</div>
+            <div class="font-medium text-gray-900 text-sm">${t.name.split('\n')[0]}${t.session === '2' && t.name.includes('\n') ? `<div class="text-xs text-gray-500 mt-0.5">${t.name.split('\n').slice(1).join(' / ')}</div>` : ''}</div>
+            <div><span class="badge-${t.session}교시 text-xs font-bold px-2 py-0.5 rounded-full">${t.session}교시</span></div>
+            <div><span class="subject-tag ${cfg.class}">${cfg.label}</span></div>
+            <div class="${cfg.color} text-xs font-medium">열기 →</div>
+        </div>`;
+    }).join('');
+}
+
+// ══════════ FILTER ══════════
+function filterTopics(subject) {
+    let count = 0;
+    filteredIndices = [];
+    document.querySelectorAll('.topic-card').forEach((el, i) => {
+        const show = subject === 'all' || el.dataset.subject === subject;
+        el.style.display = show ? '' : 'none';
+        if (show) { count++; filteredIndices.push(i); }
+    });
+    document.querySelectorAll('.list-row').forEach(el => {
+        el.style.display = (subject === 'all' || el.dataset.subject === subject) ? '' : 'none';
+    });
+    document.getElementById('filteredCount').textContent = count;
+    const labels = { all: '전체', sw: 'SW', db: 'DB', os: 'CA', ds: '디지털' };
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        const active = subject === 'all' ? btn.textContent === '전체' : btn.textContent === (SUBJECT_CONFIG[subject]?.label || '');
+        btn.className = 'filter-btn text-sm px-3.5 py-1.5 rounded-full shadow-sm ' +
+            (active ? 'bg-indigo-600 text-white font-medium' : 'bg-white text-gray-500 border border-gray-200');
+    });
+}
+
+// ══════════ VIEWER ══════════
+function openViewer(idx) {
+    currentIdx = idx;
+    const t = TOPICS[idx];
+    if (!t.file) { alert('이 토픽의 학습페이지가 아직 준비되지 않았습니다.'); return; }
+    const overlay = document.getElementById('viewerOverlay');
+    const cfg = SUBJECT_CONFIG[t.subject] || SUBJECT_CONFIG.sw;
+
+    const badge = document.getElementById('vBadge');
+    badge.textContent = t.session + '교시';
+    badge.className = 'text-xs font-bold px-2.5 py-1 rounded-full badge-' + t.session + '교시';
+
+    const subj = document.getElementById('vSubject');
+    subj.textContent = cfg.label;
+    subj.className = 'subject-tag ' + cfg.class;
+
+    document.getElementById('vTitle').textContent = t.shortTitle || t.name.split('\n')[0];
+    document.getElementById('vCounter').textContent = (idx + 1) + ' / ' + TOPICS.length;
+    document.getElementById('vNewTab').href = HTML_BASE_DIR + t.file;
+    document.getElementById('btnPrev').classList.toggle('disabled', idx === 0);
+    document.getElementById('btnNext').classList.toggle('disabled', idx === TOPICS.length - 1);
+    document.getElementById('vFrame').src = HTML_BASE_DIR + t.file;
+    overlay.classList.add('open');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeViewer() {
+    document.getElementById('viewerOverlay').classList.remove('open');
+    document.body.style.overflow = '';
+    setTimeout(() => { document.getElementById('vFrame').src = 'about:blank'; }, 350);
+}
+
+function navTopic(dir) {
+    const next = currentIdx + dir;
+    if (next >= 0 && next < TOPICS.length) openViewer(next);
+}
+
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeViewer();
+    if (e.key === 'ArrowLeft' && currentIdx > 0) navTopic(-1);
+    if (e.key === 'ArrowRight' && currentIdx < TOPICS.length - 1) navTopic(1);
+});
+
+// ══════════ TAB / VIEW ══════════
+function switchTab(name, el) {
+    document.querySelectorAll('.dash-tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    ['topics', 'quiz'].forEach(s => {
+        const sec = document.getElementById('section-' + s);
+        if (sec) sec.style.display = s === name ? '' : 'none';
+    });
+}
+
+let isListView = false;
+function toggleView() {
+    isListView = !isListView;
+    document.getElementById('cardGrid').style.display = isListView ? 'none' : '';
+    document.getElementById('listView').style.display = isListView ? '' : 'none';
+    document.getElementById('viewIcon').textContent = isListView ? '📦' : '📋';
+    document.getElementById('viewLabel').textContent = isListView ? '카드' : '리스트';
+}
+
+// ══════════ QUIZ SCOPE ══════════
+function renderQuizScope() {
+    const bar = document.getElementById('quizScopeBar');
+    let html = '<button class="quiz-scope text-sm px-4 py-2 rounded-lg bg-indigo-50 text-indigo-700 font-medium" onclick="setScope(\'all\', this)">전체 토픽</button>';
+    html += '<button class="quiz-scope text-sm px-4 py-2 rounded-lg bg-gray-50 text-gray-500" onclick="setScope(\'1\', this)">1교시만</button>';
+    html += '<button class="quiz-scope text-sm px-4 py-2 rounded-lg bg-gray-50 text-gray-500" onclick="setScope(\'2\', this)">2교시만</button>';
+    for (const [key, cfg] of Object.entries(SUBJECT_CONFIG)) {
+        if (!TOPICS.some(t => t.subject === key)) continue;
+        html += `<button class="quiz-scope text-sm px-4 py-2 rounded-lg bg-gray-50 text-gray-500" onclick="setScope('${key}', this)">${cfg.label}</button>`;
+    }
+    bar.innerHTML = html;
+}
+
+function setScope(scope, el) {
+    quizScope = scope;
+    document.querySelectorAll('.quiz-scope').forEach(b => {
+        b.className = 'quiz-scope text-sm px-4 py-2 rounded-lg ' +
+            (b === el ? 'bg-indigo-50 text-indigo-700 font-medium' : 'bg-gray-50 text-gray-500');
+    });
+}
+
+function getScopedTopics() {
+    return TOPICS.filter(t => {
+        if (quizScope === 'all') return true;
+        if (quizScope === '1' || quizScope === '2') return t.session === quizScope;
+        return t.subject === quizScope;
+    });
+}
+
+// ══════════ GEMINI API ══════════
+function getApiKey() { return localStorage.getItem('gemini_api_key') || ''; }
+function saveApiKey() {
+    const key = document.getElementById('apiKeyInput').value.trim();
+    if (key) { localStorage.setItem('gemini_api_key', key); updateApiStatus(); toggleApiModal(); }
+}
+function clearApiKey() { localStorage.removeItem('gemini_api_key'); updateApiStatus(); document.getElementById('apiKeyInput').value = ''; }
+function updateApiStatus() {
+    const el = document.getElementById('apiStatus');
+    el.textContent = getApiKey() ? '✅ API Key가 설정되어 있습니다.' : '⚠️ API Key가 설정되지 않았습니다.';
+}
+function toggleApiModal() {
+    const modal = document.getElementById('apiModal');
+    modal.style.display = modal.style.display === 'none' ? 'flex' : 'none';
+    if (modal.style.display === 'flex') {
+        document.getElementById('apiKeyInput').value = getApiKey();
+        updateApiStatus();
+    }
+}
+
+// Gemini API 호출 — responseMimeType: application/json 으로 순수 JSON 강제
+async function callGeminiJSON(prompt) {
+    var key = getApiKey();
+    if (!key) { toggleApiModal(); throw new Error('API Key 필요'); }
+    var r = await fetch(
+        'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=' + key,
+        { method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({
+              contents:[{parts:[{text:prompt}]}],
+              generationConfig:{ responseMimeType:'application/json' }
+          })
+        }
+    );
+    if (!r.ok) throw new Error('API 오류: ' + r.status);
+    var d = await r.json();
+    var t = d.candidates[0].content.parts[0].text;
+    t = t.replace(/```json\s*/gi,'').replace(/```\s*/g,'').trim();
+    var depth=0,start=-1,end=-1;
+    for(var i=0;i<t.length;i++){
+        if(t[i]==='{'){if(depth===0)start=i;depth++;}
+        else if(t[i]==='}'){depth--;if(depth===0&&start!==-1){end=i;break;}}
+    }
+    if(start===-1||end===-1) throw new Error('JSON 응답을 찾을 수 없습니다');
+    t=t.substring(start,end+1);
+    t=t.replace(/[\x00-\x1F\x7F]/g,function(c){return c==='\n'||c==='\r'||c==='\t'?' ':'';});
+    return JSON.parse(t);
+}
+
+// ══════════ QUIZ GENERATION ══════════
+var quizTypeHistory = [];
+var currentQuizData = null;
+
+async function generateQuiz(type) {
+    var area = document.getElementById('quizArea');
+    var scoped = getScopedTopics();
+    if (scoped.length === 0) { alert('선택한 범위에 토픽이 없습니다.'); return; }
+
+    // 중복 방지 랜덤 토픽 선택
+    var available = scoped.filter(function(t){ return !usedTopicIds.has(t.id); });
+    if (available.length === 0) { usedTopicIds.clear(); available = scoped; }
+    var topic = available[Math.floor(Math.random() * available.length)];
+    usedTopicIds.add(topic.id);
+    var cfg = SUBJECT_CONFIG[topic.subject] || SUBJECT_CONFIG.sw;
+
+    // 퀴즈 유형 결정: 버튼 지정 우선, 같은 유형 3연속 방지
+    var isMC;
+    if (type === 'multiple') { isMC = true; }
+    else if (type === 'short') { isMC = false; }
+    else {
+        var recent = quizTypeHistory.slice(-2);
+        if (recent.length >= 2 && recent[0] === recent[1]) { isMC = !recent[1]; }
+        else { isMC = Math.random() > 0.5; }
+    }
+    quizTypeHistory.push(isMC);
+
+    var topicName = (topic.shortTitle || topic.name.split('\n')[0]);
+    area.innerHTML = '<div class="text-center py-12"><div class="spinner mb-3"></div>'
+        + '<p class="text-sm text-gray-500">AI가 문제를 생성하고 있습니다...</p>'
+        + '<p class="text-xs text-gray-400 mt-1">' + topicName + '</p></div>';
+
+    // 간결한 프롬프트 (골든 샘플 패턴: category + keywords 스타일)
+    var quizType = isMC ? '객관식 (4지선다)' : '단답형';
+    var format = isMC
+        ? '{"question":"문제","options":["A. 선택지1","B. 선택지2","C. 선택지3","D. 선택지4"],"correctIndex":0,"explanation":"해설"}'
+        : '{"question":"문제","correctAnswer":"정답","explanation":"해설"}';
+    var prompt = '다음 토픽에 대한 ' + quizType + ' 퀴즈 1문제를 만드세요.\n'
+        + '토픽: ' + topicName + '\n'
+        + '출제의도: ' + (topic.intent || '') + '\n'
+        + '규칙: 반드시 위 토픽에 직접 관련된 정보관리기술사 수준 문제를 출제하세요.\n'
+        + 'JSON 형식으로 응답: ' + format;
+
+    try {
+        currentQuizData = await callGeminiJSON(prompt);
+        if (isMC) { renderMultipleChoice(currentQuizData, topic, cfg); }
+        else { renderShortAnswer(currentQuizData, topic, cfg); }
+    } catch(err) {
+        area.innerHTML = '<div class="border-2 border-dashed border-red-200 rounded-xl p-8 text-center">'
+            + '<div class="text-2xl mb-2">⚠️</div>'
+            + '<p class="text-sm text-red-600 font-medium">' + err.message + '</p>'
+            + '<p class="text-xs text-gray-400 mt-2">API Key를 확인하거나 다시 시도해주세요</p></div>';
+    }
+}
+
+function renderMultipleChoice(q, topic, cfg) {
+    var area = document.getElementById('quizArea');
+    var topicName = (topic.shortTitle || topic.name.split('\n')[0]);
+    var letters = ['A','B','C','D'];
+    var optHtml = '';
+    (q.options || []).forEach(function(opt, i) {
+        optHtml += '<div class="quiz-option flex items-center gap-3" onclick="checkMultipleChoice(' + i + ')">'
+            + '<span class="w-8 h-8 flex items-center justify-center bg-gray-100 rounded-full text-sm font-bold text-gray-500 flex-shrink-0">' + letters[i] + '</span>'
+            + '<span class="text-sm text-gray-700">' + opt.replace(/^[A-D]\.\s*/, '') + '</span></div>';
+    });
+    area.innerHTML = '<div class="flex items-center gap-2 mb-4">'
+        + '<span class="bg-indigo-100 text-indigo-700 text-xs font-bold px-2.5 py-1 rounded-full">Q</span>'
+        + '<span class="subject-tag ' + cfg.class + '">' + cfg.label + '</span>'
+        + '<span class="text-xs text-gray-400">객관식 · ' + topicName + '</span></div>'
+        + '<p class="text-gray-900 font-medium mb-5">' + q.question + '</p>'
+        + '<div class="space-y-3" id="optionList">' + optHtml + '</div>'
+        + '<div id="quizFeedback" class="hidden mt-4 p-4 rounded-xl border-l-4"></div>';
+}
+
+function checkMultipleChoice(idx) {
+    var correct = idx === currentQuizData.correctIndex;
+    document.querySelectorAll('.quiz-option').forEach(function(b, i) {
+        b.style.pointerEvents = 'none';
+        b.style.opacity = '0.7';
+        if (i === currentQuizData.correctIndex) {
+            b.classList.add('correct');
+            b.querySelector('span:first-child').style.background = '#dcfce7';
+            b.querySelector('span:first-child').style.color = '#15803d';
+        }
+        if (i === idx && !correct) {
+            b.classList.add('wrong');
+            b.querySelector('span:first-child').style.background = '#fee2e2';
+            b.querySelector('span:first-child').style.color = '#b91c1c';
+        }
+    });
+    showQuizFeedback(correct, currentQuizData.options[currentQuizData.correctIndex], currentQuizData.explanation);
+    quizTotal++;
+    if (correct) quizCorrect++;
+    updateQuizScore();
+}
+
+function renderShortAnswer(q, topic, cfg) {
+    var area = document.getElementById('quizArea');
+    var topicName = (topic.shortTitle || topic.name.split('\n')[0]);
+    area.innerHTML = '<div class="flex items-center gap-2 mb-4">'
+        + '<span class="bg-indigo-100 text-indigo-700 text-xs font-bold px-2.5 py-1 rounded-full">Q</span>'
+        + '<span class="subject-tag ' + cfg.class + '">' + cfg.label + '</span>'
+        + '<span class="text-xs text-gray-400">단답형 · ' + topicName + '</span></div>'
+        + '<p class="text-gray-900 font-medium mb-4">' + q.question + '</p>'
+        + '<div class="flex gap-2 mb-4">'
+        + "<input type=\"text\" id=\"shortInput\" placeholder=\"정답을 입력하세요...\" class=\"flex-1 border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400\" onkeydown=\"if(event.key==='Enter')checkShortAnswer()\">"
+        + '<button onclick="checkShortAnswer()" id="btnShortSubmit" class="bg-indigo-600 text-white text-sm font-medium px-5 rounded-xl hover:bg-indigo-700 transition">확인</button>'
+        + '<button onclick="showShortAnswer()" class="bg-gray-100 text-gray-600 text-sm font-medium px-4 rounded-xl hover:bg-gray-200 transition">정답보기</button></div>'
+        + '<div id="quizFeedback" class="hidden mt-4 p-4 rounded-xl border-l-4"></div>';
+}
+
+// 단답형 AI 채점 (골든 샘플 패턴) + 로컬 폴백
+async function checkShortAnswer() {
+    var ans = document.getElementById('shortInput').value.trim();
+    if (!ans) return;
+    var btn = document.getElementById('btnShortSubmit');
+    btn.disabled = true; btn.textContent = '채점 중...';
+    document.getElementById('shortInput').disabled = true;
+    try {
+        var gradingPrompt = '당신은 정보관리기술사 시험 채점관입니다. 아래 문제에 대해 사용자의 답안이 정답으로 인정될 수 있는지 판정하세요.\n\n'
+            + '문제: ' + currentQuizData.question + '\n'
+            + '모범 정답: ' + currentQuizData.correctAnswer + '\n'
+            + '사용자 답안: ' + ans + '\n\n'
+            + '판정 기준: 핵심 의미가 동일하면 정답, 약어/풀네임 모두 인정, 영어/한글 혼용 인정, 띄어쓰기/조사 차이 무시, 의미가 명확히 다르면 오답\n\n'
+            + 'Output JSON: {"correct":true또는false,"reason":"판정 이유"}';
+        var result = await callGeminiJSON(gradingPrompt);
+        showQuizFeedback(result.correct, currentQuizData.correctAnswer, currentQuizData.explanation + (result.reason ? ' (AI: ' + result.reason + ')' : ''));
+        quizTotal++;
+        if (result.correct) quizCorrect++;
+    } catch(e) {
+        // 로컬 폴백: 단순 문자열 비교
+        var normalize = function(s){ return s.replace(/\s/g,'').toLowerCase(); };
+        var isCorrect = normalize(currentQuizData.correctAnswer).includes(normalize(ans)) || normalize(ans).includes(normalize(currentQuizData.correctAnswer));
+        showQuizFeedback(isCorrect, currentQuizData.correctAnswer, currentQuizData.explanation + ' (로컬 채점)');
+        quizTotal++;
+        if (isCorrect) quizCorrect++;
+    }
+    btn.disabled = false; btn.textContent = '확인';
+    updateQuizScore();
+}
+
+function showShortAnswer() {
+    document.getElementById('shortInput').disabled = true;
+    showQuizFeedback(false, currentQuizData.correctAnswer, currentQuizData.explanation);
+    quizTotal++;
+    updateQuizScore();
+}
+
+// 통합 피드백 표시 (골든 샘플 패턴)
+function showQuizFeedback(correct, answer, explanation) {
+    var fb = document.getElementById('quizFeedback');
+    fb.classList.remove('hidden','border-green-500','bg-green-50','border-red-500','bg-red-50');
+    if (correct) {
+        fb.classList.add('border-green-500','bg-green-50');
+        fb.innerHTML = '<p class="font-bold text-green-700 mb-1">✅ 정답입니다!</p><p class="text-sm text-green-600">' + explanation + '</p>';
+    } else {
+        fb.classList.add('border-red-500','bg-red-50');
+        fb.innerHTML = '<p class="font-bold text-red-700 mb-1">❌ 오답입니다.</p><p class="text-sm text-red-700 mb-1">정답: ' + answer + '</p><p class="text-sm text-red-600">' + explanation + '</p>';
+    }
+}
+
+function updateQuizScore() {
+    var hist = document.getElementById('quizHistory');
+    hist.style.display = '';
+    document.getElementById('quizScore').textContent = quizCorrect + ' / ' + quizTotal + ' 정답 (' + (quizTotal > 0 ? Math.round(quizCorrect/quizTotal*100) : 0) + '%)';
+}
+
+</script>
+
+</body>
+</html>

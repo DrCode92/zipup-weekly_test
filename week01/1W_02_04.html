@@ -1,0 +1,1119 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>클라우드 서비스 모델(IaaS/PaaS/SaaS) 비교, FinOps 라이프사이클, 소버린 클라우드</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+        body { font-family: 'Noto Sans KR', sans-serif; background-color: #f5f5f4; color: #1f2937; }
+        .chart-container { position: relative; width: 100%; max-width: 600px; margin-left: auto; margin-right: auto; height: 350px; max-height: 400px; }
+        .nav-item.active { border-bottom: 2px solid #4f46e5; color: #4f46e5; font-weight: 700; }
+        .tech-block { transition: all 0.3s ease; cursor: pointer; }
+        .tech-block:hover { transform: translateY(-2px); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        .tech-block.selected { ring: 2px; ring-color: #4f46e5; background-color: #eef2ff; border-color: #4f46e5; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        #chat-sidebar { transition: transform 0.3s ease-in-out; }
+        #chat-sidebar.closed { transform: translateX(100%); }
+        #chat-sidebar.open { transform: translateX(0); }
+        .typing-indicator span { display: inline-block; width: 6px; height: 6px; background-color: #4f46e5; border-radius: 50%; animation: typing 1.4s infinite ease-in-out both; margin: 0 2px; }
+        .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+        .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes typing { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+        .prose h1,.prose h2,.prose h3 { font-weight: bold; margin-top: 1em; margin-bottom: 0.5em; color: #312e81; font-size: 1.1em; }
+        .prose ul { list-style-type: disc; padding-left: 1.5em; margin-bottom: 1em; }
+        .prose strong { color: #4338ca; }
+        .prose p { margin-bottom: 0.8em; }
+        .chat-msg { border-radius: 12px; padding: 10px 14px; margin-bottom: 10px; max-width: 85%; font-size: 0.95rem; }
+        .chat-msg.user { background-color: #4f46e5; color: white; align-self: flex-end; margin-left: auto; }
+        .chat-msg.ai { background-color: #f3f4f6; color: #1f2937; align-self: flex-start; border: 1px solid #e5e7eb; }
+        .textbook-content h3 { font-size: 1.25rem; font-weight: 700; color: #1e3a8a; margin-top: 1.5rem; margin-bottom: 0.75rem; border-left: 4px solid #4f46e5; padding-left: 0.75rem; }
+        .textbook-content h4 { font-size: 1.1rem; font-weight: 600; color: #374151; margin-top: 1rem; margin-bottom: 0.5rem; }
+        .textbook-content p { margin-bottom: 1rem; line-height: 1.8; color: #4b5563; }
+        .textbook-content ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 1rem; color: #4b5563; }
+        .textbook-content li { margin-bottom: 0.5rem; line-height: 1.7; }
+        .textbook-content table { width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; font-size: 0.95rem; }
+        .textbook-content th,.textbook-content td { border: 1px solid #e5e7eb; padding: 0.75rem; text-align: left; }
+        .textbook-content th { background-color: #f9fafb; font-weight: 600; color: #1f2937; }
+        .textbook-content .highlight { background-color: #eef2ff; color: #4338ca; font-weight: 600; padding: 0 4px; border-radius: 4px; }
+        .textbook-content pre { background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem; overflow-x: auto; margin-bottom: 1rem; font-size: 0.85rem; line-height: 1.6; }
+        .textbook-content code { font-family: 'Courier New', monospace; }
+        .def-box { background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%); border-left: 4px solid #4f46e5; border-radius: 8px; padding: 1.25rem; margin-bottom: 1rem; }
+        .def-box p { color: #312e81; font-weight: 500; margin: 0; line-height: 1.8; }
+        .insight-box { background-color: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 1rem; margin: 1rem 0; }
+        .insight-box::before { content: '💡'; margin-right: 0.5rem; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
+    </style>
+</head><body class="bg-stone-100 min-h-screen flex flex-col overflow-x-hidden">
+    <header class="bg-white shadow-sm sticky top-0 z-40">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center pt-3 pb-1">
+                <div class="flex flex-col justify-center min-w-0">
+                    <span class="text-[10px] sm:text-xs text-indigo-600 font-bold uppercase tracking-wider leading-tight">KPC 정보관리기술사 ZIP-UP 심화반</span>
+                    <div class="flex items-center gap-2">
+                        <span class="text-lg sm:text-xl font-bold text-gray-900 tracking-tight truncate">클라우드 서비스 모델(IaaS/PaaS/SaaS) 비교, FinOps 라이프사이클, 소버린 클라우드</span>
+                        <span class="text-[10px] sm:text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-bold flex-shrink-0">2026</span>
+                    </div>
+                </div>
+            </div>
+            <nav class="flex space-x-1 sm:space-x-4 overflow-x-auto no-scrollbar pb-1 items-center">
+                <button onclick="navTo('overview')" id="nav-overview" class="nav-item active px-1 pt-1 pb-2 text-xs sm:text-sm font-medium text-gray-900 whitespace-nowrap">개요 및 개념</button>
+                <button onclick="navTo('responsibility')" id="nav-responsibility" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium text-gray-500 hover:text-gray-700 whitespace-nowrap">책임 공유 모델</button>
+                <button onclick="navTo('finops')" id="nav-finops" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium text-gray-500 hover:text-gray-700 whitespace-nowrap">FinOps 라이프사이클</button>
+                <button onclick="navTo('sovereign')" id="nav-sovereign" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium text-gray-500 hover:text-gray-700 whitespace-nowrap">소버린 클라우드</button>
+                <button onclick="navTo('textbook')" id="nav-textbook" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium text-gray-500 hover:text-gray-700 whitespace-nowrap">원문 학습</button>
+                <button onclick="navTo('script')" id="nav-script" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium text-amber-600 hover:text-amber-800 whitespace-nowrap hidden">🎬 강의 스크립트</button>
+                <button onclick="navTo('quiz')" id="nav-quiz" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium text-indigo-600 hover:text-indigo-800 whitespace-nowrap">퀴즈 &amp; 암기</button>
+                <span class="w-px h-4 bg-gray-300 flex-shrink-0"></span>
+                <button onclick="toggleSettings()" class="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium text-indigo-600 hover:bg-indigo-50 border border-indigo-200 hover:border-indigo-400 transition-all whitespace-nowrap flex-shrink-0" title="API Key 설정">&#128273; API</button>
+            </nav>
+        </div>
+    </header>
+    <main class="flex-grow max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12 pb-24">
+        <!-- ==================== SECTION: 개요 및 개념 ==================== -->
+        <section id="overview" class="space-y-6 animate-fade-in">
+            <div class="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+                <h2 class="text-2xl font-bold text-gray-900 mb-6">개요 및 개념</h2>
+
+                <div class="def-box mb-6">
+                    <p><strong>클라우드 서비스 모델(IaaS/PaaS/SaaS)</strong>은 NIST SP 800-145에서 정의한 3대 서비스 모델로, 인프라·플랫폼·소프트웨어 계층별로 CSP와 이용자 간 책임 경계가 상이한 <strong>책임 공유 모델(Shared Responsibility Model)</strong>에 기반한다.</p>
+                </div>
+                <div class="def-box mb-6">
+                    <p><strong>FinOps(Financial Operations)</strong>란 엔지니어링, 재무, 비즈니스 팀이 협업하여 클라우드 비용의 가시성·최적화·운영을 체계적으로 수행하는 <strong>클라우드 재무 관리 프레임워크</strong>이다. (FinOps Foundation, 2019)</p>
+                </div>
+                <div class="def-box mb-6">
+                    <p><strong>소버린 클라우드(Sovereign Cloud)</strong>란 국가의 <strong>데이터 주권(Data Sovereignty)</strong>을 보장하기 위해 특정 관할권 내에서 데이터가 저장·처리·관리되며, 해당 국가의 법률과 규제를 준수하는 클라우드 인프라이다.</p>
+                </div>
+
+                <p class="text-gray-600 leading-relaxed mb-6">
+                    이 토픽은 <strong>"기술 이해 → 비용 최적화 → 거버넌스 확보"</strong>의 논리적 흐름을 따릅니다. 클라우드 서비스 모델의 책임 분리를 이해한 후, FinOps로 비용 효율화를 다루고, 소버린 클라우드로 데이터 주권이라는 거버넌스 관점으로 확장합니다. 2024년 Gartner 보고서에 따르면 글로벌 퍼블릭 클라우드 지출은 6,790억 달러에 달하며, Flexera에 따르면 기업 클라우드 지출의 28%가 낭비되고 있습니다.
+                </p>
+
+                <div class="insight-box">
+                    <span class="text-gray-800 font-medium">이 문제는 3개의 소문제가 논리적으로 연결됩니다. 소문제 1(서비스 모델 비교)에서 기본기를, 소문제 2(FinOps)에서 비용 관리를, 소문제 3(소버린 클라우드)에서 거버넌스를 묻습니다. 서론에서 이 흐름을 예고하면 채점관에게 강한 인상을 줄 수 있습니다.</span>
+                </div>
+            </div>
+
+            <!-- 배경/맥락 카드 -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-white rounded-xl shadow-sm p-6 border-l-4 border-indigo-500">
+                    <h3 class="font-bold text-indigo-900 mb-3">☁️ 서비스 모델</h3>
+                    <p class="text-sm text-gray-600 leading-relaxed">IaaS는 <strong>캠핑</strong>(모든 것을 직접), PaaS는 <strong>글램핑</strong>(앱만 집중), SaaS는 <strong>호텔</strong>(쉬기만)에 비유됩니다. 데이터는 어떤 모델이든 항상 이용자 책임입니다.</p>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm p-6 border-l-4 border-green-500">
+                    <h3 class="font-bold text-green-900 mb-3">💰 FinOps</h3>
+                    <p class="text-sm text-gray-600 leading-relaxed"><strong>Inform → Optimize → Operate</strong> 3단계 반복 라이프사이클. "인옵옵"으로 암기. 태깅 기반 가시성 → RI/SP 요율 최적화 → 정책 자동화 순서로 성숙도를 높입니다.</p>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm p-6 border-l-4 border-purple-500">
+                    <h3 class="font-bold text-purple-900 mb-3">🛡️ 소버린 클라우드</h3>
+                    <p class="text-sm text-gray-600 leading-relaxed">미국 CLOUD Act(2018)에 따른 역외 데이터 접근 우려, EU Gaia-X, 한국 CSAP 등 각국이 <strong>데이터 주권</strong> 확보에 적극 나서고 있습니다. 5대 기술 요건: <strong>"데데운소암"</strong></p>
+                </div>
+            </div>
+
+            <!-- 클라우드 지출 차트 -->
+            <div class="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+                <h3 class="text-lg font-bold text-gray-900 mb-4">2024 글로벌 퍼블릭 클라우드 지출 현황 (Gartner)</h3>
+                <div class="chart-container">
+                    <canvas id="cloudSpendChart"></canvas>
+                </div>
+                <p class="text-xs text-gray-400 text-center mt-2">* 출처: Gartner 2024 보고서 기준, 전체 6,790억 달러</p>
+            </div>
+        </section>
+        <!-- ==================== SECTION: 책임 공유 모델 ==================== -->
+        <section id="responsibility" class="hidden space-y-6">
+            <div class="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+                <h2 class="text-2xl font-bold text-gray-900 mb-2">책임 공유 모델 관점의 서비스 모델 비교</h2>
+                <p class="text-gray-500 mb-6">CSP와 이용자 간 보안·운영 책임의 분담 구조</p>
+
+                <!-- 책임 공유 모델 시각화 (ASCII → HTML/CSS) -->
+                <div class="mb-8">
+                    <h3 class="text-lg font-bold text-gray-900 mb-4">책임 공유 모델 계층 구조</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm border-collapse">
+                            <thead>
+                                <tr class="bg-gray-50">
+                                    <th class="border border-gray-200 p-3 text-left font-bold w-1/4">관리 영역</th>
+                                    <th class="border border-gray-200 p-3 text-center font-bold text-indigo-700">IaaS</th>
+                                    <th class="border border-gray-200 p-3 text-center font-bold text-green-700">PaaS</th>
+                                    <th class="border border-gray-200 p-3 text-center font-bold text-amber-700">SaaS</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td class="border border-gray-200 p-3 font-semibold">데이터</td><td class="border border-gray-200 p-3 text-center bg-blue-50 text-blue-700 font-bold">■ 이용자</td><td class="border border-gray-200 p-3 text-center bg-blue-50 text-blue-700 font-bold">■ 이용자</td><td class="border border-gray-200 p-3 text-center bg-blue-50 text-blue-700 font-bold">■ 이용자</td></tr>
+                                <tr class="bg-gray-50"><td class="border border-gray-200 p-3 font-semibold">애플리케이션</td><td class="border border-gray-200 p-3 text-center bg-blue-50 text-blue-700 font-bold">■ 이용자</td><td class="border border-gray-200 p-3 text-center bg-blue-50 text-blue-700 font-bold">■ 이용자</td><td class="border border-gray-200 p-3 text-center bg-orange-50 text-orange-700 font-bold">□ CSP</td></tr>
+                                <tr><td class="border border-gray-200 p-3 font-semibold">런타임</td><td class="border border-gray-200 p-3 text-center bg-blue-50 text-blue-700 font-bold">■ 이용자</td><td class="border border-gray-200 p-3 text-center bg-orange-50 text-orange-700 font-bold">□ CSP</td><td class="border border-gray-200 p-3 text-center bg-orange-50 text-orange-700 font-bold">□ CSP</td></tr>
+                                <tr class="bg-gray-50"><td class="border border-gray-200 p-3 font-semibold">미들웨어</td><td class="border border-gray-200 p-3 text-center bg-blue-50 text-blue-700 font-bold">■ 이용자</td><td class="border border-gray-200 p-3 text-center bg-orange-50 text-orange-700 font-bold">□ CSP</td><td class="border border-gray-200 p-3 text-center bg-orange-50 text-orange-700 font-bold">□ CSP</td></tr>
+                                <tr><td class="border border-gray-200 p-3 font-semibold">OS</td><td class="border border-gray-200 p-3 text-center bg-blue-50 text-blue-700 font-bold">■ 이용자</td><td class="border border-gray-200 p-3 text-center bg-orange-50 text-orange-700 font-bold">□ CSP</td><td class="border border-gray-200 p-3 text-center bg-orange-50 text-orange-700 font-bold">□ CSP</td></tr>
+                                <tr class="bg-gray-50"><td class="border border-gray-200 p-3 font-semibold">가상화</td><td class="border border-gray-200 p-3 text-center bg-orange-50 text-orange-700 font-bold">□ CSP</td><td class="border border-gray-200 p-3 text-center bg-orange-50 text-orange-700 font-bold">□ CSP</td><td class="border border-gray-200 p-3 text-center bg-orange-50 text-orange-700 font-bold">□ CSP</td></tr>
+                                <tr><td class="border border-gray-200 p-3 font-semibold">서버/스토리지</td><td class="border border-gray-200 p-3 text-center bg-orange-50 text-orange-700 font-bold">□ CSP</td><td class="border border-gray-200 p-3 text-center bg-orange-50 text-orange-700 font-bold">□ CSP</td><td class="border border-gray-200 p-3 text-center bg-orange-50 text-orange-700 font-bold">□ CSP</td></tr>
+                                <tr class="bg-gray-50"><td class="border border-gray-200 p-3 font-semibold">네트워크</td><td class="border border-gray-200 p-3 text-center bg-orange-50 text-orange-700 font-bold">□ CSP</td><td class="border border-gray-200 p-3 text-center bg-orange-50 text-orange-700 font-bold">□ CSP</td><td class="border border-gray-200 p-3 text-center bg-orange-50 text-orange-700 font-bold">□ CSP</td></tr>
+                                <tr><td class="border border-gray-200 p-3 font-semibold">물리적 보안</td><td class="border border-gray-200 p-3 text-center bg-orange-50 text-orange-700 font-bold">□ CSP</td><td class="border border-gray-200 p-3 text-center bg-orange-50 text-orange-700 font-bold">□ CSP</td><td class="border border-gray-200 p-3 text-center bg-orange-50 text-orange-700 font-bold">□ CSP</td></tr>
+                            </tbody>
+                            <tfoot>
+                                <tr class="bg-indigo-50"><td class="border border-gray-200 p-3 font-bold">이용자 책임</td><td class="border border-gray-200 p-3 text-center font-bold text-red-600">높음</td><td class="border border-gray-200 p-3 text-center font-bold text-amber-600">중간</td><td class="border border-gray-200 p-3 text-center font-bold text-green-600">낮음</td></tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-2">■ = 이용자 책임, □ = CSP 책임 | AWS: "Security OF the Cloud" vs "Security IN the Cloud"</p>
+                </div>
+
+                <!-- 체계적 비교표 -->
+                <h3 class="text-lg font-bold text-gray-900 mb-4">서비스 모델별 체계적 비교</h3>
+                <div class="overflow-x-auto mb-6">
+                    <table class="w-full text-sm border-collapse">
+                        <thead>
+                            <tr class="bg-gray-50">
+                                <th class="border border-gray-200 p-3 text-left font-bold">비교 기준</th>
+                                <th class="border border-gray-200 p-3 text-center font-bold text-indigo-700">IaaS</th>
+                                <th class="border border-gray-200 p-3 text-center font-bold text-green-700">PaaS</th>
+                                <th class="border border-gray-200 p-3 text-center font-bold text-amber-700">SaaS</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td class="border border-gray-200 p-3 font-semibold">추상화 수준</td><td class="border border-gray-200 p-3 text-center">인프라(가상 HW)</td><td class="border border-gray-200 p-3 text-center">플랫폼(개발 환경)</td><td class="border border-gray-200 p-3 text-center">소프트웨어(완성 앱)</td></tr>
+                            <tr class="bg-gray-50"><td class="border border-gray-200 p-3 font-semibold">이용자 관리 범위</td><td class="border border-gray-200 p-3 text-center">OS ~ 애플리케이션</td><td class="border border-gray-200 p-3 text-center">앱 ~ 데이터</td><td class="border border-gray-200 p-3 text-center">데이터, 접근 제어</td></tr>
+                            <tr><td class="border border-gray-200 p-3 font-semibold">유연성</td><td class="border border-gray-200 p-3 text-center">최고 (인프라 완전 제어)</td><td class="border border-gray-200 p-3 text-center">중간 (플랫폼 내 자유)</td><td class="border border-gray-200 p-3 text-center">최저 (설정 범위 내)</td></tr>
+                            <tr class="bg-gray-50"><td class="border border-gray-200 p-3 font-semibold">운영 부담</td><td class="border border-gray-200 p-3 text-center">높음</td><td class="border border-gray-200 p-3 text-center">중간</td><td class="border border-gray-200 p-3 text-center">낮음</td></tr>
+                            <tr><td class="border border-gray-200 p-3 font-semibold">Vendor Lock-in</td><td class="border border-gray-200 p-3 text-center">낮음</td><td class="border border-gray-200 p-3 text-center">높음 (API/SDK 종속)</td><td class="border border-gray-200 p-3 text-center">매우 높음</td></tr>
+                            <tr class="bg-gray-50"><td class="border border-gray-200 p-3 font-semibold">비용 구조</td><td class="border border-gray-200 p-3 text-center">시간/용량 기반</td><td class="border border-gray-200 p-3 text-center">요청/실행 기반</td><td class="border border-gray-200 p-3 text-center">사용자 수/구독</td></tr>
+                            <tr><td class="border border-gray-200 p-3 font-semibold">대표 서비스</td><td class="border border-gray-200 p-3 text-center">AWS EC2, Azure VM</td><td class="border border-gray-200 p-3 text-center">Beanstalk, Heroku</td><td class="border border-gray-200 p-3 text-center">M365, Salesforce</td></tr>
+                            <tr class="bg-gray-50"><td class="border border-gray-200 p-3 font-semibold">적합 대상</td><td class="border border-gray-200 p-3 text-center">인프라 전문 팀</td><td class="border border-gray-200 p-3 text-center">개발 팀, 신규 서비스</td><td class="border border-gray-200 p-3 text-center">비IT 부서, 범용 업무</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="insight-box">
+                    <span class="text-gray-800 font-medium"><strong>XaaS 트렌드:</strong> IaaS/PaaS/SaaS를 넘어 FaaS(Function), CaaS(Container), DBaaS 등 세분화된 서비스 모델이 등장하고 있다. 특히 FaaS(서버리스)는 PaaS의 진화형으로, 코드 실행 단위까지 추상화를 끌어올렸다.</span>
+                </div>
+            </div>
+
+            <!-- 클라우드 성숙도 모델 -->
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <h3 class="font-bold text-gray-900 mb-4">클라우드 성숙도 모델 (Gartner)</h3>
+                <div class="flex flex-col md:flex-row items-center gap-4">
+                    <div class="flex-1 bg-indigo-50 rounded-lg p-4 text-center border-2 border-indigo-200">
+                        <div class="text-2xl mb-1">🏗️</div>
+                        <p class="font-bold text-indigo-800">Lift & Shift</p>
+                        <p class="text-xs text-indigo-600">IaaS 도입</p>
+                    </div>
+                    <div class="text-2xl text-gray-400 hidden md:block">→</div>
+                    <div class="flex-1 bg-green-50 rounded-lg p-4 text-center border-2 border-green-200">
+                        <div class="text-2xl mb-1">🔄</div>
+                        <p class="font-bold text-green-800">Re-platform</p>
+                        <p class="text-xs text-green-600">PaaS 전환</p>
+                    </div>
+                    <div class="text-2xl text-gray-400 hidden md:block">→</div>
+                    <div class="flex-1 bg-amber-50 rounded-lg p-4 text-center border-2 border-amber-200">
+                        <div class="text-2xl mb-1">📦</div>
+                        <p class="font-bold text-amber-800">Replace</p>
+                        <p class="text-xs text-amber-600">SaaS 표준화</p>
+                    </div>
+                    <div class="text-2xl text-gray-400 hidden md:block">→</div>
+                    <div class="flex-1 bg-purple-50 rounded-lg p-4 text-center border-2 border-purple-200">
+                        <div class="text-2xl mb-1">🚀</div>
+                        <p class="font-bold text-purple-800">Re-architect</p>
+                        <p class="text-xs text-purple-600">클라우드 네이티브</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!-- ==================== SECTION: FinOps 라이프사이클 ==================== -->
+        <section id="finops" class="hidden space-y-6">
+            <div class="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+                <h2 class="text-2xl font-bold text-gray-900 mb-2">FinOps 3단계 라이프사이클</h2>
+                <p class="text-gray-500 mb-6">Inform → Optimize → Operate 반복 순환 구조</p>
+
+                <div class="def-box mb-6">
+                    <p><strong>FinOps(Financial Operations)</strong>란, 엔지니어링, 재무, 비즈니스 팀이 협업하여 클라우드 비용의 가시성(Visibility), 최적화(Optimization), 운영(Operation)을 체계적으로 수행하는 클라우드 재무 관리 프레임워크이다. (FinOps Foundation, 2019)</p>
+                </div>
+
+                <div class="insight-box mb-6">
+                    <span class="text-gray-800 font-medium">FinOps 3단계 암기법: <strong class="text-indigo-700">"인옵옵"</strong> — Inform(정보화) → Optimize(최적화) → Operate(운영)</span>
+                </div>
+
+                <!-- FinOps 3단계 순환도 (HTML/CSS) -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                    <div class="tech-block bg-white border-2 border-indigo-500 rounded-xl p-5" onclick="toggleBlock(this)">
+                        <div class="text-center mb-3">
+                            <span class="inline-block w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center text-2xl mx-auto">👁️</span>
+                            <h3 class="font-bold text-indigo-900 mt-2">1단계: Inform</h3>
+                            <p class="text-xs text-indigo-600">"현황을 본다"</p>
+                        </div>
+                        <div class="detail-content text-sm text-gray-600 space-y-2 border-t pt-3">
+                            <p><strong>핵심:</strong> 클라우드 비용의 가시성(Visibility) 확보</p>
+                            <table class="w-full text-xs border-collapse mt-2">
+                                <tr><td class="border p-2 font-semibold bg-indigo-50">비용 할당</td><td class="border p-2">태깅 정책 수립, 부서별 비용 배분</td></tr>
+                                <tr><td class="border p-2 font-semibold bg-indigo-50">가시화</td><td class="border p-2">Showback/Chargeback 보고서 자동 생성</td></tr>
+                                <tr><td class="border p-2 font-semibold bg-indigo-50">벤치마킹</td><td class="border p-2">업종/규모별 클라우드 비용 비교</td></tr>
+                                <tr><td class="border p-2 font-semibold bg-indigo-50">예산 수립</td><td class="border p-2">임계값 알림 설정 (AWS Budgets 등)</td></tr>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="tech-block bg-white border-2 border-gray-200 rounded-xl p-5" onclick="toggleBlock(this)">
+                        <div class="text-center mb-3">
+                            <span class="inline-block w-12 h-12 rounded-full bg-green-100 flex items-center justify-center text-2xl mx-auto">⚡</span>
+                            <h3 class="font-bold text-green-900 mt-2">2단계: Optimize</h3>
+                            <p class="text-xs text-green-600">"낭비를 줄인다"</p>
+                        </div>
+                        <div class="detail-content hidden text-sm text-gray-600 space-y-2 border-t pt-3">
+                            <p><strong>핵심:</strong> 비용 대비 효율(Unit Economics) 극대화</p>
+                            <table class="w-full text-xs border-collapse mt-2">
+                                <tr><td class="border p-2 font-semibold bg-green-50">사용량 최적화</td><td class="border p-2">유휴 제거, Right-sizing (20~40% 절감)</td></tr>
+                                <tr><td class="border p-2 font-semibold bg-green-50">요율 최적화</td><td class="border p-2">RI, Savings Plan, Spot (30~72% 절감)</td></tr>
+                                <tr><td class="border p-2 font-semibold bg-green-50">아키텍처 최적화</td><td class="border p-2">서버리스, 컨테이너화 (40~60% 절감)</td></tr>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="tech-block bg-white border-2 border-gray-200 rounded-xl p-5" onclick="toggleBlock(this)">
+                        <div class="text-center mb-3">
+                            <span class="inline-block w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center text-2xl mx-auto">🏛️</span>
+                            <h3 class="font-bold text-amber-900 mt-2">3단계: Operate</h3>
+                            <p class="text-xs text-amber-600">"체계를 만든다"</p>
+                        </div>
+                        <div class="detail-content hidden text-sm text-gray-600 space-y-2 border-t pt-3">
+                            <p><strong>핵심:</strong> FinOps를 지속 가능한 조직 문화로 정착</p>
+                            <table class="w-full text-xs border-collapse mt-2">
+                                <tr><td class="border p-2 font-semibold bg-amber-50">정책 자동화</td><td class="border p-2">비용 임계값 자동 알림/차단</td></tr>
+                                <tr><td class="border p-2 font-semibold bg-amber-50">KPI 관리</td><td class="border p-2">단위 비용(Cost per Transaction) 추적</td></tr>
+                                <tr><td class="border p-2 font-semibold bg-amber-50">거버넌스</td><td class="border p-2">FinOps 위원회 정기 리뷰 제도화</td></tr>
+                                <tr><td class="border p-2 font-semibold bg-amber-50">지속적 개선</td><td class="border p-2">성숙도 평가(Crawl-Walk-Run)</td></tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FinOps 6대 원칙 -->
+                <h3 class="text-lg font-bold text-gray-900 mb-4">FinOps 6대 핵심 원칙</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
+                    <div class="bg-indigo-50 rounded-lg p-4 border border-indigo-100"><span class="font-bold text-indigo-800">① Teams need to collaborate</span><br><span class="text-sm text-gray-600">엔지니어링, 재무, 비즈니스 팀 간 협업</span></div>
+                    <div class="bg-indigo-50 rounded-lg p-4 border border-indigo-100"><span class="font-bold text-indigo-800">② Everyone takes ownership</span><br><span class="text-sm text-gray-600">클라우드 비용에 대한 분산된 의사결정</span></div>
+                    <div class="bg-indigo-50 rounded-lg p-4 border border-indigo-100"><span class="font-bold text-indigo-800">③ A centralized team drives FinOps</span><br><span class="text-sm text-gray-600">FinOps 팀이 중앙에서 베스트 프랙티스 확산</span></div>
+                    <div class="bg-indigo-50 rounded-lg p-4 border border-indigo-100"><span class="font-bold text-indigo-800">④ Reports should be accessible</span><br><span class="text-sm text-gray-600">실시간 비용 보고서에 모든 이해관계자 접근</span></div>
+                    <div class="bg-indigo-50 rounded-lg p-4 border border-indigo-100"><span class="font-bold text-indigo-800">⑤ Decisions driven by business value</span><br><span class="text-sm text-gray-600">비용이 아닌 비즈니스 가치 기반 의사결정</span></div>
+                    <div class="bg-indigo-50 rounded-lg p-4 border border-indigo-100"><span class="font-bold text-indigo-800">⑥ Variable cost model</span><br><span class="text-sm text-gray-600">클라우드의 가변 비용 모델을 적극 활용</span></div>
+                </div>
+
+                <!-- FinOps 성숙도 모델 -->
+                <h3 class="text-lg font-bold text-gray-900 mb-4">FinOps 성숙도 모델 (Crawl-Walk-Run)</h3>
+                <div class="overflow-x-auto mb-6">
+                    <table class="w-full text-sm border-collapse">
+                        <thead><tr class="bg-gray-50"><th class="border border-gray-200 p-3 font-bold">성숙도 단계</th><th class="border border-gray-200 p-3 font-bold">특징</th><th class="border border-gray-200 p-3 font-bold">주요 활동</th></tr></thead>
+                        <tbody>
+                            <tr><td class="border border-gray-200 p-3 font-semibold text-indigo-700">🐛 Crawl (기초)</td><td class="border border-gray-200 p-3">반응적 관리, 기본 가시성 확보</td><td class="border border-gray-200 p-3">태깅 정책 수립, 월별 비용 보고</td></tr>
+                            <tr class="bg-gray-50"><td class="border border-gray-200 p-3 font-semibold text-green-700">🚶 Walk (발전)</td><td class="border border-gray-200 p-3">사전적 최적화, KPI 기반 관리</td><td class="border border-gray-200 p-3">RI/SP 구매 자동화, 부서별 Chargeback</td></tr>
+                            <tr><td class="border border-gray-200 p-3 font-semibold text-purple-700">🏃 Run (최적화)</td><td class="border border-gray-200 p-3">자동화된 거버넌스, 비즈니스 가치 연계</td><td class="border border-gray-200 p-3">실시간 이상 탐지, 비용 예측 모델</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- FinOps 절감 효과 차트 -->
+            <div class="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+                <h3 class="text-lg font-bold text-gray-900 mb-4">최적화 유형별 절감 효과</h3>
+                <div class="chart-container">
+                    <canvas id="finopsSavingsChart"></canvas>
+                </div>
+            </div>
+
+            <!-- 실무 사례 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-white rounded-xl shadow-sm p-6 border-l-4 border-green-500">
+                    <h3 class="font-bold text-green-900 mb-3">🏢 네이버 클라우드 FinOps (2023)</h3>
+                    <p class="text-sm text-gray-600 leading-relaxed">자체 NCP와 외부 CSP 병행 사용으로 비용 45% 증가 → FinOps 팀 조직 → 태깅 기반 할당 → RI 최적화 → 자동 스케일링 적용. <strong class="text-green-700">6개월 내 23% 절감</strong> 달성.</p>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm p-6 border-l-4 border-indigo-500">
+                    <h3 class="font-bold text-indigo-900 mb-3">🏦 국민은행 차세대 시스템 (2024)</h3>
+                    <p class="text-sm text-gray-600 leading-relaxed">클라우드 전환 과정에서 FinOps 도입 → 개발/스테이징 환경 비업무시간 Auto Shutdown, S3 Intelligent-Tiering 적용. <strong class="text-indigo-700">연간 약 180억 원 절감</strong>.</p>
+                </div>
+            </div>
+        </section>
+        <!-- ==================== SECTION: 소버린 클라우드 ==================== -->
+        <section id="sovereign" class="hidden space-y-6">
+            <div class="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+                <h2 class="text-2xl font-bold text-gray-900 mb-2">소버린 클라우드(Sovereign Cloud)</h2>
+                <p class="text-gray-500 mb-6">국가 데이터 주권 보장을 위한 클라우드 인프라</p>
+
+                <div class="def-box mb-6">
+                    <p><strong>소버린 클라우드</strong>란, 국가의 데이터 주권(Data Sovereignty)을 보장하기 위해 특정 관할권 내에서 데이터가 저장·처리·관리되며, 해당 국가의 법률과 규제를 준수하는 클라우드 인프라이다.</p>
+                </div>
+
+                <div class="insight-box mb-6">
+                    <span class="text-gray-800 font-medium">5대 기술 요건 암기법: <strong class="text-indigo-700">"데데운소암"</strong> — 데이터 레지던시, 데이터 주권, 운영 주권, 소프트웨어 주권, 암호화 주권</span>
+                </div>
+
+                <!-- 등장 배경 -->
+                <h3 class="text-lg font-bold text-gray-900 mb-4">등장 배경</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-8">
+                    <div class="bg-red-50 rounded-lg p-4 border border-red-100">
+                        <span class="font-bold text-red-800">⚖️ CLOUD Act (2018)</span>
+                        <p class="text-sm text-gray-600 mt-1">미국 CSP는 해외 서버 데이터도 미 정부 요청 시 제출 의무 → 역외 데이터 접근 우려</p>
+                    </div>
+                    <div class="bg-blue-50 rounded-lg p-4 border border-blue-100">
+                        <span class="font-bold text-blue-800">🇪🇺 데이터 주권 규제 강화</span>
+                        <p class="text-sm text-gray-600 mt-1">EU GDPR, 한국 데이터 3법, 중국 PIPL 등 각국 데이터 현지화 요구</p>
+                    </div>
+                    <div class="bg-amber-50 rounded-lg p-4 border border-amber-100">
+                        <span class="font-bold text-amber-800">🌐 공급망 리스크</span>
+                        <p class="text-sm text-gray-600 mt-1">지정학적 갈등으로 인한 클라우드 서비스 중단 우려 (러시아 AWS 중단 사례)</p>
+                    </div>
+                    <div class="bg-purple-50 rounded-lg p-4 border border-purple-100">
+                        <span class="font-bold text-purple-800">🔒 국가 안보</span>
+                        <p class="text-sm text-gray-600 mt-1">국방, 외교, 핵심 인프라 데이터의 외국 기업 접근 차단 필요</p>
+                    </div>
+                </div>
+
+                <!-- 5대 핵심 기술 요건 -->
+                <h3 class="text-lg font-bold text-gray-900 mb-4">5대 핵심 기술 요건</h3>
+                <div class="overflow-x-auto mb-6">
+                    <table class="w-full text-sm border-collapse">
+                        <thead><tr class="bg-gray-50"><th class="border border-gray-200 p-3 font-bold">기술 요건</th><th class="border border-gray-200 p-3 font-bold">설명</th><th class="border border-gray-200 p-3 font-bold">구현 기술</th></tr></thead>
+                        <tbody>
+                            <tr><td class="border border-gray-200 p-3 font-semibold text-indigo-700">데이터 레지던시</td><td class="border border-gray-200 p-3">물리적 저장 위치가 특정 관할권 내로 제한</td><td class="border border-gray-200 p-3">리전 지정, 지오펜싱</td></tr>
+                            <tr class="bg-gray-50"><td class="border border-gray-200 p-3 font-semibold text-indigo-700">데이터 주권</td><td class="border border-gray-200 p-3">해당 국가 법률만 적용, 외국 정부 접근 차단</td><td class="border border-gray-200 p-3">법적 분리, 현지 법인</td></tr>
+                            <tr><td class="border border-gray-200 p-3 font-semibold text-indigo-700">운영 주권</td><td class="border border-gray-200 p-3">운영 인력이 해당 국가 국민으로 제한</td><td class="border border-gray-200 p-3">보안 인가 기반 접근 제어</td></tr>
+                            <tr class="bg-gray-50"><td class="border border-gray-200 p-3 font-semibold text-indigo-700">소프트웨어 주권</td><td class="border border-gray-200 p-3">핵심 SW 소스 코드 감사 가능성 확보</td><td class="border border-gray-200 p-3">오픈소스 기반, 코드 에스크로</td></tr>
+                            <tr><td class="border border-gray-200 p-3 font-semibold text-indigo-700">암호화 주권</td><td class="border border-gray-200 p-3">암호화 키를 해당 국가가 독점 관리</td><td class="border border-gray-200 p-3">BYOK, 외부 KMS, HSM</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 글로벌 추진 현황 -->
+            <div class="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+                <h3 class="text-lg font-bold text-gray-900 mb-4">글로벌 소버린 클라우드 추진 현황</h3>
+                <div class="overflow-x-auto mb-6">
+                    <table class="w-full text-sm border-collapse">
+                        <thead><tr class="bg-gray-50"><th class="border border-gray-200 p-3 font-bold">국가/지역</th><th class="border border-gray-200 p-3 font-bold">추진 내용</th><th class="border border-gray-200 p-3 font-bold">대표 사업자</th></tr></thead>
+                        <tbody>
+                            <tr><td class="border border-gray-200 p-3 font-semibold">🇪🇺 EU</td><td class="border border-gray-200 p-3">Gaia-X — 유럽 데이터 주권 확보를 위한 연합 클라우드 표준</td><td class="border border-gray-200 p-3">Deutsche Telekom, OVHcloud</td></tr>
+                            <tr class="bg-gray-50"><td class="border border-gray-200 p-3 font-semibold">🇫🇷 프랑스</td><td class="border border-gray-200 p-3">SecNumCloud 인증 — ANSSI 보안 인증 CSP만 공공데이터 처리</td><td class="border border-gray-200 p-3">3DS Outscale, OVHcloud</td></tr>
+                            <tr><td class="border border-gray-200 p-3 font-semibold">🇩🇪 독일</td><td class="border border-gray-200 p-3">Sovereign Cloud Stack(SCS) — 오픈소스 기반 표준 스택 개발</td><td class="border border-gray-200 p-3">OSBA 컨소시엄</td></tr>
+                            <tr class="bg-gray-50"><td class="border border-gray-200 p-3 font-semibold">🇰🇷 한국</td><td class="border border-gray-200 p-3">CSAP — 행정/공공기관용 클라우드 보안 인증 제도</td><td class="border border-gray-200 p-3">NHN, KT, 네이버</td></tr>
+                            <tr><td class="border border-gray-200 p-3 font-semibold">🇯🇵 일본</td><td class="border border-gray-200 p-3">ISMAP 인증 — 정부기관용 클라우드 보안 평가 제도</td><td class="border border-gray-200 p-3">일본 디지털청</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- CSP 대응 전략 -->
+                <h3 class="text-lg font-bold text-gray-900 mb-4">글로벌 CSP의 소버린 클라우드 대응</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-white rounded-lg p-4 border-2 border-gray-200"><span class="font-bold text-gray-800">AWS</span><p class="text-sm text-gray-600 mt-1">Dedicated Local Zone, Sovereign Cloud(2025) — 물리적·논리적 완전 분리, 현지 법인 운영</p></div>
+                    <div class="bg-white rounded-lg p-4 border-2 border-gray-200"><span class="font-bold text-gray-800">Azure</span><p class="text-sm text-gray-600 mt-1">Azure Sovereign Cloud — 독립 네트워크, 현지 운영 인력, 코드 감사</p></div>
+                    <div class="bg-white rounded-lg p-4 border-2 border-gray-200"><span class="font-bold text-gray-800">GCP</span><p class="text-sm text-gray-600 mt-1">Sovereign Controls by T-Systems — 독일 T-Systems이 데이터·암호키 관리</p></div>
+                    <div class="bg-white rounded-lg p-4 border-2 border-gray-200"><span class="font-bold text-gray-800">Oracle</span><p class="text-sm text-gray-600 mt-1">EU Sovereign Cloud — EU 내 법인, EU 시민만 운영, GDPR 완전 준수</p></div>
+                </div>
+            </div>
+
+            <!-- 연관 이론 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-white rounded-xl shadow-sm p-6 border-l-4 border-teal-500">
+                    <h3 class="font-bold text-teal-900 mb-3">🔐 제로 트러스트 아키텍처</h3>
+                    <p class="text-sm text-gray-600 leading-relaxed">소버린 클라우드의 접근 제어 체계는 NIST SP 800-207의 제로 트러스트 원칙에 기반하여, 네트워크 위치가 아닌 ID 기반 인증·인가를 수행한다.</p>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm p-6 border-l-4 border-purple-500">
+                    <h3 class="font-bold text-purple-900 mb-3">📜 디지털 권리장전</h3>
+                    <p class="text-sm text-gray-600 leading-relaxed">한국 정부의 디지털 권리장전(2023)의 "디지털 안전권"과 "데이터 주권" 원칙의 기술적 구현체로 소버린 클라우드를 볼 수 있다.</p>
+                </div>
+            </div>
+        </section>
+        <!-- ==================== SECTION: 원문 학습 ==================== -->
+        <section id="textbook" class="hidden space-y-6">
+            <div class="bg-white rounded-xl shadow-sm p-6 sm:p-8 textbook-content">
+                <h2 class="text-2xl font-bold text-gray-900 mb-6" style="border-left:none;padding-left:0;">원문 학습 (제1부 상세 해설)</h2>
+
+                <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-4 mb-6">
+                    <p class="text-sm text-indigo-800 font-medium"><strong>2교시형 문제 구조 분석:</strong> 3개 소문제가 논리적으로 연결 — 소문제 1: 책임 공유 모델 관점의 IaaS/PaaS/SaaS 비교, 소문제 2: FinOps 개념과 3단계 라이프사이클, 소문제 3: 소버린 클라우드의 필요성과 핵심 기술 요건. <strong>"기술 이해 → 비용 최적화 → 거버넌스 확보"</strong>의 흐름.</p>
+                </div>
+
+                <h3>제1장 책임 공유 모델 관점의 IaaS, PaaS, SaaS 비교</h3>
+
+                <h4>1.1 클라우드 서비스 모델 개요</h4>
+                <p>클라우드 서비스 모델은 NIST SP 800-145(2011)에서 정의한 3대 서비스 모델로서, 인프라(IaaS), 플랫폼(PaaS), 소프트웨어(SaaS)의 세 계층으로 구분된다. 각 모델은 클라우드 사업자(CSP)와 이용자 간의 <strong>책임 분리 경계(Responsibility Boundary)</strong>가 상이하며, 이를 <strong>책임 공유 모델(Shared Responsibility Model)</strong>이라 한다.</p>
+                <p>2024년 Gartner 보고서에 따르면 글로벌 퍼블릭 클라우드 지출은 6,790억 달러에 달하고, 이 중 IaaS가 1,500억 달러, PaaS가 1,760억 달러, SaaS가 2,480억 달러를 차지하였다.</p>
+
+                <h4>1.2 책임 공유 모델 개념</h4>
+                <p>책임 공유 모델이란, 클라우드 환경에서의 보안과 운영 책임을 CSP와 이용자가 서비스 모델에 따라 분담하는 구조이다. AWS의 표현을 빌리면, CSP는 <strong>"클라우드의 보안(Security OF the Cloud)"</strong>을, 이용자는 <strong>"클라우드 안의 보안(Security IN the Cloud)"</strong>을 책임진다.</p>
+
+                <!-- 책임 공유 모델 계층 구조 (HTML/CSS 시각화) -->
+                <div class="overflow-x-auto mb-4">
+                    <table class="w-full text-sm border-collapse">
+                        <thead><tr class="bg-gray-100"><th class="border p-2 text-left">관리 영역</th><th class="border p-2 text-center">IaaS</th><th class="border p-2 text-center">PaaS</th><th class="border p-2 text-center">SaaS</th></tr></thead>
+                        <tbody>
+                            <tr><td class="border p-2">데이터</td><td class="border p-2 text-center bg-blue-50 font-bold">■ 이용자</td><td class="border p-2 text-center bg-blue-50 font-bold">■ 이용자</td><td class="border p-2 text-center bg-blue-50 font-bold">■ 이용자</td></tr>
+                            <tr><td class="border p-2">애플리케이션</td><td class="border p-2 text-center bg-blue-50 font-bold">■ 이용자</td><td class="border p-2 text-center bg-blue-50 font-bold">■ 이용자</td><td class="border p-2 text-center bg-orange-50 font-bold">□ CSP</td></tr>
+                            <tr><td class="border p-2">런타임</td><td class="border p-2 text-center bg-blue-50 font-bold">■ 이용자</td><td class="border p-2 text-center bg-orange-50 font-bold">□ CSP</td><td class="border p-2 text-center bg-orange-50 font-bold">□ CSP</td></tr>
+                            <tr><td class="border p-2">미들웨어</td><td class="border p-2 text-center bg-blue-50 font-bold">■ 이용자</td><td class="border p-2 text-center bg-orange-50 font-bold">□ CSP</td><td class="border p-2 text-center bg-orange-50 font-bold">□ CSP</td></tr>
+                            <tr><td class="border p-2">OS</td><td class="border p-2 text-center bg-blue-50 font-bold">■ 이용자</td><td class="border p-2 text-center bg-orange-50 font-bold">□ CSP</td><td class="border p-2 text-center bg-orange-50 font-bold">□ CSP</td></tr>
+                            <tr><td class="border p-2">가상화</td><td class="border p-2 text-center bg-orange-50 font-bold">□ CSP</td><td class="border p-2 text-center bg-orange-50 font-bold">□ CSP</td><td class="border p-2 text-center bg-orange-50 font-bold">□ CSP</td></tr>
+                            <tr><td class="border p-2">서버/스토리지</td><td class="border p-2 text-center bg-orange-50 font-bold">□ CSP</td><td class="border p-2 text-center bg-orange-50 font-bold">□ CSP</td><td class="border p-2 text-center bg-orange-50 font-bold">□ CSP</td></tr>
+                            <tr><td class="border p-2">네트워크</td><td class="border p-2 text-center bg-orange-50 font-bold">□ CSP</td><td class="border p-2 text-center bg-orange-50 font-bold">□ CSP</td><td class="border p-2 text-center bg-orange-50 font-bold">□ CSP</td></tr>
+                            <tr><td class="border p-2">물리적 보안</td><td class="border p-2 text-center bg-orange-50 font-bold">□ CSP</td><td class="border p-2 text-center bg-orange-50 font-bold">□ CSP</td><td class="border p-2 text-center bg-orange-50 font-bold">□ CSP</td></tr>
+                        </tbody>
+                        <tfoot><tr class="bg-indigo-50"><td class="border p-2 font-bold">이용자 책임</td><td class="border p-2 text-center font-bold text-red-600">높음</td><td class="border p-2 text-center font-bold text-amber-600">중간</td><td class="border p-2 text-center font-bold text-green-600">낮음</td></tr></tfoot>
+                    </table>
+                </div>
+
+                <h4>1.3 서비스 모델별 상세 해설</h4>
+                <p><strong>IaaS(Infrastructure as a Service)</strong>는 가상 머신, 스토리지, 네트워크 등의 인프라 자원을 서비스로 제공하는 모델이다. 이용자는 OS 이상의 모든 스택에 대한 관리 권한과 책임을 가지며, 가장 높은 자유도와 함께 가장 무거운 운영 부담을 수반한다. AWS EC2, Azure VM, GCP Compute Engine이 대표적이다.</p>
+                <p><strong>PaaS(Platform as a Service)</strong>는 개발 플랫폼과 런타임 환경을 서비스로 제공하는 모델이다. 이용자는 애플리케이션과 데이터에 집중하고, OS, 미들웨어, 런타임은 CSP가 관리한다. AWS Elastic Beanstalk, Azure App Service, Google App Engine이 대표적이며, 개발 생산성이 높지만 플랫폼 종속(Vendor Lock-in)의 위험이 존재한다.</p>
+                <p><strong>SaaS(Software as a Service)</strong>는 완성된 소프트웨어를 서비스로 제공하는 모델이다. 이용자는 데이터 입력과 접근 제어만 관리하며, 나머지 전체 스택은 CSP가 책임진다. Microsoft 365, Salesforce, Google Workspace가 대표적이다.</p>
+
+                <h4>1.4 체계적 비교표</h4>
+                <table>
+                    <thead><tr><th>비교 기준</th><th>IaaS</th><th>PaaS</th><th>SaaS</th></tr></thead>
+                    <tbody>
+                        <tr><td>추상화 수준</td><td>인프라(가상 HW)</td><td>플랫폼(개발 환경)</td><td>소프트웨어(완성 앱)</td></tr>
+                        <tr><td>이용자 관리 범위</td><td>OS ~ 애플리케이션</td><td>애플리케이션 ~ 데이터</td><td>데이터, 접근 제어</td></tr>
+                        <tr><td>유연성</td><td>최고 (인프라 완전 제어)</td><td>중간 (플랫폼 내 자유)</td><td>최저 (설정 범위 내)</td></tr>
+                        <tr><td>운영 부담</td><td>높음 (패치, 보안, 모니터링)</td><td>중간 (앱 로직에 집중)</td><td>낮음 (사용만)</td></tr>
+                        <tr><td>확장성 방식</td><td>수동/자동 스케일링 설정</td><td>자동 스케일링 내장</td><td>CSP가 완전 관리</td></tr>
+                        <tr><td>Vendor Lock-in</td><td>낮음 (표준 VM 이미지)</td><td>높음 (API/SDK 종속)</td><td>매우 높음 (데이터 이식성)</td></tr>
+                        <tr><td>비용 구조</td><td>시간/용량 기반 과금</td><td>요청/실행 기반 과금</td><td>사용자 수/기능 기반 구독</td></tr>
+                        <tr><td>대표 서비스</td><td>AWS EC2, Azure VM</td><td>AWS Beanstalk, Heroku</td><td>M365, Salesforce</td></tr>
+                        <tr><td>적합 대상</td><td>인프라 전문 팀, 레거시 마이그레이션</td><td>개발 팀, 신규 서비스 개발</td><td>비IT 부서, 범용 업무</td></tr>
+                    </tbody>
+                </table>
+
+                <h4>1.5 연관 이론 연결</h4>
+                <p><strong>Everything as a Service(XaaS):</strong> IaaS/PaaS/SaaS를 넘어 FaaS(Function), CaaS(Container), DBaaS(Database) 등 세분화된 서비스 모델이 등장하고 있다. 특히 FaaS(서버리스 컴퓨팅)는 PaaS의 진화된 형태로서, 코드 실행 단위까지 추상화를 끌어올렸다.</p>
+                <p><strong>클라우드 성숙도 모델:</strong> Gartner에 따르면, 조직은 IaaS 도입(Lift &amp; Shift) → PaaS 전환(Re-platform) → SaaS 표준화(Replace) → 클라우드 네이티브(Re-architect)의 순서로 성숙도가 진화한다.</p>
+
+                <h3>제2장 핀옵스(FinOps)의 개념과 3단계 라이프사이클</h3>
+
+                <h4>2.1 FinOps의 등장 배경</h4>
+                <p>클라우드 전환이 가속화되면서, 기업들은 예상치 못한 <strong>클라우드 비용 폭증</strong> 문제에 직면하고 있다. Flexera 2024 State of the Cloud Report에 따르면, 기업의 클라우드 지출 중 평균 28%가 낭비되고 있으며, 74%의 기업이 클라우드 비용 최적화를 최우선 과제로 꼽았다.</p>
+
+                <h4>2.2 FinOps의 개념</h4>
+                <div class="def-box">
+                    <p>FinOps(Financial Operations)란, 엔지니어링, 재무, 비즈니스 팀이 협업하여 클라우드 비용의 가시성, 최적화, 운영을 체계적으로 수행하는 클라우드 재무 관리 프레임워크이다.</p>
+                </div>
+                <p>FinOps의 핵심 원칙은 6가지로 정의된다:</p>
+                <table>
+                    <thead><tr><th>원칙</th><th>설명</th></tr></thead>
+                    <tbody>
+                        <tr><td>Teams need to collaborate</td><td>엔지니어링, 재무, 비즈니스 팀 간 협업</td></tr>
+                        <tr><td>Everyone takes ownership</td><td>클라우드 비용에 대한 분산된 의사결정</td></tr>
+                        <tr><td>A centralized team drives FinOps</td><td>FinOps 팀이 중앙에서 베스트 프랙티스 확산</td></tr>
+                        <tr><td>Reports should be accessible and timely</td><td>실시간 비용 보고서에 모든 이해관계자 접근 가능</td></tr>
+                        <tr><td>Decisions are driven by business value</td><td>비용이 아닌 비즈니스 가치 기반 의사결정</td></tr>
+                        <tr><td>Take advantage of the variable cost model</td><td>클라우드의 가변 비용 모델을 적극 활용</td></tr>
+                    </tbody>
+                </table>
+
+                <h4>2.3 FinOps 3단계 라이프사이클</h4>
+                <p>FinOps는 <strong>Inform → Optimize → Operate</strong>의 3단계 반복 라이프사이클로 운영된다.</p>
+
+                <p><strong>[1단계] Inform (정보화)</strong> — "현황을 본다"</p>
+                <table>
+                    <thead><tr><th>활동</th><th>상세 내용</th><th>도구 예시</th></tr></thead>
+                    <tbody>
+                        <tr><td>비용 할당</td><td>태깅 정책 수립, 부서/프로젝트별 비용 배분</td><td>AWS Cost Explorer, Azure Cost Management</td></tr>
+                        <tr><td>가시화</td><td>비용 보고서 자동 생성, 부서별 과금 체계</td><td>CloudHealth, Apptio</td></tr>
+                        <tr><td>벤치마킹</td><td>업종/규모별 클라우드 비용 벤치마크 비교</td><td>FinOps Foundation 벤치마크</td></tr>
+                        <tr><td>예산 수립</td><td>클라우드 예산 계획 수립 및 임계값 알림 설정</td><td>AWS Budgets, GCP Budget Alerts</td></tr>
+                    </tbody>
+                </table>
+
+                <p><strong>[2단계] Optimize (최적화)</strong> — "낭비를 줄인다"</p>
+                <table>
+                    <thead><tr><th>최적화 유형</th><th>기법</th><th>절감 효과</th></tr></thead>
+                    <tbody>
+                        <tr><td>사용량 최적화</td><td>유휴 리소스 제거, 적정 사이징(Right-sizing)</td><td>20~40% 절감</td></tr>
+                        <tr><td>요율 최적화</td><td>RI(Reserved Instance), SP(Savings Plan), Spot Instance</td><td>30~72% 절감</td></tr>
+                        <tr><td>아키텍처 최적화</td><td>서버리스 전환, 컨테이너화, 스토리지 계층화</td><td>40~60% 절감</td></tr>
+                    </tbody>
+                </table>
+
+                <p><strong>[3단계] Operate (운영)</strong> — "체계를 만든다"</p>
+                <table>
+                    <thead><tr><th>활동</th><th>상세 내용</th></tr></thead>
+                    <tbody>
+                        <tr><td>정책 자동화</td><td>비용 임계값 초과 시 자동 알림/차단, 태그 미부착 리소스 자동 중단</td></tr>
+                        <tr><td>KPI 관리</td><td>단위 비용(Cost per Transaction), 클라우드 효율성 지수 추적</td></tr>
+                        <tr><td>거버넌스 운영</td><td>FinOps 위원회 정기 회의, 비용 리뷰 프로세스 제도화</td></tr>
+                        <tr><td>지속적 개선</td><td>FinOps 성숙도 평가(Crawl-Walk-Run), 자동화 수준 향상</td></tr>
+                    </tbody>
+                </table>
+
+                <h4>2.4 FinOps 성숙도 모델 (Crawl-Walk-Run)</h4>
+                <table>
+                    <thead><tr><th>성숙도 단계</th><th>특징</th><th>주요 활동</th></tr></thead>
+                    <tbody>
+                        <tr><td>Crawl (기초)</td><td>반응적 관리, 기본 가시성 확보</td><td>태깅 정책 수립, 월별 비용 보고</td></tr>
+                        <tr><td>Walk (발전)</td><td>사전적 최적화, KPI 기반 관리</td><td>RI/SP 구매 자동화, 부서별 Chargeback</td></tr>
+                        <tr><td>Run (최적화)</td><td>자동화된 거버넌스, 비즈니스 가치 연계</td><td>실시간 이상 탐지, 비용 예측 모델</td></tr>
+                    </tbody>
+                </table>
+
+                <h4>2.5 실무 적용 사례</h4>
+                <p><strong>사례 1: 네이버 클라우드 FinOps 도입(2023)</strong> — 자체 NCP와 외부 CSP 병행 사용으로 연간 비용 45% 증가 → FinOps 팀 조직 → 태깅 기반 비용 할당 → RI 최적화 → 자동 스케일링 정책 적용하여 6개월 내 클라우드 비용 23% 절감 달성.</p>
+                <p><strong>사례 2: 국민은행 차세대 시스템(2024)</strong> — 클라우드 전환 과정에서 FinOps 프레임워크 도입 → 개발/스테이징 환경 비업무시간 Auto Shutdown, 스토리지 계층화(S3 Intelligent-Tiering) 적용으로 연간 약 180억 원의 비용 절감 효과.</p>
+
+                <h3>제3장 소버린 클라우드의 필요성 및 핵심 기술 요건</h3>
+
+                <h4>3.1 소버린 클라우드 개념</h4>
+                <div class="def-box">
+                    <p>소버린 클라우드란, 국가의 데이터 주권을 보장하기 위해 특정 관할권 내에서 데이터가 저장·처리·관리되며, 해당 국가의 법률과 규제를 준수하는 클라우드 인프라이다.</p>
+                </div>
+
+                <h4>3.2 소버린 클라우드 등장 배경</h4>
+                <table>
+                    <thead><tr><th>배경 요인</th><th>상세 설명</th></tr></thead>
+                    <tbody>
+                        <tr><td>데이터 주권 규제 강화</td><td>EU GDPR, 한국 데이터 3법, 중국 PIPL 등 각국의 데이터 현지화 요구</td></tr>
+                        <tr><td>CLOUD Act 우려</td><td>미국 CLOUD Act(2018)에 의해 미국 CSP는 해외 서버 데이터도 미 정부에 제출 의무</td></tr>
+                        <tr><td>공급망 리스크</td><td>지정학적 갈등으로 인한 클라우드 서비스 중단 우려</td></tr>
+                        <tr><td>국가 안보</td><td>국방, 외교, 핵심 인프라 데이터의 외국 기업 접근 차단 필요</td></tr>
+                        <tr><td>디지털 전환 가속</td><td>공공기관의 클라우드 전환 과정에서 데이터 주권 확보 필수</td></tr>
+                    </tbody>
+                </table>
+
+                <h4>3.3 소버린 클라우드의 핵심 기술 요건</h4>
+                <table>
+                    <thead><tr><th>기술 요건</th><th>설명</th><th>구현 기술</th></tr></thead>
+                    <tbody>
+                        <tr><td>데이터 레지던시</td><td>데이터 물리적 저장 위치가 특정 관할권 내로 제한</td><td>리전 지정, 지오펜싱</td></tr>
+                        <tr><td>데이터 주권</td><td>해당 국가 법률만 적용, 외국 정부 접근 차단</td><td>법적 분리, 현지 법인 운영</td></tr>
+                        <tr><td>운영 주권</td><td>운영 인력이 해당 국가 국민으로 제한</td><td>보안 인가 기반 접근 제어</td></tr>
+                        <tr><td>소프트웨어 주권</td><td>핵심 SW 소스 코드 감사 가능성 확보</td><td>오픈소스 기반, 소스 코드 에스크로</td></tr>
+                        <tr><td>암호화 주권</td><td>암호화 키를 해당 국가가 독점적으로 관리</td><td>BYOK, 외부 KMS, HSM</td></tr>
+                    </tbody>
+                </table>
+
+                <h4>3.4 글로벌 소버린 클라우드 추진 현황</h4>
+                <table>
+                    <thead><tr><th>국가/지역</th><th>추진 내용</th><th>대표 사업자</th></tr></thead>
+                    <tbody>
+                        <tr><td>EU</td><td>Gaia-X — 유럽 데이터 주권 확보 연합 클라우드 인프라 표준 수립</td><td>Deutsche Telekom, OVHcloud</td></tr>
+                        <tr><td>프랑스</td><td>SecNumCloud 인증 — ANSSI 보안 인증 CSP만 공공데이터 처리 허용</td><td>3DS Outscale, OVHcloud</td></tr>
+                        <tr><td>독일</td><td>Sovereign Cloud Stack(SCS) — 오픈소스 기반 소버린 클라우드 표준 스택</td><td>OSBA 컨소시엄</td></tr>
+                        <tr><td>한국</td><td>CSAP — 행정/공공기관용 클라우드 보안 인증 제도</td><td>NHN, KT, 네이버</td></tr>
+                        <tr><td>일본</td><td>ISMAP 인증 — 정부기관용 클라우드 보안 평가 제도</td><td>일본 디지털청</td></tr>
+                    </tbody>
+                </table>
+
+                <h4>3.5 CSP의 소버린 클라우드 대응 전략</h4>
+                <table>
+                    <thead><tr><th>CSP</th><th>소버린 클라우드 전략</th><th>핵심 특징</th></tr></thead>
+                    <tbody>
+                        <tr><td>AWS</td><td>Dedicated Local Zone, Sovereign Cloud(2025)</td><td>물리적·논리적 완전 분리, 현지 법인 운영</td></tr>
+                        <tr><td>Azure</td><td>Azure Sovereign Cloud</td><td>독립 네트워크, 현지 운영 인력, 코드 감사</td></tr>
+                        <tr><td>GCP</td><td>Sovereign Controls by T-Systems</td><td>독일 T-Systems이 데이터·암호키 관리 위탁</td></tr>
+                        <tr><td>Oracle</td><td>EU Sovereign Cloud</td><td>EU 내 법인, EU 시민만 운영, GDPR 완전 준수</td></tr>
+                    </tbody>
+                </table>
+
+                <h4>3.6 연관 이론 연결</h4>
+                <p><strong>제로 트러스트 아키텍처:</strong> 소버린 클라우드의 접근 제어 체계는 제로 트러스트 원칙에 기반하여, 네트워크 위치가 아닌 ID 기반 인증·인가를 수행한다. NIST SP 800-207의 제로 트러스트 원칙이 소버린 클라우드의 보안 기반으로 활용된다.</p>
+                <p><strong>디지털 권리장전:</strong> 한국 정부가 2023년 발표한 디지털 권리장전은 "디지털 환경에서의 자유와 권리 보장"을 명시하고 있으며, 소버린 클라우드는 이 중 디지털 안전권과 데이터 주권 원칙의 기술적 구현체이다.</p>
+
+                <h3>소문제 간 통합 분석</h3>
+                <table>
+                    <thead><tr><th>관점</th><th>소문제 1</th><th>소문제 2</th><th>소문제 3</th></tr></thead>
+                    <tbody>
+                        <tr><td>핵심 질문</td><td>누가 무엇을 책임지는가?</td><td>비용을 어떻게 통제하는가?</td><td>데이터 주권을 어떻게 확보하는가?</td></tr>
+                        <tr><td>관리 대상</td><td>기술적 책임 경계</td><td>재무적 효율성</td><td>법적·정치적 통제권</td></tr>
+                        <tr><td>핵심 프레임워크</td><td>책임 공유 모델</td><td>FinOps 라이프사이클</td><td>소버린 5대 기술 요건</td></tr>
+                        <tr><td>이해관계자</td><td>CTO, 인프라팀</td><td>CFO, FinOps팀</td><td>CISO, 법무팀, 정부</td></tr>
+                    </tbody>
+                </table>
+                <p>결론적으로, 현대 클라우드 전략은 <strong>기술적 아키텍처(소문제 1)</strong>를 기반으로 <strong>재무적 최적화(소문제 2)</strong>를 수행하면서, 동시에 <strong>규제·거버넌스 요구사항(소문제 3)</strong>을 충족하는 삼위일체 접근이 필수적이다.</p>
+            </div>
+        </section>
+        <!-- ==================== SECTION: 강의 스크립트 ==================== -->
+        <section id="script" class="hidden space-y-6">
+            <div class="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+                <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
+                    <p class="text-amber-800 font-bold">🎬 멘토 전용 강의 스크립트 (20분 강의용)</p>
+                    <p class="text-sm text-amber-600">이 탭은 URL에 ?mentor=true 파라미터가 있을 때만 표시됩니다.</p>
+                </div>
+                <div class="textbook-content">
+                    <h3>도입부 (~3분)</h3>
+                    <p>안녕하세요, 여러분. 오늘은 2교시형 문제 중에서도 굉장히 실전적이고 최근 트렌드를 반영한 문제를 다뤄볼 건데요. 바로 <span class="highlight">클라우드 서비스 모델 비교</span>, <span class="highlight">FinOps</span>, 그리고 <span class="highlight">소버린 클라우드</span>에 대한 문제입니다.</p>
+                    <p>이 문제가 왜 중요한지부터 얘기해볼게요. 요즘 기술사 시험에서 클라우드 관련 문제가 안 나오는 회차가 거의 없거든요. FinOps라는 키워드가 2024년부터 기술사 시험에 등장하기 시작했고, 소버린 클라우드도 EU의 <span class="highlight">Gaia-X</span> 프로젝트와 맞물려서 언제 나와도 이상하지 않은 토픽입니다.</p>
+                    <p>소문제 구조를 꼭 정리하고 들어가야 해요. 3개의 소문제가 논리적으로 연결됩니다. <strong>"기술 이해 → 비용 최적화 → 거버넌스 확보"</strong>의 흐름이에요. 서론에서 이 흐름을 예고해주면 채점관이 "아, 이 수험생은 문제의 맥락을 정확히 파악했구나" 하고 느끼겠죠.</p>
+
+                    <h3>소문제 1: 서비스 모델 비교 (~5분)</h3>
+                    <p>핵심은 "누가 뭘 관리하느냐"예요. 제가 항상 하는 비유가 있는데, <span class="highlight">IaaS는 캠핑</span>(자유도 높지만 모든 것 직접), <span class="highlight">PaaS는 글램핑</span>(앱만 집중), <span class="highlight">SaaS는 호텔</span>(체크인만)이에요. 이 비유를 답안 서론에 넣으면 채점관의 관심을 끌 수 있어요.</p>
+                    <p>답안지에는 반드시 <span class="highlight">계층도</span>를 그려야 해요. 세로축에 네트워크~데이터를 쌓고, IaaS/PaaS/SaaS별로 CSP 책임과 이용자 책임의 경계선을 그어주는 거죠. 이 그림 하나가 본론의 절반 가치입니다.</p>
+                    <p>비교표는 최소 6개 이상 기준: 추상화 수준, 관리 범위, 유연성, 운영 부담, Vendor Lock-in, 비용 구조, 대표 서비스, 적합 대상. 그리고 <strong>데이터는 어떤 서비스 모델을 쓰든 항상 이용자 책임</strong>이에요. 차별화 포인트로 <span class="highlight">XaaS</span> 트렌드를 한 줄 언급하면 좋아요.</p>
+
+                    <h3>소문제 2: FinOps 라이프사이클 (~6분)</h3>
+                    <p>Flexera 보고서에 따르면 기업 클라우드 지출의 28%가 낭비래요. 거의 3분의 1을 허투루 쓰고 있다는 거죠. FinOps는 한 마디로 <span class="highlight">"클라우드 비용을 체계적으로 관리하는 프레임워크"</span>예요.</p>
+                    <p>3단계 라이프사이클: <span class="highlight">Inform → Optimize → Operate</span>. "<strong>인옵옵</strong>"으로 외우세요. 1단계 Inform은 "비용을 보는 단계" — 태깅이 핵심. 2단계 Optimize는 "낭비를 줄이는 단계" — 사용량/요율/아키텍처 3가지 최적화. 3단계 Operate는 "체계를 만드는 단계" — 정책 자동화, FinOps 위원회.</p>
+                    <p>세 가지 최적화를 표로 정리할 때 절감 효과 퍼센티지를 꼭 넣으세요. 사용량 20~40%, 요율 30~72%, 아키텍처 40~60%. 숫자가 있으면 답안의 구체성이 확 올라갑니다.</p>
+                    <p>실무 사례: 국민은행 차세대 시스템에서 개발환경 비업무시간 자동 종료만으로 연간 180억 원 절감. 이런 사례를 넣으면 "이 사람은 실무를 아는 사람이구나"라는 인상을 줄 수 있어요.</p>
+
+                    <h3>소문제 3: 소버린 클라우드 (~4분)</h3>
+                    <p>핵심 원인이 미국의 <span class="highlight">CLOUD Act(2018)</span>예요. 미국 기업은 해외 서버 데이터도 미 정부 요청 시 제출해야 해요. 이게 유럽을 자극해서 Gaia-X가 나온 거고, 각국이 데이터 주권 법제를 강화한 거죠.</p>
+                    <p>5대 기술 요건: <span class="highlight">"데데운소암"</span>으로 외우세요. 데이터 레지던시, 데이터 주권, 운영 주권, 소프트웨어 주권, 암호화 주권. 특히 <span class="highlight">암호화 주권</span>이 중요한데, BYOK(Bring Your Own Key)로 암호화 키를 이용자가 직접 관리하는 거예요.</p>
+                    <p>글로벌 사례 2~3개: EU Gaia-X, 프랑스 SecNumCloud, 독일 SCS, 한국 CSAP.</p>
+
+                    <h3>마무리 및 답안 전략 (~2분)</h3>
+                    <p>결론: <strong>"클라우드 전략은 기술적 아키텍처 + 재무적 최적화 + 규제 거버넌스의 삼위일체 접근이 필수"</strong>. 향후 멀티/하이브리드 클라우드 환경에서 클라우드 CoE 조직의 역할이 중요해질 것.</p>
+                    <p>분량 배분: 서론 10%, 소문제 1 25%, 소문제 2 30%, 소문제 3 25%, 결론 10%. 필수 도식: 책임 공유 모델 계층도 + FinOps 3단계 순환도.</p>
+                    <p>연관 토픽: 소버린 클라우드 ↔ 제로 트러스트 아키텍처, FinOps ↔ DevOps, 디지털 권리장전의 "디지털 안전권" ↔ 소버린 클라우드.</p>
+                </div>
+            </div>
+        </section>
+        <!-- ==================== SECTION: 퀴즈 & 암기 ==================== -->
+        <section id="quiz" class="hidden space-y-6">
+            <div class="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+                <h2 class="text-2xl font-bold text-gray-900 mb-6">퀴즈 &amp; 암기</h2>
+
+                <!-- AI 실전 퀴즈 영역 (QUIZ_TEMPLATE 그대로) -->
+                <div class="bg-indigo-50 rounded-xl p-6 border border-indigo-100 mb-8">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-bold text-indigo-900 text-lg flex items-center"><span class="mr-2">🧠</span> AI 실전 문제 생성</h3>
+                        <button onclick="generateQuiz()" id="btn-quiz-gen" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm transition-colors flex items-center gap-2"><span>✨ 새로운 문제 생성</span></button>
+                    </div>
+                    <div id="quiz-loading" class="hidden py-8 text-center">
+                        <div class="typing-indicator flex justify-center mb-2"><span></span><span></span><span></span></div>
+                        <p class="text-indigo-600 text-sm">AI가 문제를 출제하고 있습니다...</p>
+                    </div>
+                    <div id="quiz-container" class="hidden space-y-4">
+                        <div class="bg-white p-5 rounded-lg shadow-sm border border-indigo-100">
+                            <div class="flex items-start gap-2 mb-4">
+                                <span id="quiz-type-badge" class="bg-indigo-100 text-indigo-800 text-xs font-bold px-2 py-1 rounded whitespace-nowrap mt-1">객관식</span>
+                                <p id="quiz-question" class="font-bold text-gray-800 text-lg"></p>
+                            </div>
+                            <div id="quiz-options" class="space-y-2"></div>
+                            <div id="quiz-input-area" class="hidden mt-4">
+                                <div class="flex gap-2">
+                                    <input type="text" id="quiz-answer-input" placeholder="정답을 입력하세요" class="flex-grow border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                    <button onclick="checkShortAnswer()" id="btn-short-submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-bold">제출</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="quiz-feedback" class="hidden bg-white p-5 rounded-lg border-l-4"></div>
+                    </div>
+                    <div id="quiz-placeholder" class="text-center py-8 text-gray-500 border-2 border-dashed border-indigo-200 rounded-lg">
+                        <p>'새로운 문제 생성' 버튼을 눌러 실력을 점검해보세요.</p>
+                    </div>
+                </div>
+
+                <!-- 암기 노트 ① 두문자어 -->
+                <div class="bg-amber-50 rounded-xl p-6 border border-amber-200 mb-6">
+                    <h3 class="font-bold text-amber-900 text-lg mb-4">📝 암기 노트 ① 두문자어</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="bg-white rounded-lg p-4 border border-amber-100 text-center">
+                            <p class="text-2xl font-bold text-indigo-700 mb-2">"인옵옵"</p>
+                            <p class="text-sm text-gray-600"><strong>인</strong>폼(Inform) → <strong>옵</strong>티마이즈(Optimize) → <strong>옵</strong>erate(Operate)</p>
+                            <p class="text-xs text-gray-400 mt-1">FinOps 3단계 라이프사이클</p>
+                        </div>
+                        <div class="bg-white rounded-lg p-4 border border-amber-100 text-center">
+                            <p class="text-2xl font-bold text-indigo-700 mb-2">"데데운소암"</p>
+                            <p class="text-sm text-gray-600"><strong>데</strong>이터 레지던시 · <strong>데</strong>이터 주권 · <strong>운</strong>영 주권 · <strong>소</strong>프트웨어 주권 · <strong>암</strong>호화 주권</p>
+                            <p class="text-xs text-gray-400 mt-1">소버린 클라우드 5대 요건</p>
+                        </div>
+                        <div class="bg-white rounded-lg p-4 border border-amber-100 text-center">
+                            <p class="text-2xl font-bold text-indigo-700 mb-2">IaaS=OS부터</p>
+                            <p class="text-sm text-gray-600">IaaS는 OS부터, PaaS는 App부터, SaaS는 Data만</p>
+                            <p class="text-xs text-gray-400 mt-1">책임 공유 모델 이용자 범위</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 암기 노트 ② 골격 답안 -->
+                <div class="bg-green-50 rounded-xl p-6 border border-green-200 mb-6">
+                    <h3 class="font-bold text-green-900 text-lg mb-4">📋 암기 노트 ② 골격 답안 구조</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm border-collapse">
+                            <thead><tr class="bg-green-100"><th class="border border-green-200 p-3 text-left">구간</th><th class="border border-green-200 p-3 text-left">비중</th><th class="border border-green-200 p-3 text-left">핵심 내용</th></tr></thead>
+                            <tbody>
+                                <tr><td class="border border-green-200 p-3 font-bold">서론</td><td class="border border-green-200 p-3">10%</td><td class="border border-green-200 p-3">클라우드 전면 전환 배경, 비용 폭증과 데이터 주권 우려, 삼위일체 접근 필요성</td></tr>
+                                <tr class="bg-green-50"><td class="border border-green-200 p-3 font-bold">소문제 1</td><td class="border border-green-200 p-3">25%</td><td class="border border-green-200 p-3">책임 공유 모델 계층도 필수, 비교표(6~8개 기준), XaaS 확장 트렌드</td></tr>
+                                <tr><td class="border border-green-200 p-3 font-bold">소문제 2</td><td class="border border-green-200 p-3">30%</td><td class="border border-green-200 p-3">FinOps 정의 + 6대 원칙, Inform→Optimize→Operate 상세, 성숙도 모델</td></tr>
+                                <tr class="bg-green-50"><td class="border border-green-200 p-3 font-bold">소문제 3</td><td class="border border-green-200 p-3">25%</td><td class="border border-green-200 p-3">CLOUD Act 배경, 5대 기술 요건 표, Gaia-X/CSAP 글로벌 사례</td></tr>
+                                <tr><td class="border border-green-200 p-3 font-bold">결론</td><td class="border border-green-200 p-3">10%</td><td class="border border-green-200 p-3">기술+비용+거버넌스 삼위일체 접근, 클라우드 CoE 조직 전망</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 암기 노트 ③ 필수 도식 & 차별화 포인트 -->
+                <div class="bg-purple-50 rounded-xl p-6 border border-purple-200 mb-6">
+                    <h3 class="font-bold text-purple-900 text-lg mb-4">🎯 암기 노트 ③ 필수 도식 &amp; 차별화 포인트</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <h4 class="font-bold text-purple-800 mb-2">필수 도식</h4>
+                            <ul class="text-sm text-gray-600 space-y-1">
+                                <li>1. 책임 공유 모델 계층도 — IaaS/PaaS/SaaS별 관리 경계 구분</li>
+                                <li>2. FinOps 3단계 순환도 — Inform→Optimize→Operate 반복 구조</li>
+                                <li>3. 서비스 모델 비교표 — 6~8개 기준의 체계적 비교</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-purple-800 mb-2">차별화 포인트</h4>
+                            <ul class="text-sm text-gray-600 space-y-1">
+                                <li>• FinOps 구체적 절감 수치 (RI 30~72%, Right-sizing 20~40%)</li>
+                                <li>• CLOUD Act의 역외 데이터 접근 + Gaia-X 대응</li>
+                                <li>• 클라우드 성숙도 모델 연계 로드맵</li>
+                                <li>• 소버린 클라우드 ↔ 제로 트러스트 연결</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 제2부 전체 (textbook-content) -->
+                <div class="border-t-2 border-indigo-200 pt-6">
+                    <h3 class="text-xl font-bold text-indigo-900 mb-4" style="border-left:4px solid #4f46e5; padding-left:0.75rem;">제2부 암기 요약 자료 전체</h3>
+                    <div class="textbook-content">
+                        <h4>한 줄 정의</h4>
+                        <div class="def-box">
+                            <p>클라우드 서비스 모델(IaaS/PaaS/SaaS)은 책임 공유 모델에 따라 CSP와 이용자 간 관리 경계가 구분되며, FinOps는 비용 가시성·최적화·운영의 반복 라이프사이클로 비용을 통제하고, 소버린 클라우드는 데이터 주권 확보를 위한 기술적·법적 통제 체계이다.</p>
+                        </div>
+
+                        <h4>핵심 키워드 맵</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+                            <div class="bg-indigo-50 rounded-lg p-3 border border-indigo-100 text-sm">
+                                <p class="font-bold text-indigo-800 mb-1">[클라우드 서비스 모델]</p>
+                                <ul class="text-gray-600 space-y-1 text-xs">
+                                    <li>├ IaaS: 인프라 제공, OS 이상 이용자 책임</li>
+                                    <li>├ PaaS: 플랫폼 제공, 앱+데이터만 관리</li>
+                                    <li>├ SaaS: SW 완성형, 데이터/접근만 관리</li>
+                                    <li>└ 책임 공유 모델: CSP ↔ 이용자 분담</li>
+                                </ul>
+                            </div>
+                            <div class="bg-green-50 rounded-lg p-3 border border-green-100 text-sm">
+                                <p class="font-bold text-green-800 mb-1">[FinOps]</p>
+                                <ul class="text-gray-600 space-y-1 text-xs">
+                                    <li>├ 정의: 엔지니어링+재무+비즈니스 협업</li>
+                                    <li>├ 3단계: Inform→Optimize→Operate</li>
+                                    <li>├ 성숙도: Crawl→Walk→Run</li>
+                                    <li>└ 핵심: 태깅→가시화→RI/SP→자동화</li>
+                                </ul>
+                            </div>
+                            <div class="bg-purple-50 rounded-lg p-3 border border-purple-100 text-sm">
+                                <p class="font-bold text-purple-800 mb-1">[소버린 클라우드]</p>
+                                <ul class="text-gray-600 space-y-1 text-xs">
+                                    <li>├ 정의: 데이터 주권 보장 클라우드</li>
+                                    <li>├ 5대 요건: 레지던시/주권/운영/SW/암호화</li>
+                                    <li>├ EU: Gaia-X, SecNumCloud</li>
+                                    <li>└ 한국: CSAP 인증</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <h4>두문자어 암기법</h4>
+                        <p><strong>FinOps 3단계: "인옵옵"</strong> — 인폼(Inform, 비용 가시성) → 옵티마이즈(Optimize, 사용량/요율/아키텍처 최적화) → 오퍼레이트(Operate, 정책 자동화·거버넌스)</p>
+                        <p><strong>소버린 클라우드 5대 요건: "데데운소암"</strong> — 데이터 레지던시(물리적 위치) → 데이터 주권(국가 법률) → 운영 주권(현지 인력) → 소프트웨어 주권(소스 코드 감사) → 암호화 주권(키 관리 독점)</p>
+                        <p><strong>책임 공유 모델:</strong> "IaaS는 OS부터, PaaS는 App부터, SaaS는 Data만"</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+    <!-- AI 튜터 채팅 -->
+    <div id="chat-sidebar" class="fixed top-0 right-0 h-full w-80 sm:w-96 bg-white shadow-2xl z-50 closed flex flex-col">
+        <div class="flex items-center justify-between p-4 border-b bg-indigo-600 text-white">
+            <h3 class="font-bold">💬 AI 튜터</h3>
+            <button onclick="toggleChat()" class="text-white hover:text-indigo-200 text-xl">&times;</button>
+        </div>
+        <div id="chat-messages" class="flex-grow overflow-y-auto p-4 flex flex-col space-y-2">
+            <div class="chat-msg ai">안녕하세요! 클라우드 서비스 모델, FinOps, 소버린 클라우드에 대해 무엇이든 물어보세요.</div>
+        </div>
+        <div class="p-3 border-t flex gap-2">
+            <input type="text" id="chat-input" placeholder="질문을 입력하세요..." class="flex-grow border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" onkeydown="if(event.key==='Enter')sendChat()">
+            <button onclick="sendChat()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-indigo-700">전송</button>
+        </div>
+    </div>
+    <button onclick="toggleChat()" id="chat-fab" class="fixed bottom-6 right-6 w-14 h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-lg flex items-center justify-center text-2xl z-40 transition-transform hover:scale-110">💬</button>
+    <!-- API 설정 모달 -->
+    <div id="settings-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-gray-900">🔑 API Key 설정</h3>
+                <button onclick="toggleSettings()" class="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
+            </div>
+            <p class="text-sm text-gray-600 mb-4">Gemini API Key를 입력하면 AI 퀴즈 생성과 튜터 채팅 기능을 사용할 수 있습니다.</p>
+            <input type="password" id="api-key-input" placeholder="Gemini API Key 입력" class="w-full border border-gray-300 rounded-lg px-4 py-2 mb-3 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <div class="flex gap-2">
+                <button onclick="saveApiKey()" class="flex-grow bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg font-bold text-sm">저장</button>
+                <button onclick="clearApiKey()" class="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50">초기화</button>
+            </div>
+            <p id="api-key-status" class="text-xs text-gray-400 mt-2 text-center"></p>
+        </div>
+    </div>
+    <footer class="bg-white border-t mt-auto">
+        <div class="max-w-5xl mx-auto px-4 py-6 text-center">
+            <p class="text-sm text-gray-500">박교익PE (132회 정보관리기술사, dr.code92@gmail.com)</p>
+            <p class="text-xs text-gray-400 mt-1">Copyright &copy; KPC 정보관리기술사 ZIP-UP 심화반. All rights reserved.</p>
+        </div>
+    </footer>
+<script>
+    // ── 기본 변수 ──
+    var sections = ['overview','responsibility','finops','sovereign','textbook','quiz'];
+    var isMentorMode = new URLSearchParams(window.location.search).get('mentor') === 'true';
+    if (isMentorMode) {
+        sections = ['overview','responsibility','finops','sovereign','textbook','script','quiz'];
+        var scriptNav = document.getElementById('nav-script');
+        if (scriptNav) scriptNav.classList.remove('hidden');
+    }
+    // URL key 파라미터
+    var urlKey = new URLSearchParams(window.location.search).get('key') || '';
+    if (urlKey) localStorage.setItem('geminiKey', urlKey);
+
+    // ── 탭 네비게이션 ──
+    function navTo(id) {
+        sections.forEach(function(s) {
+            var sec = document.getElementById(s);
+            var nav = document.getElementById('nav-' + s);
+            if (sec) sec.classList.add('hidden');
+            if (nav) { nav.classList.remove('active','text-gray-900'); nav.classList.add('text-gray-500'); }
+        });
+        var el = document.getElementById(id);
+        var navEl = document.getElementById('nav-' + id);
+        if (el) { el.classList.remove('hidden'); el.classList.add('animate-fade-in'); }
+        if (navEl) { navEl.classList.add('active','text-gray-900'); navEl.classList.remove('text-gray-500'); }
+        window.scrollTo({top: 0, behavior: 'smooth'});
+    }
+
+    // ── tech-block 클릭 확장 ──
+    function toggleBlock(el) {
+        var detail = el.querySelector('.detail-content');
+        if (!detail) return;
+        var isOpen = !detail.classList.contains('hidden');
+        el.closest('.grid,.space-y-4,.space-y-3').querySelectorAll('.detail-content').forEach(function(d) { d.classList.add('hidden'); });
+        el.closest('.grid,.space-y-4,.space-y-3').querySelectorAll('.tech-block').forEach(function(b) { b.classList.remove('selected','border-indigo-500'); b.classList.add('border-gray-200'); });
+        if (!isOpen) {
+            detail.classList.remove('hidden');
+            el.classList.add('selected','border-indigo-500');
+            el.classList.remove('border-gray-200');
+        }
+    }
+
+    // ── API Key 관리 ──
+    function getApiKey() { return localStorage.getItem('geminiKey') || localStorage.getItem('gemini_api_key') || ''; }
+    function toggleSettings() { document.getElementById('settings-modal').classList.toggle('hidden'); var k = getApiKey(); document.getElementById('api-key-input').value = k; document.getElementById('api-key-status').textContent = k ? '✅ API Key가 설정되어 있습니다.' : ''; }
+    function saveApiKey() { var k = document.getElementById('api-key-input').value.trim(); if(k){ localStorage.setItem('geminiKey',k); document.getElementById('api-key-status').textContent='✅ 저장되었습니다.'; } else { alert('API Key를 입력해주세요.'); } }
+    function clearApiKey() { localStorage.removeItem('geminiKey'); localStorage.removeItem('gemini_api_key'); document.getElementById('api-key-input').value=''; document.getElementById('api-key-status').textContent='🗑️ 초기화되었습니다.'; }
+
+    // ── AI 채팅 ──
+    function toggleChat() { var s=document.getElementById('chat-sidebar'); s.classList.toggle('open'); s.classList.toggle('closed'); }
+    async function sendChat() {
+        geminiKey = (typeof getApiKey === 'function') ? (getApiKey() || '') : (localStorage.getItem('geminiKey') || localStorage.getItem('gemini_api_key') || '');
+        if (!geminiKey) { alert('API Key를 먼저 설정해주세요.'); toggleSettings(); return; }
+        var input = document.getElementById('chat-input');
+        var msg = input.value.trim();
+        if (!msg) return;
+        input.value = '';
+        var box = document.getElementById('chat-messages');
+        box.innerHTML += '<div class="chat-msg user">' + msg + '</div>';
+        box.innerHTML += '<div class="chat-msg ai" id="chat-loading"><div class="typing-indicator"><span></span><span></span><span></span></div></div>';
+        box.scrollTop = box.scrollHeight;
+        try {
+            var r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=' + geminiKey, {
+                method:'POST', headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({ contents:[{parts:[{text:"당신은 정보관리기술사 시험 멘토입니다. '클라우드 서비스 모델, FinOps, 소버린 클라우드' 관련 질문에 전문적이고 명쾌하게 답변해주세요. 300자 이내로 핵심만 요약.\n\n질문: " + msg}]}], generationConfig:{maxOutputTokens:1024} })
+            });
+            var d = await r.json();
+            var t = d.candidates[0].content.parts[0].text;
+            var loading = document.getElementById('chat-loading');
+            if(loading) loading.outerHTML = '<div class="chat-msg ai prose">' + marked.parse(t) + '</div>';
+        } catch(e) {
+            var loading = document.getElementById('chat-loading');
+            if(loading) loading.outerHTML = '<div class="chat-msg ai text-red-500">오류: ' + e.message + '</div>';
+        }
+        box.scrollTop = box.scrollHeight;
+    }
+
+    // ── 퀴즈 ──
+    var geminiKey = (typeof getApiKey === 'function') ? (getApiKey() || '') : (localStorage.getItem('geminiKey') || localStorage.getItem('gemini_api_key') || '');
+    var quizTypeHistory = [];
+    var currentQuizData = null;
+    var quizTopics = [
+        { category: "클라우드 서비스 모델 기초", keywords: "IaaS, PaaS, SaaS, NIST SP 800-145, 서비스 계층" },
+        { category: "책임 공유 모델", keywords: "Shared Responsibility Model, CSP, 이용자 책임, 보안 경계" },
+        { category: "서비스 모델 비교", keywords: "유연성, Vendor Lock-in, 비용 구조, 확장성, 운영 부담" },
+        { category: "FinOps 개념과 원칙", keywords: "FinOps Foundation, 6대 원칙, 클라우드 재무 관리, 협업" },
+        { category: "FinOps 라이프사이클", keywords: "Inform, Optimize, Operate, 태깅, Right-sizing, RI" },
+        { category: "FinOps 성숙도 모델", keywords: "Crawl, Walk, Run, Chargeback, KPI" },
+        { category: "소버린 클라우드 개념", keywords: "데이터 주권, CLOUD Act, Gaia-X, 디지털 주권" },
+        { category: "소버린 클라우드 기술 요건", keywords: "레지던시, 운영 주권, SW 주권, 암호화 주권, BYOK, CSAP" }
+    ];
+
+    async function generateQuiz() {
+        geminiKey = (typeof getApiKey === 'function') ? (getApiKey() || '') : (localStorage.getItem('geminiKey') || localStorage.getItem('gemini_api_key') || '');
+        if (!geminiKey) { alert('API Key를 먼저 설정해주세요.'); toggleSettings(); return; }
+        var btn = document.getElementById('btn-quiz-gen');
+        btn.disabled = true; btn.innerHTML = '<span>생성 중...</span>';
+        document.getElementById('quiz-placeholder').classList.add('hidden');
+        document.getElementById('quiz-container').classList.add('hidden');
+        document.getElementById('quiz-loading').classList.remove('hidden');
+        var isMC;
+        var recent = quizTypeHistory.slice(-2);
+        if (recent.length >= 2 && recent[0] === recent[1]) { isMC = !recent[1]; }
+        else { isMC = Math.random() > 0.5; }
+        quizTypeHistory.push(isMC);
+        var selected = quizTopics[Math.floor(Math.random() * quizTopics.length)];
+        var quizType = isMC ? '객관식 (4지선다)' : '단답형';
+        var format = isMC
+            ? '{"question":"문제","options":["A","B","C","D"],"correctIndex":0,"explanation":"해설"}'
+            : '{"question":"문제","correctAnswer":"정답","explanation":"해설"}';
+        var prompt = "다음 카테고리에 대한 " + quizType + " 퀴즈 1문제를 만드세요.\n"
+            + "카테고리: " + selected.category + "\n"
+            + "관련 키워드: " + selected.keywords + "\n"
+            + "규칙: 반드시 위 카테고리와 키워드에 직접 관련된 문제를 출제하세요.\n"
+            + "JSON 형식으로 응답: " + format;
+        try {
+            var r = await fetch(
+                'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=' + geminiKey,
+                { method:'POST', headers:{'Content-Type':'application/json'},
+                  body: JSON.stringify({ contents:[{parts:[{text:prompt}]}], generationConfig:{responseMimeType:"application/json"} })
+                }
+            );
+            var d = await r.json();
+            var t = d.candidates[0].content.parts[0].text;
+            t = t.replace(/```json\s*/gi,"").replace(/```\s*/g,"").trim();
+            var depth=0, start=-1, end=-1;
+            for (var i=0;i<t.length;i++) {
+                if (t[i]==='{') { if(depth===0) start=i; depth++; }
+                else if (t[i]==='}') { depth--; if(depth===0 && start!==-1) { end=i; break; } }
+            }
+            if (start===-1||end===-1) throw new Error("No JSON found");
+            t = t.substring(start, end+1);
+            t = t.replace(/[\x00-\x1F\x7F]/g, function(c) { return c==='\n'||c==='\r'||c==='\t' ? ' ' : ''; });
+            currentQuizData = JSON.parse(t);
+            renderQuiz(isMC);
+        } catch(e) {
+            document.getElementById('quiz-loading').classList.add('hidden');
+            document.getElementById('quiz-placeholder').classList.remove('hidden');
+            document.getElementById('quiz-placeholder').innerHTML = '<p class="text-red-500">퀴즈 생성 오류: ' + e.message + '</p>';
+        }
+        btn.disabled = false; btn.innerHTML = '<span>✨ 새로운 문제 생성</span>';
+    }
+
+    function renderQuiz(isMC) {
+        document.getElementById('quiz-loading').classList.add('hidden');
+        document.getElementById('quiz-feedback').classList.add('hidden');
+        document.getElementById('quiz-container').classList.remove('hidden');
+        document.getElementById('quiz-type-badge').textContent = isMC ? '객관식' : '단답형';
+        document.getElementById('quiz-question').textContent = currentQuizData.question;
+        var optDiv = document.getElementById('quiz-options');
+        var inputDiv = document.getElementById('quiz-input-area');
+        if (isMC) {
+            optDiv.classList.remove('hidden');
+            inputDiv.classList.add('hidden');
+            var h = '';
+            var letters = ['A','B','C','D'];
+            currentQuizData.options.forEach(function(opt, i) {
+                h += '<button onclick="checkMultipleChoice(' + i + ', this)" class="w-full text-left p-4 rounded-lg border border-gray-200 hover:bg-indigo-50 hover:border-indigo-300 transition-all mb-2 flex items-center group">'
+                    + '<span class="w-8 h-8 rounded-full bg-gray-100 group-hover:bg-indigo-100 flex items-center justify-center text-sm font-bold text-gray-500 group-hover:text-indigo-600 mr-3 flex-shrink-0">' + letters[i] + '</span>'
+                    + '<span class="text-sm text-gray-700">' + opt + '</span></button>';
+            });
+            optDiv.innerHTML = h;
+        } else {
+            optDiv.classList.add('hidden');
+            inputDiv.classList.remove('hidden');
+            document.getElementById('quiz-answer-input').value = '';
+            document.getElementById('quiz-answer-input').focus();
+        }
+    }
+
+    function checkMultipleChoice(idx, btnEl) {
+        var correct = idx === currentQuizData.correctIndex;
+        document.querySelectorAll('#quiz-options button').forEach(function(b, i) {
+            b.disabled = true;
+            if (i === currentQuizData.correctIndex) { b.classList.add('bg-green-50','border-green-400'); b.querySelector('span:first-child').classList.add('bg-green-100','text-green-700'); }
+            else if (i === idx && !correct) { b.classList.add('bg-red-50','border-red-400'); b.querySelector('span:first-child').classList.add('bg-red-100','text-red-700'); }
+        });
+        showQuizFeedback(correct, currentQuizData.options[currentQuizData.correctIndex], currentQuizData.explanation);
+    }
+
+    async function checkShortAnswer() {
+        geminiKey = (typeof getApiKey === 'function') ? (getApiKey() || '') : (localStorage.getItem('geminiKey') || localStorage.getItem('gemini_api_key') || '');
+        var ans = document.getElementById('quiz-answer-input').value.trim();
+        if (!ans) { alert('답을 입력해주세요.'); return; }
+        var btn = document.getElementById('btn-short-submit');
+        btn.disabled = true; btn.textContent = '채점 중...';
+        try {
+            var gradingPrompt = "당신은 정보관리기술사 시험 채점관입니다. 아래 문제에 대해 사용자의 답안이 정답으로 인정될 수 있는지 판정하세요.\n\n"
+                + "문제: " + currentQuizData.question + "\n"
+                + "모범 정답: " + currentQuizData.correctAnswer + "\n"
+                + "사용자 답안: " + ans + "\n\n"
+                + "판정 기준:\n- 핵심 의미가 동일하면 정답\n- 약어/풀네임 모두 인정\n- 영어/한글 혼용 인정\n- 띄어쓰기/조사 차이는 무시\n- 의미가 명확히 다르면 오답\n\n"
+                + "Output JSON: {\"correct\":true/false,\"reason\":\"판정 이유\"}";
+            var r = await fetch(
+                'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=' + geminiKey,
+                { method:'POST', headers:{'Content-Type':'application/json'},
+                  body: JSON.stringify({ contents:[{parts:[{text:gradingPrompt}]}], generationConfig:{responseMimeType:"application/json"} })
+                }
+            );
+            var d = await r.json();
+            var gt = d.candidates[0].content.parts[0].text;
+            gt = gt.replace(/```json\s*/gi,"").replace(/```\s*/g,"").trim();
+            var gd=0,gs=-1,ge=-1;
+            for(var i=0;i<gt.length;i++){if(gt[i]==='{'){if(gd===0)gs=i;gd++;}else if(gt[i]==='}'){gd--;if(gd===0&&gs!==-1){ge=i;break;}}}
+            if(gs===-1||ge===-1) throw new Error("No JSON");
+            gt=gt.substring(gs,ge+1);
+            gt=gt.replace(/[\x00-\x1F\x7F]/g,function(c){return c==='\n'||c==='\r'||c==='\t'?' ':'';});
+            var result = JSON.parse(gt);
+            showQuizFeedback(result.correct, currentQuizData.correctAnswer, currentQuizData.explanation + (result.reason ? ' (AI: ' + result.reason + ')' : ''));
+        } catch(e) {
+            var normalize = function(s){return s.replace(/\s/g,'').toLowerCase();};
+            var correct = normalize(currentQuizData.correctAnswer).includes(normalize(ans)) || normalize(ans).includes(normalize(currentQuizData.correctAnswer));
+            showQuizFeedback(correct, currentQuizData.correctAnswer, currentQuizData.explanation + ' (로컬 채점)');
+        }
+        btn.disabled = false; btn.textContent = '제출';
+    }
+
+    function showQuizFeedback(correct, answer, explanation) {
+        var fb = document.getElementById('quiz-feedback');
+        fb.classList.remove('hidden','border-green-500','bg-green-50','border-red-500','bg-red-50');
+        if (correct) {
+            fb.classList.add('border-green-500','bg-green-50');
+            fb.innerHTML = '<p class="font-bold text-green-700 mb-1">✅ 정답입니다!</p><p class="text-sm text-green-600">' + explanation + '</p>';
+        } else {
+            fb.classList.add('border-red-500','bg-red-50');
+            fb.innerHTML = '<p class="font-bold text-red-700 mb-1">❌ 오답입니다.</p><p class="text-sm text-red-700 mb-1">정답: ' + answer + '</p><p class="text-sm text-red-600">' + explanation + '</p>';
+        }
+    }
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && document.getElementById('quiz-answer-input') === document.activeElement) { checkShortAnswer(); }
+    });
+
+    // ── 차트 초기화 ──
+    document.addEventListener('DOMContentLoaded', function() {
+        // 클라우드 지출 비교 차트
+        var ctx1 = document.getElementById('cloudSpendChart');
+        if (ctx1) {
+            new Chart(ctx1.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: ['IaaS', 'PaaS', 'SaaS'],
+                    datasets: [{
+                        label: '2024 글로벌 지출 (억 달러)',
+                        data: [1500, 1760, 2480],
+                        backgroundColor: ['rgba(99,102,241,0.7)', 'rgba(16,185,129,0.7)', 'rgba(245,158,11,0.7)'],
+                        borderColor: ['#6366f1', '#10b981', '#f59e0b'],
+                        borderWidth: 2, borderRadius: 6
+                    }]
+                },
+                options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false} }, scales:{ y:{beginAtZero:true, ticks:{callback:function(v){return v+'억$'}}} } }
+            });
+        }
+        // FinOps 절감 효과 차트
+        var ctx2 = document.getElementById('finopsSavingsChart');
+        if (ctx2) {
+            new Chart(ctx2.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: ['사용량 최적화', '요율 최적화(RI/SP)', '아키텍처 최적화'],
+                    datasets: [
+                        { label: '최소 절감률(%)', data: [20, 30, 40], backgroundColor: 'rgba(99,102,241,0.5)', borderColor: '#6366f1', borderWidth: 1, borderRadius: 4 },
+                        { label: '최대 절감률(%)', data: [40, 72, 60], backgroundColor: 'rgba(99,102,241,0.9)', borderColor: '#4f46e5', borderWidth: 1, borderRadius: 4 }
+                    ]
+                },
+                options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{position:'top'} }, scales:{ y:{beginAtZero:true, max:80, ticks:{callback:function(v){return v+'%'}}} } }
+            });
+        }
+    });
+</script>
+</body></html>

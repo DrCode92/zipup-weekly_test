@@ -1,0 +1,1314 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RAID 레벨별 구조, Write Hole 메커니즘, 해결 방안</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+body{font-family:'Noto Sans KR',sans-serif}
+.tab-btn{padding:0.5rem 1rem;font-size:0.85rem;font-weight:500;border-radius:0.5rem;white-space:nowrap;transition:all 0.2s}
+.tab-btn.active{background:#4f46e5;color:#fff;box-shadow:0 2px 8px rgba(79,70,229,0.3)}
+.tab-btn:not(.active){color:#6b7280}
+.tab-btn:not(.active):hover{background:#e0e7ff;color:#4338ca}
+.tab-btn.mentor-tab{color:#b45309}
+.tab-btn.mentor-tab.active{background:#d97706;color:#fff;box-shadow:0 2px 8px rgba(217,119,6,0.3)}
+.def-box{background:linear-gradient(135deg,#ede9fe 0%,#e0e7ff 100%);border-left:4px solid #6366f1;padding:1.5rem;border-radius:0.75rem;margin:1rem 0}
+.info-card{border-radius:0.75rem;padding:1.25rem;margin-bottom:1rem;border-left:4px solid}
+.info-card.indigo{background:#eef2ff;border-color:#6366f1}
+.info-card.green{background:#ecfdf5;border-color:#10b981}
+.info-card.purple{background:#faf5ff;border-color:#8b5cf6}
+.info-card.amber{background:#fffbeb;border-color:#f59e0b}
+.info-card.teal{background:#f0fdfa;border-color:#14b8a6}
+.info-card.red{background:#fef2f2;border-color:#ef4444}
+.tech-block{background:#fff;border:1px solid #e5e7eb;border-radius:0.75rem;margin-bottom:0.75rem;overflow:hidden;cursor:pointer}
+.tech-block .header{padding:1rem 1.25rem;display:flex;justify-content:space-between;align-items:center}
+.tech-block .body{padding:0 1.25rem 1.25rem;display:none}
+.tech-block.open .body{display:block}
+.tech-block .toggle{transition:transform 0.2s}
+.tech-block.open .toggle{transform:rotate(180deg)}
+.highlight{background:linear-gradient(120deg,#a78bfa 0%,#818cf8 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:700}
+.chat-sidebar{position:fixed;top:0;right:-400px;width:400px;height:100%;background:#fff;box-shadow:-4px 0 20px rgba(0,0,0,0.15);z-index:1000;transition:right 0.3s;display:flex;flex-direction:column}
+.chat-sidebar.open{right:0}
+.chat-fab{position:fixed;bottom:24px;right:24px;width:56px;height:56px;background:#4f46e5;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;cursor:pointer;box-shadow:0 4px 12px rgba(79,70,229,0.4);z-index:999;transition:transform 0.2s}
+.chat-fab:hover{transform:scale(1.1)}
+.typing-indicator span{display:inline-block;width:8px;height:8px;margin:0 2px;background:#6366f1;border-radius:50%;animation:typing 1s infinite}
+.typing-indicator span:nth-child(2){animation-delay:0.2s}
+.typing-indicator span:nth-child(3){animation-delay:0.4s}
+@keyframes typing{0%,100%{opacity:0.3;transform:scale(0.8)}50%{opacity:1;transform:scale(1.2)}}
+.strategy-card{background:#fff;border:1px solid #e5e7eb;border-radius:0.75rem;overflow:hidden;cursor:pointer;margin-bottom:0.75rem}
+.strategy-card .s-header{padding:1rem 1.25rem;display:flex;justify-content:space-between;align-items:center}
+.strategy-card .s-body{padding:0 1.25rem 1.25rem;display:none}
+.strategy-card.open .s-body{display:block}
+.strategy-card .s-toggle{transition:transform 0.2s}
+.strategy-card.open .s-toggle{transform:rotate(180deg)}
+.textbook-content h3{font-size:1.25rem;font-weight:700;color:#1e293b;margin-top:2.5rem;margin-bottom:1rem;padding-bottom:0.5rem;border-bottom:2px solid #e0e7ff}
+.textbook-content h4{font-size:1.1rem;font-weight:600;color:#334155;margin-top:1.5rem;margin-bottom:0.75rem}
+.textbook-content p{color:#374151;line-height:1.8;margin-bottom:0.75rem}
+.textbook-content table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:0.9rem}
+.textbook-content th{background:#f1f5f9;padding:0.625rem;border:1px solid #d1d5db;font-weight:600;text-align:left}
+.textbook-content td{padding:0.625rem;border:1px solid #d1d5db}
+.textbook-content blockquote{border-left:4px solid #6366f1;padding:1rem;background:#eef2ff;border-radius:0 0.5rem 0.5rem 0;margin:1rem 0}
+.textbook-content pre{background:#f8fafc;border:1px solid #e2e8f0;border-radius:0.5rem;padding:1rem;overflow-x:auto;font-size:0.85rem;margin:1rem 0}
+.insight-box{background:linear-gradient(135deg,#fef3c7 0%,#fde68a 100%);border-left:4px solid #f59e0b;padding:1.25rem;border-radius:0.75rem;margin:1rem 0}
+</style>
+</head>
+<body class="bg-gray-50">
+<div class="max-w-5xl mx-auto px-4 py-6">
+  <header class="bg-white rounded-2xl shadow-sm border p-6 mb-6">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <p class="text-sm text-indigo-600 font-medium tracking-wide mb-1">KPC 정보관리기술사 ZIP-UP 심화반</p>
+        <h1 class="text-2xl font-black text-gray-900">RAID 레벨별 구조, Write Hole 메커니즘, 해결 방안</h1>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="bg-indigo-100 text-indigo-700 text-xs font-bold px-3 py-1 rounded-full">2026</span>
+        <button onclick="toggleSettings()" class="bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs font-medium px-3 py-1.5 rounded-full transition-colors flex items-center gap-1">🔑 API 설정</button>
+      </div>
+    </div>
+    <nav class="flex gap-2 overflow-x-auto pb-2" id="tabNav">
+      <button class="tab-btn active" onclick="navTo('overview')">개요 및 개념</button>
+      <button class="tab-btn" onclick="navTo('raidlevels')">RAID 레벨 비교</button>
+      <button class="tab-btn" onclick="navTo('writehole')">Write Hole 분석</button>
+      <button class="tab-btn" onclick="navTo('solutions')">해결 방안</button>
+      <button class="tab-btn" onclick="navTo('textbook')">원문 학습</button>
+      <button class="tab-btn mentor-tab" onclick="navTo('script')" id="scriptTabBtn" style="display:none;">🎬 강의 스크립트</button>
+      <button class="tab-btn" onclick="navTo('quiz')">퀴즈 & 암기</button>
+    </nav>
+  </header>
+  <main>
+
+<div id="overview" class="tab-content">
+  <div class="def-box">
+    <p class="font-bold text-indigo-900 text-lg mb-2">📖 핵심 정의</p>
+    <p class="text-gray-800 leading-relaxed"><strong>RAID(Redundant Array of Independent Disks)</strong>란, <strong>다수의 물리적 디스크를 조합하여 하나의 논리적 디스크를 구성</strong>함으로써 성능(Performance), 용량(Capacity), 신뢰성(Reliability)을 동시에 향상시키는 기술이다. <strong>Write Hole</strong>은 RAID 5/6에서 <strong>데이터 블록과 패리티 블록의 갱신이 원자적(Atomic)으로 이루어지지 않아</strong>, 갱신 도중 시스템 장애 시 데이터-패리티 불일치가 발생하는 현상이다.</p>
+  </div>
+
+  <div class="info-card indigo">
+    <p class="font-bold text-indigo-800 mb-2">💡 개념 해설</p>
+    <p class="text-sm text-gray-700 leading-relaxed">RAID는 1988년 UC Berkeley에서 Patterson, Gibson, Katz가 발표한 개념으로, 스트라이핑(성능)·미러링(신뢰성)·패리티(효율+신뢰성)의 3대 기술을 조합하여 다양한 레벨(0/1/5/6)을 제공합니다. Write Hole은 RAID 5/6의 <strong>구조적 취약점</strong>으로, 즉시 데이터 손실이 아닌 <strong>향후 디스크 장애 시 잘못된 복구로 이어지는 지연된 위험(Latent Risk)</strong>입니다.</p>
+  </div>
+
+  <h3 class="text-lg font-bold text-gray-800 mt-8 mb-4">삼단계 학습 구조</h3>
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <div class="bg-white rounded-xl shadow-sm border-l-4 border-indigo-500 p-5">
+      <div class="flex items-center gap-2 mb-2"><span class="bg-indigo-100 text-indigo-700 text-xs font-bold px-2 py-1 rounded-full">소문제 1</span><h4 class="font-bold text-gray-800">RAID 레벨별 구조</h4></div>
+      <p class="text-sm text-gray-600">RAID 0/1/5/6의 아키텍처와 효율성 비교 — 스트라이핑, 미러링, 분산 패리티, 이중 패리티</p>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm border-l-4 border-red-500 p-5">
+      <div class="flex items-center gap-2 mb-2"><span class="bg-red-100 text-red-700 text-xs font-bold px-2 py-1 rounded-full">소문제 2</span><h4 class="font-bold text-gray-800">Write Hole 메커니즘</h4></div>
+      <p class="text-sm text-gray-600">RAID 5의 데이터-패리티 비원자적 갱신 취약점과 Silent Data Corruption 위험</p>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm border-l-4 border-green-500 p-5">
+      <div class="flex items-center gap-2 mb-2"><span class="bg-green-100 text-green-700 text-xs font-bold px-2 py-1 rounded-full">소문제 3</span><h4 class="font-bold text-gray-800">해결 방안</h4></div>
+      <p class="text-sm text-gray-600">BBU(HW), Intent Log(SW), ZFS COW(FS) — 다양한 계층에서의 쓰기 원자성 보장</p>
+    </div>
+  </div>
+
+  <h3 class="text-lg font-bold text-gray-800 mt-8 mb-4">RAID 3대 핵심 기술</h3>
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <div class="info-card indigo">
+      <p class="font-bold text-indigo-800 mb-1">⚡ 스트라이핑 (Striping)</p>
+      <p class="text-sm text-gray-700">데이터를 여러 디스크에 분산 저장하여 <strong>성능 향상</strong> (병렬 I/O)</p>
+    </div>
+    <div class="info-card green">
+      <p class="font-bold text-green-800 mb-1">🔄 미러링 (Mirroring)</p>
+      <p class="text-sm text-gray-700">동일 데이터를 복수 디스크에 복제하여 <strong>신뢰성 향상</strong> (데이터 보호)</p>
+    </div>
+    <div class="info-card purple">
+      <p class="font-bold text-purple-800 mb-1">🧮 패리티 (Parity)</p>
+      <p class="text-sm text-gray-700">오류 검출/복구용 부가 데이터로 <strong>신뢰성 + 용량 효율</strong> 확보</p>
+    </div>
+  </div>
+
+  <div class="info-card amber">
+    <p class="font-bold text-amber-800 mb-2">📐 문제 구조: 구조 → 취약점 → 해결</p>
+    <p class="text-sm text-gray-700">소문제 1에서 RAID가 어떻게 데이터를 분산 저장하는지 구조적으로 이해하고, 소문제 2에서 RAID 5의 패리티 기반 구조가 왜 Write Hole에 취약한지 분석하며, 소문제 3에서 이 취약점을 어떻게 극복하는지 기술합니다.</p>
+  </div>
+
+  <!-- RAID 레벨 비교 차트 -->
+  <h3 class="text-lg font-bold text-gray-800 mt-8 mb-4">RAID 레벨별 핵심 지표 비교</h3>
+  <div class="bg-white rounded-xl shadow-sm border p-6">
+    <canvas id="raidChart" height="200"></canvas>
+  </div>
+</div>
+
+<div id="raidlevels" class="hidden">
+  <h2 class="text-xl font-bold text-gray-900 mb-6">RAID 레벨별 아키텍처와 효율성 비교</h2>
+
+  <!-- RAID 0 -->
+  <div class="tech-block">
+    <div class="header">
+      <div class="flex items-center gap-3"><span class="bg-indigo-100 text-indigo-700 text-xs font-bold px-2 py-1 rounded-full">RAID 0</span><h3 class="font-bold text-gray-800">스트라이핑 (Striping)</h3></div>
+      <span class="toggle text-gray-400">▼</span>
+    </div>
+    <div class="body">
+      <!-- RAID 0 도식: HTML/CSS -->
+      <div class="bg-slate-50 rounded-lg border p-4 mb-4">
+        <p class="text-center text-sm font-bold text-gray-700 mb-3">RAID 0 — 데이터 분산 배치</p>
+        <p class="text-center text-xs text-gray-500 mb-3">Data: A B C D E F G H</p>
+        <div class="grid grid-cols-4 gap-3 max-w-md mx-auto">
+          <div class="text-center">
+            <p class="text-xs font-bold text-gray-600 mb-1">Disk 0</p>
+            <div class="bg-indigo-100 border border-indigo-300 rounded p-2 text-xs font-mono"><div>A</div><div>E</div></div>
+          </div>
+          <div class="text-center">
+            <p class="text-xs font-bold text-gray-600 mb-1">Disk 1</p>
+            <div class="bg-indigo-100 border border-indigo-300 rounded p-2 text-xs font-mono"><div>B</div><div>F</div></div>
+          </div>
+          <div class="text-center">
+            <p class="text-xs font-bold text-gray-600 mb-1">Disk 2</p>
+            <div class="bg-indigo-100 border border-indigo-300 rounded p-2 text-xs font-mono"><div>C</div><div>G</div></div>
+          </div>
+          <div class="text-center">
+            <p class="text-xs font-bold text-gray-600 mb-1">Disk 3</p>
+            <div class="bg-indigo-100 border border-indigo-300 rounded p-2 text-xs font-mono"><div>D</div><div>H</div></div>
+          </div>
+        </div>
+        <p class="text-center text-xs text-gray-500 mt-3">용량: N × 단일 디스크 (100%) | 장애 허용: 0</p>
+      </div>
+      <table class="w-full text-sm border-collapse">
+        <tr><th class="bg-gray-50 p-2 border text-left w-1/4">구성</th><td class="p-2 border">최소 2개 디스크, 데이터를 블록 단위로 분산</td></tr>
+        <tr><th class="bg-gray-50 p-2 border text-left">용량 효율</th><td class="p-2 border">100% (N개 디스크 × 디스크 용량)</td></tr>
+        <tr><th class="bg-gray-50 p-2 border text-left">읽기/쓰기</th><td class="p-2 border">N배 향상 (병렬 읽기/쓰기)</td></tr>
+        <tr><th class="bg-gray-50 p-2 border text-left">장애 허용</th><td class="p-2 border"><strong class="text-red-600">없음</strong> — 1개 디스크 장애 시 전체 데이터 손실</td></tr>
+        <tr><th class="bg-gray-50 p-2 border text-left">용도</th><td class="p-2 border">임시 데이터, 캐시, 성능 우선 환경</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- RAID 1 -->
+  <div class="tech-block">
+    <div class="header">
+      <div class="flex items-center gap-3"><span class="bg-green-100 text-green-700 text-xs font-bold px-2 py-1 rounded-full">RAID 1</span><h3 class="font-bold text-gray-800">미러링 (Mirroring)</h3></div>
+      <span class="toggle text-gray-400">▼</span>
+    </div>
+    <div class="body">
+      <div class="bg-slate-50 rounded-lg border p-4 mb-4">
+        <p class="text-center text-sm font-bold text-gray-700 mb-3">RAID 1 — 1:1 복제</p>
+        <div class="grid grid-cols-4 gap-3 max-w-md mx-auto">
+          <div class="text-center">
+            <p class="text-xs font-bold text-gray-600 mb-1">Disk 0</p>
+            <div class="bg-green-100 border border-green-300 rounded p-2 text-xs font-mono"><div>A</div><div>B</div></div>
+            <p class="text-xs text-gray-500 mt-1">(원본)</p>
+          </div>
+          <div class="text-center">
+            <p class="text-xs font-bold text-gray-600 mb-1">Disk 1</p>
+            <div class="bg-green-100 border border-green-300 rounded p-2 text-xs font-mono"><div>A</div><div>B</div></div>
+            <p class="text-xs text-gray-500 mt-1">(미러)</p>
+          </div>
+          <div class="text-center">
+            <p class="text-xs font-bold text-gray-600 mb-1">Disk 2</p>
+            <div class="bg-green-100 border border-green-300 rounded p-2 text-xs font-mono"><div>C</div><div>D</div></div>
+            <p class="text-xs text-gray-500 mt-1">(원본)</p>
+          </div>
+          <div class="text-center">
+            <p class="text-xs font-bold text-gray-600 mb-1">Disk 3</p>
+            <div class="bg-green-100 border border-green-300 rounded p-2 text-xs font-mono"><div>C</div><div>D</div></div>
+            <p class="text-xs text-gray-500 mt-1">(미러)</p>
+          </div>
+        </div>
+        <p class="text-center text-xs text-gray-500 mt-3">용량: N/2 × 단일 디스크 (50%) | 장애 허용: 1 (미러 쌍 내)</p>
+      </div>
+      <table class="w-full text-sm border-collapse">
+        <tr><th class="bg-gray-50 p-2 border text-left w-1/4">구성</th><td class="p-2 border">최소 2개 디스크, 데이터를 1:1 복제</td></tr>
+        <tr><th class="bg-gray-50 p-2 border text-left">용량 효율</th><td class="p-2 border"><strong>50%</strong> (총 용량의 절반만 사용 가능)</td></tr>
+        <tr><th class="bg-gray-50 p-2 border text-left">읽기 성능</th><td class="p-2 border">2배 향상 (양쪽에서 읽기 가능)</td></tr>
+        <tr><th class="bg-gray-50 p-2 border text-left">쓰기 성능</th><td class="p-2 border">동일 (양쪽에 동시 쓰기)</td></tr>
+        <tr><th class="bg-gray-50 p-2 border text-left">장애 허용</th><td class="p-2 border"><strong>1개 디스크</strong> (미러 쌍 내)</td></tr>
+        <tr><th class="bg-gray-50 p-2 border text-left">용도</th><td class="p-2 border">OS, 데이터베이스 로그, 고가용성 환경</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- RAID 5 -->
+  <div class="tech-block">
+    <div class="header">
+      <div class="flex items-center gap-3"><span class="bg-purple-100 text-purple-700 text-xs font-bold px-2 py-1 rounded-full">RAID 5</span><h3 class="font-bold text-gray-800">분산 패리티 스트라이핑</h3></div>
+      <span class="toggle text-gray-400">▼</span>
+    </div>
+    <div class="body">
+      <div class="bg-slate-50 rounded-lg border p-4 mb-4">
+        <p class="text-center text-sm font-bold text-gray-700 mb-3">RAID 5 — 분산 패리티</p>
+        <div class="grid grid-cols-4 gap-3 max-w-md mx-auto">
+          <div class="text-center">
+            <p class="text-xs font-bold text-gray-600 mb-1">Disk 0</p>
+            <div class="rounded p-1 text-xs font-mono space-y-1">
+              <div class="bg-purple-100 border border-purple-300 rounded px-2 py-1">A1</div>
+              <div class="bg-purple-100 border border-purple-300 rounded px-2 py-1">B1</div>
+              <div class="bg-purple-100 border border-purple-300 rounded px-2 py-1">C1</div>
+              <div class="bg-amber-100 border border-amber-400 rounded px-2 py-1 font-bold">Dp</div>
+            </div>
+          </div>
+          <div class="text-center">
+            <p class="text-xs font-bold text-gray-600 mb-1">Disk 1</p>
+            <div class="rounded p-1 text-xs font-mono space-y-1">
+              <div class="bg-purple-100 border border-purple-300 rounded px-2 py-1">A2</div>
+              <div class="bg-purple-100 border border-purple-300 rounded px-2 py-1">B2</div>
+              <div class="bg-amber-100 border border-amber-400 rounded px-2 py-1 font-bold">Cp</div>
+              <div class="bg-purple-100 border border-purple-300 rounded px-2 py-1">D1</div>
+            </div>
+          </div>
+          <div class="text-center">
+            <p class="text-xs font-bold text-gray-600 mb-1">Disk 2</p>
+            <div class="rounded p-1 text-xs font-mono space-y-1">
+              <div class="bg-purple-100 border border-purple-300 rounded px-2 py-1">A3</div>
+              <div class="bg-amber-100 border border-amber-400 rounded px-2 py-1 font-bold">Bp</div>
+              <div class="bg-purple-100 border border-purple-300 rounded px-2 py-1">C2</div>
+              <div class="bg-purple-100 border border-purple-300 rounded px-2 py-1">D2</div>
+            </div>
+          </div>
+          <div class="text-center">
+            <p class="text-xs font-bold text-gray-600 mb-1">Disk 3</p>
+            <div class="rounded p-1 text-xs font-mono space-y-1">
+              <div class="bg-amber-100 border border-amber-400 rounded px-2 py-1 font-bold">Ap</div>
+              <div class="bg-purple-100 border border-purple-300 rounded px-2 py-1">B3</div>
+              <div class="bg-purple-100 border border-purple-300 rounded px-2 py-1">C3</div>
+              <div class="bg-purple-100 border border-purple-300 rounded px-2 py-1">D3</div>
+            </div>
+          </div>
+        </div>
+        <p class="text-center text-xs text-gray-500 mt-3">🟡 = 패리티 (분산 배치) | 용량: (N-1)/N | 장애 허용: 1개</p>
+      </div>
+      <div class="info-card purple">
+        <p class="font-bold text-purple-800 mb-1">🧮 패리티 복구 원리</p>
+        <p class="text-sm text-gray-700">A1 XOR A2 XOR A3 = Ap → Disk 2 장애 시: A3 = A1 XOR A2 XOR Ap (XOR의 가역성)</p>
+      </div>
+      <table class="w-full text-sm border-collapse">
+        <tr><th class="bg-gray-50 p-2 border text-left w-1/4">구성</th><td class="p-2 border">최소 3개 디스크, 패리티를 모든 디스크에 분산</td></tr>
+        <tr><th class="bg-gray-50 p-2 border text-left">용량 효율</th><td class="p-2 border"><strong>(N-1)/N</strong> (4개 디스크 → 75%)</td></tr>
+        <tr><th class="bg-gray-50 p-2 border text-left">쓰기 성능</th><td class="p-2 border">패리티 계산 오버헤드 (Read-Modify-Write)</td></tr>
+        <tr><th class="bg-gray-50 p-2 border text-left">장애 허용</th><td class="p-2 border"><strong>1개 디스크</strong> — XOR 연산으로 복구</td></tr>
+        <tr><th class="bg-gray-50 p-2 border text-left">Write Hole</th><td class="p-2 border"><strong class="text-red-600">취약</strong></td></tr>
+        <tr><th class="bg-gray-50 p-2 border text-left">용도</th><td class="p-2 border">범용 서버, 파일 서버, 웹 서버</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- RAID 6 -->
+  <div class="tech-block">
+    <div class="header">
+      <div class="flex items-center gap-3"><span class="bg-red-100 text-red-700 text-xs font-bold px-2 py-1 rounded-full">RAID 6</span><h3 class="font-bold text-gray-800">이중 분산 패리티</h3></div>
+      <span class="toggle text-gray-400">▼</span>
+    </div>
+    <div class="body">
+      <div class="bg-slate-50 rounded-lg border p-4 mb-4">
+        <p class="text-center text-sm font-bold text-gray-700 mb-3">RAID 6 — 이중 패리티 (P + Q)</p>
+        <div class="grid grid-cols-4 gap-3 max-w-md mx-auto">
+          <div class="text-center">
+            <p class="text-xs font-bold text-gray-600 mb-1">Disk 0</p>
+            <div class="rounded p-1 text-xs font-mono space-y-1">
+              <div class="bg-blue-100 border border-blue-300 rounded px-2 py-1">A1</div>
+              <div class="bg-blue-100 border border-blue-300 rounded px-2 py-1">B1</div>
+              <div class="bg-amber-100 border border-amber-400 rounded px-2 py-1 font-bold">Cp</div>
+            </div>
+          </div>
+          <div class="text-center">
+            <p class="text-xs font-bold text-gray-600 mb-1">Disk 1</p>
+            <div class="rounded p-1 text-xs font-mono space-y-1">
+              <div class="bg-blue-100 border border-blue-300 rounded px-2 py-1">A2</div>
+              <div class="bg-amber-100 border border-amber-400 rounded px-2 py-1 font-bold">Bp</div>
+              <div class="bg-red-100 border border-red-400 rounded px-2 py-1 font-bold">Cq</div>
+            </div>
+          </div>
+          <div class="text-center">
+            <p class="text-xs font-bold text-gray-600 mb-1">Disk 2</p>
+            <div class="rounded p-1 text-xs font-mono space-y-1">
+              <div class="bg-amber-100 border border-amber-400 rounded px-2 py-1 font-bold">Ap</div>
+              <div class="bg-red-100 border border-red-400 rounded px-2 py-1 font-bold">Bq</div>
+              <div class="bg-blue-100 border border-blue-300 rounded px-2 py-1">C1</div>
+            </div>
+          </div>
+          <div class="text-center">
+            <p class="text-xs font-bold text-gray-600 mb-1">Disk 3</p>
+            <div class="rounded p-1 text-xs font-mono space-y-1">
+              <div class="bg-red-100 border border-red-400 rounded px-2 py-1 font-bold">Aq</div>
+              <div class="bg-blue-100 border border-blue-300 rounded px-2 py-1">B2</div>
+              <div class="bg-blue-100 border border-blue-300 rounded px-2 py-1">C2</div>
+            </div>
+          </div>
+        </div>
+        <p class="text-center text-xs text-gray-500 mt-3">🟡p = XOR 패리티 | 🔴q = Reed-Solomon | 용량: (N-2)/N | 장애 허용: 2개</p>
+      </div>
+      <table class="w-full text-sm border-collapse">
+        <tr><th class="bg-gray-50 p-2 border text-left w-1/4">구성</th><td class="p-2 border">최소 4개 디스크, 2종류 패리티(P: XOR, Q: Reed-Solomon)</td></tr>
+        <tr><th class="bg-gray-50 p-2 border text-left">용량 효율</th><td class="p-2 border"><strong>(N-2)/N</strong> (4개 디스크 → 50%)</td></tr>
+        <tr><th class="bg-gray-50 p-2 border text-left">장애 허용</th><td class="p-2 border"><strong>2개 디스크 동시 장애</strong> 허용</td></tr>
+        <tr><th class="bg-gray-50 p-2 border text-left">Write Hole</th><td class="p-2 border"><strong class="text-red-600">취약</strong></td></tr>
+        <tr><th class="bg-gray-50 p-2 border text-left">용도</th><td class="p-2 border">대용량 스토리지, 미션 크리티컬 환경</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- 종합 비교표 -->
+  <h3 class="text-lg font-bold text-gray-800 mt-8 mb-4">RAID 레벨별 효율성 종합 비교</h3>
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm border-collapse">
+      <thead>
+        <tr class="bg-indigo-50">
+          <th class="p-3 border font-bold text-indigo-900">비교 기준</th>
+          <th class="p-3 border font-bold text-indigo-900">RAID 0</th>
+          <th class="p-3 border font-bold text-indigo-900">RAID 1</th>
+          <th class="p-3 border font-bold text-indigo-900">RAID 5</th>
+          <th class="p-3 border font-bold text-indigo-900">RAID 6</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td class="p-2 border font-medium">최소 디스크</td><td class="p-2 border text-center">2</td><td class="p-2 border text-center">2</td><td class="p-2 border text-center">3</td><td class="p-2 border text-center">4</td></tr>
+        <tr><td class="p-2 border font-medium">용량 효율</td><td class="p-2 border text-center">100%</td><td class="p-2 border text-center">50%</td><td class="p-2 border text-center">(N-1)/N</td><td class="p-2 border text-center">(N-2)/N</td></tr>
+        <tr><td class="p-2 border font-medium">읽기 성능</td><td class="p-2 border text-center">최고</td><td class="p-2 border text-center">좋음</td><td class="p-2 border text-center">좋음</td><td class="p-2 border text-center">좋음</td></tr>
+        <tr><td class="p-2 border font-medium">쓰기 성능</td><td class="p-2 border text-center">최고</td><td class="p-2 border text-center">보통</td><td class="p-2 border text-center">보통</td><td class="p-2 border text-center">낮음</td></tr>
+        <tr><td class="p-2 border font-medium">장애 허용</td><td class="p-2 border text-center text-red-600 font-bold">0개</td><td class="p-2 border text-center">1개</td><td class="p-2 border text-center">1개</td><td class="p-2 border text-center text-green-600 font-bold">2개</td></tr>
+        <tr><td class="p-2 border font-medium">패리티 연산</td><td class="p-2 border text-center">없음</td><td class="p-2 border text-center">없음</td><td class="p-2 border text-center">XOR</td><td class="p-2 border text-center">XOR + RS</td></tr>
+        <tr><td class="p-2 border font-medium">Write Hole</td><td class="p-2 border text-center">해당 없음</td><td class="p-2 border text-center">해당 없음</td><td class="p-2 border text-center text-red-600 font-bold">취약</td><td class="p-2 border text-center text-red-600 font-bold">취약</td></tr>
+        <tr><td class="p-2 border font-medium">대표 용도</td><td class="p-2 border text-center">임시/캐시</td><td class="p-2 border text-center">OS/로그</td><td class="p-2 border text-center">범용 서버</td><td class="p-2 border text-center">미션 크리티컬</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div id="writehole" class="hidden">
+  <h2 class="text-xl font-bold text-gray-900 mb-6">RAID 5의 Write Hole 메커니즘</h2>
+
+  <div class="def-box">
+    <p class="font-bold text-indigo-900 text-lg mb-2">📖 Write Hole 정의</p>
+    <p class="text-gray-800 leading-relaxed"><strong>Write Hole</strong>이란, RAID 5/6에서 <strong>데이터 블록과 패리티 블록의 갱신이 원자적(Atomic)으로 이루어지지 않아</strong>, 갱신 도중 시스템 장애(정전, 크래시) 발생 시 <strong>데이터와 패리티의 불일치(Inconsistency)</strong>가 발생하는 현상이다.</p>
+  </div>
+
+  <!-- Write 과정 시각화 -->
+  <h3 class="text-lg font-bold text-gray-800 mt-8 mb-4">RAID 5 Write 과정 (정상)</h3>
+  <div class="bg-white rounded-xl shadow-sm border p-6 mb-6">
+    <div class="space-y-3">
+      <div class="flex items-center gap-3">
+        <span class="bg-indigo-600 text-white text-xs font-bold w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0">1</span>
+        <div class="bg-indigo-50 rounded-lg p-3 flex-grow"><p class="text-sm text-gray-700">기존 데이터 블록 읽기 (Old Data)</p></div>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="bg-indigo-600 text-white text-xs font-bold w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0">2</span>
+        <div class="bg-indigo-50 rounded-lg p-3 flex-grow"><p class="text-sm text-gray-700">기존 패리티 블록 읽기 (Old Parity)</p></div>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="bg-indigo-600 text-white text-xs font-bold w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0">3</span>
+        <div class="bg-indigo-50 rounded-lg p-3 flex-grow"><p class="text-sm text-gray-700">새 패리티 계산: <code class="bg-white px-2 py-0.5 rounded text-xs">New Parity = Old Data XOR New Data XOR Old Parity</code></p></div>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="bg-red-600 text-white text-xs font-bold w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0">4</span>
+        <div class="bg-red-50 border-2 border-red-300 rounded-lg p-3 flex-grow"><p class="text-sm text-gray-700"><strong>새 데이터 블록 쓰기</strong> ← ⚡ 이 사이에 장애 발생!</p></div>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="bg-red-600 text-white text-xs font-bold w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0">5</span>
+        <div class="bg-red-50 border-2 border-red-300 rounded-lg p-3 flex-grow"><p class="text-sm text-gray-700"><strong>새 패리티 블록 쓰기</strong> ← ⚡</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Write Hole 시나리오 -->
+  <h3 class="text-lg font-bold text-gray-800 mt-8 mb-4">Write Hole 발생 시나리오</h3>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+    <div class="info-card red">
+      <p class="font-bold text-red-800 mb-2">⚠️ Case 1: 4번 완료, 5번 미완료</p>
+      <p class="text-sm text-gray-700">데이터는 <strong>새 값</strong>으로 갱신됨, 패리티는 <strong>옛날 값</strong> 그대로</p>
+      <p class="text-sm text-red-700 font-bold mt-2">→ 패리티 불일치!</p>
+    </div>
+    <div class="info-card red">
+      <p class="font-bold text-red-800 mb-2">⚠️ Case 2: 4번 미완료, 5번 완료</p>
+      <p class="text-sm text-gray-700">데이터는 <strong>옛날 값</strong> 그대로, 패리티는 <strong>새 값</strong>으로 갱신됨</p>
+      <p class="text-sm text-red-700 font-bold mt-2">→ 패리티 불일치!</p>
+    </div>
+  </div>
+
+  <div class="insight-box">
+    <p class="font-bold text-amber-900 mb-2">⚡ 핵심 문제</p>
+    <p class="text-sm text-gray-700">데이터 쓰기(4번)와 패리티 쓰기(5번)는 <strong>별도의 물리적 디스크</strong>에 대한 독립적 I/O 연산이므로, 두 연산 사이에 시간적 간격(Window)이 존재한다. 이 간격 동안 장애가 발생하면 데이터-패리티 불일치가 발생한다.</p>
+  </div>
+
+  <!-- 위험성 -->
+  <h3 class="text-lg font-bold text-gray-800 mt-8 mb-4">Write Hole의 위험성</h3>
+  <div class="overflow-x-auto mb-6">
+    <table class="w-full text-sm border-collapse">
+      <thead><tr class="bg-red-50"><th class="p-3 border font-bold">상황</th><th class="p-3 border font-bold">결과</th></tr></thead>
+      <tbody>
+        <tr><td class="p-2 border">불일치 상태에서 정상 운용</td><td class="p-2 border">문제 없음 (데이터 직접 읽기)</td></tr>
+        <tr><td class="p-2 border font-bold text-red-700">불일치 상태에서 다른 디스크 장애 발생</td><td class="p-2 border"><strong class="text-red-700">데이터 복구 불가</strong> — 잘못된 패리티로 복구 → <strong>Silent Data Corruption</strong></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="info-card red">
+    <p class="font-bold text-red-800 mb-2">💀 지연된 위험 (Latent Risk)</p>
+    <p class="text-sm text-gray-700">Write Hole의 진정한 위험은 즉시 데이터 손실이 아니라, <strong>향후 디스크 장애 시 잘못된 패리티로 복구함으로써 무결성이 파괴</strong>되는 지연된 위험이다. 에러 메시지도 없이 조용히 데이터가 손상되므로 <strong>Silent Data Corruption</strong>이라 불린다.</p>
+  </div>
+
+  <h3 class="text-lg font-bold text-gray-800 mt-8 mb-4">RAID 5에서 특히 치명적인 이유</h3>
+  <div class="space-y-3">
+    <div class="strategy-card">
+      <div class="s-header"><p class="font-bold text-gray-800 text-sm">1. 1개 디스크 장애만 허용</p><span class="s-toggle text-gray-400">▼</span></div>
+      <div class="s-body"><p class="text-sm text-gray-600">RAID 5는 장애 복구 시 패리티에 의존하므로, Write Hole로 인한 패리티 불일치가 치명적 결과를 초래</p></div>
+    </div>
+    <div class="strategy-card">
+      <div class="s-header"><p class="font-bold text-gray-800 text-sm">2. 대용량 디스크의 긴 리빌드 시간</p><span class="s-toggle text-gray-400">▼</span></div>
+      <div class="s-body"><p class="text-sm text-gray-600">TB급 디스크의 리빌드가 수 시간~수십 시간 소요 → 리빌드 중 추가 장애 가능성 증가</p></div>
+    </div>
+    <div class="strategy-card">
+      <div class="s-header"><p class="font-bold text-gray-800 text-sm">3. URE(Unrecoverable Read Error) 위험</p><span class="s-toggle text-gray-400">▼</span></div>
+      <div class="s-body"><p class="text-sm text-gray-600">리빌드 중 URE 발생 시 RAID 실패 — 8TB 디스크의 리빌드 시 약 64×10¹² 비트를 읽으므로, URE(10¹⁴ 비트당 1회) 발생 확률이 상당히 높음</p></div>
+    </div>
+  </div>
+</div>
+
+<div id="solutions" class="hidden">
+  <h2 class="text-xl font-bold text-gray-900 mb-6">Write Hole 해결 방안 — HW/SW 접근</h2>
+
+  <h3 class="text-lg font-bold text-gray-800 mt-4 mb-4">하드웨어 기반 해결 방안</h3>
+
+  <div class="tech-block">
+    <div class="header">
+      <div class="flex items-center gap-3"><span class="bg-amber-100 text-amber-700 text-xs font-bold px-2 py-1 rounded-full">HW</span><h3 class="font-bold text-gray-800">BBU/BBM (Battery-Backed Write Cache)</h3></div>
+      <span class="toggle text-gray-400">▼</span>
+    </div>
+    <div class="body">
+      <table class="w-full text-sm border-collapse mb-3">
+        <tr><th class="bg-gray-50 p-2 border text-left w-1/4">원리</th><td class="p-2 border">RAID 컨트롤러에 배터리 백업 캐시(BBU)를 장착하여, 정전 시 캐시의 미완료 쓰기를 보존</td></tr>
+        <tr><th class="bg-gray-50 p-2 border text-left">동작</th><td class="p-2 border">Write 요청 → 캐시에 기록(데이터+패리티) → 배터리로 보호 → 전원 복구 후 디스크에 플러시</td></tr>
+        <tr><th class="bg-gray-50 p-2 border text-left">장점</th><td class="p-2 border">쓰기 성능 향상(Write-Back 캐시) + Write Hole 방지</td></tr>
+        <tr><th class="bg-gray-50 p-2 border text-left">단점</th><td class="p-2 border">배터리 수명 관리 필요 (2~3년 주기 교체), 캐시 크기 제한</td></tr>
+        <tr><th class="bg-gray-50 p-2 border text-left">적용</th><td class="p-2 border">Dell PERC, HP Smart Array, LSI MegaRAID 등 HW RAID 컨트롤러</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="tech-block">
+    <div class="header">
+      <div class="flex items-center gap-3"><span class="bg-amber-100 text-amber-700 text-xs font-bold px-2 py-1 rounded-full">HW</span><h3 class="font-bold text-gray-800">NVRAM/Flash-Backed Write Cache</h3></div>
+      <span class="toggle text-gray-400">▼</span>
+    </div>
+    <div class="body">
+      <table class="w-full text-sm border-collapse mb-3">
+        <tr><th class="bg-gray-50 p-2 border text-left w-1/4">원리</th><td class="p-2 border">배터리 대신 NVRAM(비휘발성 RAM) 또는 Flash 스토리지로 캐시를 보호</td></tr>
+        <tr><th class="bg-gray-50 p-2 border text-left">동작</th><td class="p-2 border">정전 시 슈퍼캐패시터가 캐시 데이터를 Flash에 저장(수초 이내)</td></tr>
+        <tr><th class="bg-gray-50 p-2 border text-left">장점</th><td class="p-2 border">배터리보다 긴 수명, 별도 충전 불필요</td></tr>
+        <tr><th class="bg-gray-50 p-2 border text-left">적용</th><td class="p-2 border">HP Smart Array (Flash-Backed Write Cache), Dell PERC H730+</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <h3 class="text-lg font-bold text-gray-800 mt-8 mb-4">소프트웨어 기반 해결 방안</h3>
+
+  <div class="tech-block">
+    <div class="header">
+      <div class="flex items-center gap-3"><span class="bg-green-100 text-green-700 text-xs font-bold px-2 py-1 rounded-full">SW</span><h3 class="font-bold text-gray-800">Write-Ahead Log (Intent Log)</h3></div>
+      <span class="toggle text-gray-400">▼</span>
+    </div>
+    <div class="body">
+      <table class="w-full text-sm border-collapse mb-3">
+        <tr><th class="bg-gray-50 p-2 border text-left w-1/4">원리</th><td class="p-2 border">쓰기 연산 전에 의도 로그(Intent Log)를 별도 영역에 기록</td></tr>
+        <tr><th class="bg-gray-50 p-2 border text-left">동작</th><td class="p-2 border">① Intent Log 기록 → ② 데이터 블록 쓰기 → ③ 패리티 블록 쓰기 → ④ Intent Log 삭제</td></tr>
+        <tr><th class="bg-gray-50 p-2 border text-left">복구</th><td class="p-2 border">장애 복구 시 Intent Log 확인 → 미완료 쓰기 감지 → 올바른 패리티 재계산</td></tr>
+        <tr><th class="bg-gray-50 p-2 border text-left">단점</th><td class="p-2 border">추가 쓰기 오버헤드 (모든 쓰기에 로그 추가)</td></tr>
+        <tr><th class="bg-gray-50 p-2 border text-left">적용</th><td class="p-2 border">Linux MD-RAID의 Write Intent Bitmap, mdadm</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="tech-block">
+    <div class="header">
+      <div class="flex items-center gap-3"><span class="bg-teal-100 text-teal-700 text-xs font-bold px-2 py-1 rounded-full">FS</span><h3 class="font-bold text-gray-800">ZFS의 Copy-on-Write (COW)</h3></div>
+      <span class="toggle text-gray-400">▼</span>
+    </div>
+    <div class="body">
+      <table class="w-full text-sm border-collapse mb-3">
+        <tr><th class="bg-gray-50 p-2 border text-left w-1/4">원리</th><td class="p-2 border">기존 블록을 직접 수정하지 않고, 새 위치에 새 데이터를 쓰고 포인터를 갱신</td></tr>
+        <tr><th class="bg-gray-50 p-2 border text-left">동작</th><td class="p-2 border">① 새 위치에 데이터+패리티 함께 기록 → ② Merkle Tree 포인터 갱신 → ③ 옛 블록 자연 해제</td></tr>
+        <tr><th class="bg-gray-50 p-2 border text-left">Write Hole</th><td class="p-2 border"><strong class="text-green-600">원천적 해결</strong> — 데이터와 패리티가 동일 트랜잭션에서 함께 기록 → 원자성 보장</td></tr>
+        <tr><th class="bg-gray-50 p-2 border text-left">추가 장점</th><td class="p-2 border">스냅샷, 체크섬(Fletcher-4/SHA-256), 자동 복구(Self-Healing)</td></tr>
+        <tr><th class="bg-gray-50 p-2 border text-left">단점</th><td class="p-2 border">쓰기 증폭(Write Amplification), 단편화 가능성</td></tr>
+        <tr><th class="bg-gray-50 p-2 border text-left">적용</th><td class="p-2 border">ZFS(RAID-Z/Z2/Z3), OpenZFS</td></tr>
+      </table>
+
+      <!-- ZFS COW vs 전통 방식 도식 -->
+      <div class="bg-slate-50 rounded-lg border p-5 mt-4">
+        <p class="text-center text-sm font-bold text-gray-700 mb-4">ZFS Copy-on-Write vs 전통적 RAID 5 방식</p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="bg-red-50 rounded-lg border border-red-200 p-4">
+            <p class="font-bold text-red-800 text-sm mb-3 text-center">전통적 RAID 5</p>
+            <div class="space-y-2 text-xs">
+              <div class="flex items-center gap-2"><div class="bg-white border rounded px-3 py-1">Block A</div><span class="text-red-500 font-bold">→ 직접 수정 →</span><div class="bg-white border rounded px-3 py-1">Block A'</div></div>
+              <div class="flex items-center gap-2"><div class="bg-white border rounded px-3 py-1">Parity P</div><span class="text-red-500 font-bold">→ 직접 수정 →</span><div class="bg-white border rounded px-3 py-1">Parity P'</div></div>
+              <p class="text-red-600 font-bold mt-2 text-center">⚠️ A'과 P' 사이에 장애 → Write Hole!</p>
+            </div>
+          </div>
+          <div class="bg-green-50 rounded-lg border border-green-200 p-4">
+            <p class="font-bold text-green-800 text-sm mb-3 text-center">ZFS COW</p>
+            <div class="space-y-2 text-xs">
+              <div class="flex items-center gap-2"><div class="bg-white border rounded px-3 py-1">Block A</div><span class="text-gray-400">→ (유지)</span></div>
+              <div class="flex items-center gap-2"><div class="bg-green-200 border border-green-400 rounded px-3 py-1 font-bold">New A' + New P'</div><span class="text-green-600">→ 새 위치에 함께 기록</span></div>
+              <div class="flex items-center gap-2"><span class="text-green-600">→ 포인터만 갱신 (원자적)</span></div>
+              <p class="text-green-700 font-bold mt-2 text-center">✅ 장애 시 → 옛 블록 유효 → 무결성 보장</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 해결 방안 비교표 -->
+  <h3 class="text-lg font-bold text-gray-800 mt-8 mb-4">해결 방안 비교</h3>
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm border-collapse">
+      <thead>
+        <tr class="bg-green-50">
+          <th class="p-3 border font-bold">비교 기준</th>
+          <th class="p-3 border font-bold">BBU/Flash Cache</th>
+          <th class="p-3 border font-bold">Intent Log</th>
+          <th class="p-3 border font-bold">ZFS COW</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td class="p-2 border font-medium">접근 방식</td><td class="p-2 border">하드웨어</td><td class="p-2 border">소프트웨어</td><td class="p-2 border">파일시스템 레벨</td></tr>
+        <tr><td class="p-2 border font-medium">추가 비용</td><td class="p-2 border">높음 (컨트롤러+배터리)</td><td class="p-2 border">낮음 (SW 구현)</td><td class="p-2 border">없음 (ZFS 내장)</td></tr>
+        <tr><td class="p-2 border font-medium">성능 영향</td><td class="p-2 border text-green-600">오히려 향상 (Write-Back)</td><td class="p-2 border text-amber-600">소폭 저하 (추가 로그)</td><td class="p-2 border text-amber-600">소폭 저하 (COW 오버헤드)</td></tr>
+        <tr><td class="p-2 border font-medium">원자성 보장</td><td class="p-2 border">캐시 수준</td><td class="p-2 border">로그 수준</td><td class="p-2 border text-green-600 font-bold">트랜잭션 수준</td></tr>
+        <tr><td class="p-2 border font-medium">추가 기능</td><td class="p-2 border">-</td><td class="p-2 border">-</td><td class="p-2 border">스냅샷, 체크섬, Self-Healing</td></tr>
+        <tr><td class="p-2 border font-medium">적용 환경</td><td class="p-2 border">엔터프라이즈 HW RAID</td><td class="p-2 border">Linux SW RAID</td><td class="p-2 border">ZFS 기반 스토리지</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="info-card teal mt-6">
+    <p class="font-bold text-teal-800 mb-2">🔗 연관 이론 연결</p>
+    <p class="text-sm text-gray-700"><strong>저널링 파일 시스템(ext4, NTFS)</strong>: Intent Log는 데이터베이스 WAL과 파일시스템 저널링과 동일한 원리. <strong>CAP 정리</strong>: RAID Write Hole은 분산 시스템의 일관성(Consistency) 문제와 본질이 같음. <strong>SSD/NVMe 미래</strong>: Erasure Coding이 RAID의 대안으로 부상.</p>
+  </div>
+</div>
+
+<div id="textbook" class="hidden">
+  <h2 class="text-xl font-bold text-gray-900 mb-2">원문 학습</h2>
+  <p class="text-sm text-gray-500 mb-6">교재 제1부(상세 해설)의 핵심 내용을 충실히 재현합니다.</p>
+  <div class="textbook-content">
+
+    <div class="def-box">
+      <p class="text-gray-800 leading-relaxed">이 문제는 3개의 소문제로 구성되어 있으며, 소문제 간에 <strong>구조 이해 → 취약점 분석 → 해결 방안</strong>의 논리적 연결이 존재한다.</p>
+    </div>
+
+    <h3>제1장 RAID 레벨별 아키텍처와 효율성 비교 (소문제 1)</h3>
+
+    <h4>1.1 RAID의 개요와 배경</h4>
+    <p>RAID(Redundant Array of Independent Disks)란, <strong>다수의 물리적 디스크를 조합하여 하나의 논리적 디스크를 구성</strong>함으로써 성능(Performance), 용량(Capacity), 신뢰성(Reliability)을 동시에 향상시키는 기술이다.</p>
+    <p>1988년 UC Berkeley의 Patterson, Gibson, Katz가 "A Case for Redundant Arrays of Inexpensive Disks(RAID)" 논문을 발표하면서 RAID 개념이 공식화되었다. 원래 "Inexpensive(저렴한)"였던 I가 이후 "Independent(독립적)"로 변경되었다.</p>
+    <p><strong>RAID의 3대 핵심 기술:</strong></p>
+    <table>
+      <thead><tr><th>기술</th><th>설명</th><th>목적</th></tr></thead>
+      <tbody>
+        <tr><td><strong>스트라이핑(Striping)</strong></td><td>데이터를 여러 디스크에 분산 저장</td><td>성능 향상 (병렬 I/O)</td></tr>
+        <tr><td><strong>미러링(Mirroring)</strong></td><td>동일 데이터를 복수 디스크에 복제</td><td>신뢰성 향상 (데이터 보호)</td></tr>
+        <tr><td><strong>패리티(Parity)</strong></td><td>오류 검출/복구용 부가 데이터 생성</td><td>신뢰성 + 용량 효율</td></tr>
+      </tbody>
+    </table>
+
+    <h4>1.2 RAID 0 — 스트라이핑</h4>
+    <div class="bg-slate-50 rounded-lg border p-4 mb-4">
+      <p class="text-center text-sm font-bold text-gray-700 mb-3">RAID 0 (Striping)</p>
+      <div class="grid grid-cols-4 gap-2 max-w-sm mx-auto text-xs font-mono text-center">
+        <div><p class="font-bold mb-1">Disk 0</p><div class="bg-indigo-100 border border-indigo-300 rounded p-1 space-y-1"><div>A</div><div>E</div></div></div>
+        <div><p class="font-bold mb-1">Disk 1</p><div class="bg-indigo-100 border border-indigo-300 rounded p-1 space-y-1"><div>B</div><div>F</div></div></div>
+        <div><p class="font-bold mb-1">Disk 2</p><div class="bg-indigo-100 border border-indigo-300 rounded p-1 space-y-1"><div>C</div><div>G</div></div></div>
+        <div><p class="font-bold mb-1">Disk 3</p><div class="bg-indigo-100 border border-indigo-300 rounded p-1 space-y-1"><div>D</div><div>H</div></div></div>
+      </div>
+      <p class="text-center text-xs text-gray-500 mt-2">용량: N × 단일 디스크 (100%) | 장애 허용: 0</p>
+    </div>
+    <table>
+      <thead><tr><th>항목</th><th>내용</th></tr></thead>
+      <tbody>
+        <tr><td>구성</td><td>최소 2개 디스크, 데이터를 블록 단위로 분산</td></tr>
+        <tr><td>용량 효율</td><td>100% (N개 디스크 × 디스크 용량)</td></tr>
+        <tr><td>읽기 성능</td><td>N배 향상 (병렬 읽기)</td></tr>
+        <tr><td>쓰기 성능</td><td>N배 향상 (병렬 쓰기)</td></tr>
+        <tr><td>장애 허용</td><td><strong>없음</strong> — 1개 디스크 장애 시 전체 데이터 손실</td></tr>
+        <tr><td>용도</td><td>임시 데이터, 캐시, 성능 우선 환경</td></tr>
+      </tbody>
+    </table>
+
+    <h4>1.3 RAID 1 — 미러링</h4>
+    <div class="bg-slate-50 rounded-lg border p-4 mb-4">
+      <p class="text-center text-sm font-bold text-gray-700 mb-3">RAID 1 (Mirroring)</p>
+      <div class="grid grid-cols-4 gap-2 max-w-sm mx-auto text-xs font-mono text-center">
+        <div><p class="font-bold mb-1">Disk 0</p><div class="bg-green-100 border border-green-300 rounded p-1 space-y-1"><div>A</div><div>B</div></div><p class="text-xs mt-1">(원본)</p></div>
+        <div><p class="font-bold mb-1">Disk 1</p><div class="bg-green-100 border border-green-300 rounded p-1 space-y-1"><div>A</div><div>B</div></div><p class="text-xs mt-1">(미러)</p></div>
+        <div><p class="font-bold mb-1">Disk 2</p><div class="bg-green-100 border border-green-300 rounded p-1 space-y-1"><div>C</div><div>D</div></div><p class="text-xs mt-1">(원본)</p></div>
+        <div><p class="font-bold mb-1">Disk 3</p><div class="bg-green-100 border border-green-300 rounded p-1 space-y-1"><div>C</div><div>D</div></div><p class="text-xs mt-1">(미러)</p></div>
+      </div>
+      <p class="text-center text-xs text-gray-500 mt-2">용량: N/2 × 단일 디스크 (50%) | 장애 허용: 1 (미러 쌍 내)</p>
+    </div>
+    <table>
+      <thead><tr><th>항목</th><th>내용</th></tr></thead>
+      <tbody>
+        <tr><td>구성</td><td>최소 2개 디스크, 데이터를 1:1 복제</td></tr>
+        <tr><td>용량 효율</td><td><strong>50%</strong> (총 용량의 절반만 사용 가능)</td></tr>
+        <tr><td>읽기 성능</td><td>2배 향상 (양쪽에서 읽기 가능)</td></tr>
+        <tr><td>쓰기 성능</td><td>동일 (양쪽에 동시 쓰기)</td></tr>
+        <tr><td>장애 허용</td><td><strong>1개 디스크</strong> (미러 쌍 내)</td></tr>
+        <tr><td>용도</td><td>OS, 데이터베이스 로그, 고가용성 환경</td></tr>
+      </tbody>
+    </table>
+
+    <h4>1.4 RAID 5 — 분산 패리티 스트라이핑</h4>
+    <div class="bg-slate-50 rounded-lg border p-4 mb-4">
+      <p class="text-center text-sm font-bold text-gray-700 mb-3">RAID 5 (Distributed Parity)</p>
+      <div class="grid grid-cols-4 gap-2 max-w-sm mx-auto text-xs font-mono text-center">
+        <div><p class="font-bold mb-1">Disk 0</p><div class="rounded space-y-1"><div class="bg-purple-100 border border-purple-300 rounded px-1 py-0.5">A1</div><div class="bg-purple-100 border border-purple-300 rounded px-1 py-0.5">B1</div><div class="bg-purple-100 border border-purple-300 rounded px-1 py-0.5">C1</div><div class="bg-amber-100 border border-amber-400 rounded px-1 py-0.5 font-bold">Dp</div></div></div>
+        <div><p class="font-bold mb-1">Disk 1</p><div class="rounded space-y-1"><div class="bg-purple-100 border border-purple-300 rounded px-1 py-0.5">A2</div><div class="bg-purple-100 border border-purple-300 rounded px-1 py-0.5">B2</div><div class="bg-amber-100 border border-amber-400 rounded px-1 py-0.5 font-bold">Cp</div><div class="bg-purple-100 border border-purple-300 rounded px-1 py-0.5">D1</div></div></div>
+        <div><p class="font-bold mb-1">Disk 2</p><div class="rounded space-y-1"><div class="bg-purple-100 border border-purple-300 rounded px-1 py-0.5">A3</div><div class="bg-amber-100 border border-amber-400 rounded px-1 py-0.5 font-bold">Bp</div><div class="bg-purple-100 border border-purple-300 rounded px-1 py-0.5">C2</div><div class="bg-purple-100 border border-purple-300 rounded px-1 py-0.5">D2</div></div></div>
+        <div><p class="font-bold mb-1">Disk 3</p><div class="rounded space-y-1"><div class="bg-amber-100 border border-amber-400 rounded px-1 py-0.5 font-bold">Ap</div><div class="bg-purple-100 border border-purple-300 rounded px-1 py-0.5">B3</div><div class="bg-purple-100 border border-purple-300 rounded px-1 py-0.5">C3</div><div class="bg-purple-100 border border-purple-300 rounded px-1 py-0.5">D3</div></div></div>
+      </div>
+      <p class="text-center text-xs text-gray-500 mt-2">(p = parity, 분산 배치) | 용량: (N-1)/N | 장애 허용: 1개</p>
+    </div>
+    <table>
+      <thead><tr><th>항목</th><th>내용</th></tr></thead>
+      <tbody>
+        <tr><td>구성</td><td>최소 3개 디스크, 패리티를 모든 디스크에 분산</td></tr>
+        <tr><td>용량 효율</td><td><strong>(N-1)/N</strong> (예: 4개 디스크 → 75%)</td></tr>
+        <tr><td>읽기 성능</td><td>(N-1)배 향상</td></tr>
+        <tr><td>쓰기 성능</td><td>패리티 계산 오버헤드 (Read-Modify-Write)</td></tr>
+        <tr><td>장애 허용</td><td><strong>1개 디스크</strong> — XOR 연산으로 복구</td></tr>
+        <tr><td>용도</td><td>범용 서버, 파일 서버, 웹 서버</td></tr>
+      </tbody>
+    </table>
+    <p><strong>패리티 계산:</strong> A1 XOR A2 XOR A3 = Ap</p>
+    <p>Disk 2 장애 시: A3 = A1 XOR A2 XOR Ap (패리티로 복구)</p>
+
+    <h4>1.5 RAID 6 — 이중 분산 패리티</h4>
+    <div class="bg-slate-50 rounded-lg border p-4 mb-4">
+      <p class="text-center text-sm font-bold text-gray-700 mb-3">RAID 6 (Double Distributed Parity)</p>
+      <div class="grid grid-cols-4 gap-2 max-w-sm mx-auto text-xs font-mono text-center">
+        <div><p class="font-bold mb-1">Disk 0</p><div class="rounded space-y-1"><div class="bg-blue-100 border border-blue-300 rounded px-1 py-0.5">A1</div><div class="bg-blue-100 border border-blue-300 rounded px-1 py-0.5">B1</div><div class="bg-amber-100 border border-amber-400 rounded px-1 py-0.5 font-bold">Cp</div></div></div>
+        <div><p class="font-bold mb-1">Disk 1</p><div class="rounded space-y-1"><div class="bg-blue-100 border border-blue-300 rounded px-1 py-0.5">A2</div><div class="bg-amber-100 border border-amber-400 rounded px-1 py-0.5 font-bold">Bp</div><div class="bg-red-100 border border-red-400 rounded px-1 py-0.5 font-bold">Cq</div></div></div>
+        <div><p class="font-bold mb-1">Disk 2</p><div class="rounded space-y-1"><div class="bg-amber-100 border border-amber-400 rounded px-1 py-0.5 font-bold">Ap</div><div class="bg-red-100 border border-red-400 rounded px-1 py-0.5 font-bold">Bq</div><div class="bg-blue-100 border border-blue-300 rounded px-1 py-0.5">C1</div></div></div>
+        <div><p class="font-bold mb-1">Disk 3</p><div class="rounded space-y-1"><div class="bg-red-100 border border-red-400 rounded px-1 py-0.5 font-bold">Aq</div><div class="bg-blue-100 border border-blue-300 rounded px-1 py-0.5">B2</div><div class="bg-blue-100 border border-blue-300 rounded px-1 py-0.5">C2</div></div></div>
+      </div>
+      <p class="text-center text-xs text-gray-500 mt-2">(p = XOR 패리티, q = Reed-Solomon) | 용량: (N-2)/N | 장애 허용: 2개</p>
+    </div>
+    <table>
+      <thead><tr><th>항목</th><th>내용</th></tr></thead>
+      <tbody>
+        <tr><td>구성</td><td>최소 4개 디스크, 2종류 패리티(P: XOR, Q: Reed-Solomon)</td></tr>
+        <tr><td>용량 효율</td><td><strong>(N-2)/N</strong> (예: 4개 디스크 → 50%)</td></tr>
+        <tr><td>읽기 성능</td><td>(N-2)배 향상</td></tr>
+        <tr><td>쓰기 성능</td><td>RAID 5보다 추가 오버헤드 (패리티 2개 계산)</td></tr>
+        <tr><td>장애 허용</td><td><strong>2개 디스크 동시 장애</strong> 허용</td></tr>
+        <tr><td>용도</td><td>대용량 스토리지, 미션 크리티컬 환경</td></tr>
+      </tbody>
+    </table>
+
+    <h4>1.6 RAID 레벨별 효율성 비교</h4>
+    <table>
+      <thead><tr><th>비교 기준</th><th>RAID 0</th><th>RAID 1</th><th>RAID 5</th><th>RAID 6</th></tr></thead>
+      <tbody>
+        <tr><td>최소 디스크</td><td>2</td><td>2</td><td>3</td><td>4</td></tr>
+        <tr><td>용량 효율</td><td>100%</td><td>50%</td><td>(N-1)/N</td><td>(N-2)/N</td></tr>
+        <tr><td>읽기 성능</td><td>최고</td><td>좋음</td><td>좋음</td><td>좋음</td></tr>
+        <tr><td>쓰기 성능</td><td>최고</td><td>보통</td><td>보통</td><td>낮음</td></tr>
+        <tr><td>장애 허용</td><td>0개</td><td>1개</td><td>1개</td><td>2개</td></tr>
+        <tr><td>패리티 연산</td><td>없음</td><td>없음</td><td>XOR</td><td>XOR + RS</td></tr>
+        <tr><td>비용 효율</td><td>최고</td><td>최저</td><td>좋음</td><td>보통</td></tr>
+        <tr><td>Write Hole</td><td>해당 없음</td><td>해당 없음</td><td><strong>취약</strong></td><td><strong>취약</strong></td></tr>
+        <tr><td>대표 용도</td><td>임시/캐시</td><td>OS/로그</td><td>범용 서버</td><td>미션 크리티컬</td></tr>
+      </tbody>
+    </table>
+
+    <h3>제2장 RAID 5의 Write Hole 메커니즘 (소문제 2)</h3>
+
+    <h4>2.1 Write Hole의 정의</h4>
+    <p>Write Hole이란, RAID 5/6에서 <strong>데이터 블록과 패리티 블록의 갱신이 원자적(Atomic)으로 이루어지지 않아</strong>, 갱신 도중 시스템 장애(정전, 크래시) 발생 시 <strong>데이터와 패리티의 불일치(Inconsistency)</strong>가 발생하는 현상이다.</p>
+
+    <h4>2.2 Write Hole 발생 메커니즘</h4>
+    <p>RAID 5에서 데이터 블록 하나를 갱신할 때의 과정:</p>
+    <div class="bg-white rounded-xl shadow-sm border p-5 mb-4">
+      <div class="space-y-2">
+        <div class="flex items-center gap-2"><span class="bg-indigo-600 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0">1</span><p class="text-sm">기존 데이터 블록 읽기 (Old Data)</p></div>
+        <div class="flex items-center gap-2"><span class="bg-indigo-600 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0">2</span><p class="text-sm">기존 패리티 블록 읽기 (Old Parity)</p></div>
+        <div class="flex items-center gap-2"><span class="bg-indigo-600 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0">3</span><p class="text-sm">새 패리티 계산: New Parity = Old Data XOR New Data XOR Old Parity</p></div>
+        <div class="flex items-center gap-2"><span class="bg-red-600 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0">4</span><p class="text-sm"><strong>새 데이터 블록 쓰기</strong> ← ★ 이 사이에 장애 발생!</p></div>
+        <div class="flex items-center gap-2"><span class="bg-red-600 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0">5</span><p class="text-sm"><strong>새 패리티 블록 쓰기</strong> ← ★</p></div>
+      </div>
+      <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div class="bg-red-50 border border-red-200 rounded-lg p-3">
+          <p class="font-bold text-red-800 text-sm">Case 1: 4번 완료, 5번 미완료</p>
+          <p class="text-xs text-gray-700 mt-1">→ 데이터는 갱신됨, 패리티는 옛날 값 → <strong>패리티 불일치!</strong></p>
+        </div>
+        <div class="bg-red-50 border border-red-200 rounded-lg p-3">
+          <p class="font-bold text-red-800 text-sm">Case 2: 4번 미완료, 5번 완료</p>
+          <p class="text-xs text-gray-700 mt-1">→ 데이터는 옛날 값, 패리티는 새 값 → <strong>패리티 불일치!</strong></p>
+        </div>
+      </div>
+    </div>
+    <p><strong>핵심 문제:</strong> 데이터 쓰기(4번)와 패리티 쓰기(5번)는 <strong>별도의 물리적 디스크</strong>에 대한 독립적 I/O 연산이므로, 두 연산 사이에 시간적 간격(Window)이 존재한다. 이 간격 동안 장애가 발생하면 <strong>데이터-패리티 불일치</strong>가 발생한다.</p>
+
+    <h4>2.3 Write Hole의 위험성</h4>
+    <table>
+      <thead><tr><th>상황</th><th>결과</th></tr></thead>
+      <tbody>
+        <tr><td>불일치 상태에서 정상 운용</td><td>문제 없음 (데이터 직접 읽기)</td></tr>
+        <tr><td>불일치 상태에서 <strong>다른 디스크 장애</strong> 발생</td><td><strong>데이터 복구 불가</strong> — 잘못된 패리티로 복구하면 Silent Data Corruption</td></tr>
+      </tbody>
+    </table>
+    <p>이것이 Write Hole의 진정한 위험이다. 즉시 데이터 손실이 아니라, <strong>향후 디스크 장애 시 잘못된 패리티로 복구함으로써 무결성이 파괴</strong>되는 지연된 위험(Latent Risk)이다.</p>
+
+    <h4>2.4 Write Hole이 RAID 5에서 특히 치명적인 이유</h4>
+    <p>RAID 5는 <strong>1개 디스크 장애만 허용</strong>하므로 장애 복구 시 패리티에 의존한다. 대용량 디스크(TB급)의 리빌드 시간이 수 시간~수십 시간 소요되며, 리빌드 중 URE(Unrecoverable Read Error) 발생 시 RAID 실패로 이어진다. Write Hole로 인한 패리티 불일치가 리빌드 중 데이터 손상을 유발한다.</p>
+
+    <h3>제3장 Write Hole 해결 방안 — HW/SW 접근 (소문제 3)</h3>
+
+    <h4>3.1 하드웨어 기반 해결 방안</h4>
+    <p><strong>[방안 1] BBU/BBM(Battery-Backed Write Cache)</strong></p>
+    <table>
+      <thead><tr><th>항목</th><th>내용</th></tr></thead>
+      <tbody>
+        <tr><td>원리</td><td>RAID 컨트롤러에 배터리 백업 캐시(BBU)를 장착하여, 정전 시 캐시의 미완료 쓰기를 보존</td></tr>
+        <tr><td>동작</td><td>Write 요청 → 캐시에 기록(데이터+패리티) → 배터리로 보호 → 전원 복구 후 디스크에 플러시</td></tr>
+        <tr><td>장점</td><td>쓰기 성능 향상(Write-Back 캐시) + Write Hole 방지</td></tr>
+        <tr><td>단점</td><td>배터리 수명 관리 필요 (2~3년 주기 교체), 캐시 크기 제한</td></tr>
+        <tr><td>적용</td><td>Dell PERC, HP Smart Array, LSI MegaRAID 등 하드웨어 RAID 컨트롤러</td></tr>
+      </tbody>
+    </table>
+
+    <p><strong>[방안 2] NVRAM/Flash-Backed Write Cache</strong></p>
+    <table>
+      <thead><tr><th>항목</th><th>내용</th></tr></thead>
+      <tbody>
+        <tr><td>원리</td><td>배터리 대신 NVRAM(비휘발성 RAM) 또는 Flash 스토리지로 캐시를 보호</td></tr>
+        <tr><td>동작</td><td>정전 시 슈퍼캐패시터가 캐시 데이터를 Flash에 저장(수초 이내)</td></tr>
+        <tr><td>장점</td><td>배터리보다 긴 수명, 별도 충전 불필요</td></tr>
+        <tr><td>적용</td><td>HP Smart Array (Flash-Backed Write Cache), Dell PERC H730+</td></tr>
+      </tbody>
+    </table>
+
+    <h4>3.2 소프트웨어 기반 해결 방안</h4>
+    <p><strong>[방안 1] Write-Ahead Log (Intent Log)</strong></p>
+    <table>
+      <thead><tr><th>항목</th><th>내용</th></tr></thead>
+      <tbody>
+        <tr><td>원리</td><td>쓰기 연산 전에 의도 로그(Intent Log)를 별도 영역에 기록</td></tr>
+        <tr><td>동작</td><td>① Intent Log에 기록 → ② 데이터 블록 쓰기 → ③ 패리티 블록 쓰기 → ④ Intent Log 삭제</td></tr>
+        <tr><td>복구</td><td>장애 복구 시 Intent Log 확인 → 미완료 쓰기 감지 → 올바른 패리티 재계산</td></tr>
+        <tr><td>단점</td><td>추가 쓰기 오버헤드 (모든 쓰기에 로그 추가)</td></tr>
+        <tr><td>적용</td><td>Linux MD-RAID의 Write Intent Bitmap, mdadm</td></tr>
+      </tbody>
+    </table>
+
+    <p><strong>[방안 2] ZFS의 Copy-on-Write (COW)</strong></p>
+    <table>
+      <thead><tr><th>항목</th><th>내용</th></tr></thead>
+      <tbody>
+        <tr><td>원리</td><td>기존 블록을 직접 수정하지 않고, 새 위치에 새 데이터를 쓰고 포인터를 갱신하는 방식</td></tr>
+        <tr><td>동작</td><td>① 새 위치에 데이터+패리티 함께 기록 → ② 메타데이터 트리(Merkle Tree) 포인터 갱신 → ③ 옛 블록은 자연스럽게 해제</td></tr>
+        <tr><td>Write Hole 해결</td><td>데이터와 패리티가 동일 트랜잭션에서 함께 기록 → 원자성 보장</td></tr>
+        <tr><td>추가 장점</td><td>스냅샷, 체크섬, 자동 복구(Self-Healing) 기능 내장</td></tr>
+        <tr><td>단점</td><td>쓰기 증폭(Write Amplification), 단편화 가능성</td></tr>
+        <tr><td>적용</td><td>ZFS(RAID-Z/Z2/Z3), OpenZFS</td></tr>
+      </tbody>
+    </table>
+
+    <!-- ZFS COW vs 전통 도식 -->
+    <div class="bg-slate-50 rounded-lg border p-5 my-4">
+      <p class="text-center text-sm font-bold text-gray-700 mb-3">ZFS Copy-on-Write vs 전통적 방식</p>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="bg-red-50 border border-red-200 rounded-lg p-3">
+          <p class="font-bold text-red-800 text-xs mb-2">[전통적 RAID 5]</p>
+          <p class="text-xs text-gray-700">Block A → (직접 수정) → Block A'</p>
+          <p class="text-xs text-gray-700">Parity P → (직접 수정) → Parity P'</p>
+          <p class="text-xs text-red-600 font-bold mt-2">※ A'과 P' 사이에 장애 → Write Hole!</p>
+        </div>
+        <div class="bg-green-50 border border-green-200 rounded-lg p-3">
+          <p class="font-bold text-green-800 text-xs mb-2">[ZFS COW]</p>
+          <p class="text-xs text-gray-700">Block A → (유지)</p>
+          <p class="text-xs text-gray-700">New Block A' + New Parity P' → 새 위치에 함께 기록</p>
+          <p class="text-xs text-gray-700">→ 포인터만 갱신 (원자적)</p>
+          <p class="text-xs text-green-700 font-bold mt-2">※ 장애 시 → 옛 블록 유효 → 무결성 보장</p>
+        </div>
+      </div>
+    </div>
+
+    <p><strong>[방안 3] Btrfs의 RAID Write Hole 대응</strong></p>
+    <p>Btrfs 파일시스템도 COW 방식을 채택하여 Write Hole을 방지한다. 다만 Btrfs의 RAID 5/6은 아직 안정성 문제로 프로덕션 사용이 권장되지 않으며, ZFS의 RAID-Z가 더 성숙한 구현체로 평가된다.</p>
+
+    <h4>3.3 해결 방안 비교</h4>
+    <table>
+      <thead><tr><th>비교 기준</th><th>BBU/Flash Cache</th><th>Intent Log</th><th>ZFS COW</th></tr></thead>
+      <tbody>
+        <tr><td>접근 방식</td><td>하드웨어</td><td>소프트웨어</td><td>파일시스템 레벨</td></tr>
+        <tr><td>추가 비용</td><td>높음 (컨트롤러+배터리)</td><td>낮음 (SW 구현)</td><td>없음 (ZFS 내장)</td></tr>
+        <tr><td>성능 영향</td><td>오히려 향상 (Write-Back)</td><td>소폭 저하 (추가 로그)</td><td>소폭 저하 (COW 오버헤드)</td></tr>
+        <tr><td>원자성 보장</td><td>캐시 수준</td><td>로그 수준</td><td>트랜잭션 수준</td></tr>
+        <tr><td>추가 기능</td><td>-</td><td>-</td><td>스냅샷, 체크섬, Self-Healing</td></tr>
+        <tr><td>적용 환경</td><td>엔터프라이즈 HW RAID</td><td>Linux SW RAID</td><td>ZFS 기반 스토리지</td></tr>
+      </tbody>
+    </table>
+
+    <h4>3.4 연관 이론 연결</h4>
+    <p><strong>저널링 파일 시스템(ext4, NTFS)과의 관계:</strong> Write-Ahead Log는 데이터베이스의 WAL(Write-Ahead Logging)과 파일 시스템의 저널링과 동일한 원리이다.</p>
+    <p><strong>CAP 정리와의 관계:</strong> RAID의 Write Hole 문제는 분산 시스템의 일관성(Consistency) 문제와 본질이 같다.</p>
+    <p><strong>SSD/NVMe와 RAID의 미래:</strong> SSD의 보급으로 RAID의 역할이 변화하고 있으며, NVMe 기반의 Erasure Coding이 RAID의 대안으로 부상하고 있다.</p>
+
+    <h3>소문제 간 통합 분석</h3>
+    <table>
+      <thead><tr><th>관점</th><th>소문제 1</th><th>소문제 2</th><th>소문제 3</th></tr></thead>
+      <tbody>
+        <tr><td>층위</td><td>구조 이해</td><td>취약점 분석</td><td>해결 방안</td></tr>
+        <tr><td>핵심 질문</td><td>RAID 레벨별 차이는?</td><td>RAID 5 Write Hole이란?</td><td>Write Hole을 어떻게 해결?</td></tr>
+        <tr><td>핵심 개념</td><td>스트라이핑/미러링/패리티</td><td>데이터-패리티 불일치</td><td>BBU, Intent Log, COW</td></tr>
+        <tr><td>연결 고리</td><td>RAID 5 패리티 구조 →</td><td>패리티 갱신의 비원자성 →</td><td>원자성 보장 기술</td></tr>
+      </tbody>
+    </table>
+    <p>결론적으로, RAID 5/6의 패리티 기반 아키텍처는 <strong>Write Hole이라는 구조적 취약점</strong>을 내포하고 있으며, 이는 BBU(하드웨어), Intent Log(소프트웨어), COW(파일시스템) 등 다양한 계층에서 <strong>쓰기 원자성을 보장</strong>함으로써 해결할 수 있다.</p>
+
+  </div>
+</div>
+</div><!-- close section before script -->
+
+<div id="script" class="hidden">
+  <h2 class="text-xl font-bold text-amber-800 mb-2">🎬 강의 스크립트</h2>
+  <p class="text-sm text-amber-600 mb-6">ZIP-UP 멘토 전용 — 20분 강의용</p>
+  <div class="bg-amber-50 rounded-xl border border-amber-200 p-6 space-y-4 text-sm text-gray-700 leading-relaxed">
+    <p>안녕하세요, 여러분. 오늘은 CA/OS 영역에서 빠지지 않는 RAID를 다뤄볼 건데요. RAID 자체는 기본적인 토픽인데, 이번 문제는 Write Hole이라는 심화 주제가 포함되어 있어서 차별화 포인트가 많은 좋은 문제예요. 특히 Write Hole은 RAID의 구조적 취약점을 깊이 이해하고 있는지를 검증하는 토픽이라서, 이걸 제대로 설명하면 확실히 합격권 답안이 됩니다.</p>
+    <p>RAID는 1988년에 UC Berkeley에서 Patterson, Gibson, Katz 세 교수가 논문으로 발표한 개념이에요. 재미있는 건 원래 이름이 "Redundant Array of <em>Inexpensive</em> Disks"였다는 거예요. "비싼 대형 디스크 대신 싸구려 작은 디스크 여러 개를 묶어 쓰자"는 아이디어였는데, 나중에 디스크 업체들이 "우리 디스크가 싸구려냐!"고 항의해서 "Independent"로 바뀐 거예요.</p>
+    <p>소문제 구조부터 잡아볼게요. 소문제 1은 "RAID 레벨별로 어떻게 다른가"라는 구조 비교예요. 소문제 2는 "RAID 5가 왜 Write Hole에 취약한가"라는 메커니즘 분석이고요. 소문제 3은 "이 문제를 어떻게 해결하느냐"라는 해결 방안이에요. <strong>"구조 → 취약점 → 해결"</strong>로 자연스럽게 문제를 풀어가는 구조입니다.</p>
+    <p>소문제 1, RAID 레벨별 아키텍처부터 갈게요. RAID의 3대 핵심 기술을 <span class="highlight">"스미패"</span>로 외우세요. 스트라이핑(성능), 미러링(신뢰성), 패리티(효율+신뢰성). 이 세 가지를 어떻게 조합하느냐에 따라 RAID 레벨이 달라지는 거예요.</p>
+    <p>RAID 0은 스트라이핑만 하는 거예요. 데이터를 여러 디스크에 쪼개서 분산하니까 성능은 N배로 올라가지만, 하나라도 고장나면 전체 데이터가 날아가요. RAID 1은 미러링이에요. 같은 데이터를 두 개의 디스크에 동시에 쓰는 거죠. 용량 효율이 50%밖에 안 되지만, 하나가 고장나도 다른 하나에서 바로 읽을 수 있으니까 가용성이 높아요.</p>
+    <p>RAID 5가 가장 중요한 부분이에요. 스트라이핑 + 분산 패리티 방식인데, 패리티를 모든 디스크에 돌아가면서 분산 배치해요. 왜 분산하느냐면, RAID 3이나 4처럼 패리티를 한 디스크에 몰아넣으면 쓰기 시 그 디스크에 병목이 생기거든요. 용량 효율은 (N-1)/N이니까, 4개 디스크면 75%예요. 패리티 복구 원리도 답안에 꼭 쓰세요. XOR 연산의 가역성이 RAID 5 복구의 핵심 원리라는 걸 한 줄 설명하면 이해도가 높은 답안이 됩니다.</p>
+    <p>RAID 6은 RAID 5에 패리티를 하나 더 추가한 거예요. P패리티(XOR)에 Q패리티(Reed-Solomon 코드)를 더해서 2개 디스크 동시 장애까지 허용해요. 대용량 디스크 환경에서 리빌드 시간이 길어지면서 RAID 6의 필요성이 커졌어요. 8TB, 16TB 디스크의 리빌드가 수십 시간 걸리는데, 그 사이에 또 다른 디스크가 고장나면 RAID 5는 끝장이거든요. URE(Unrecoverable Read Error)는 보통 10^14비트당 1번 발생하는데, 8TB 디스크를 리빌드하면 읽는 데이터량이 약 64×10^12비트이니까 확률이 상당히 높아지는 거예요.</p>
+    <p>소문제 2, Write Hole입니다. 이 부분이 30%로 가장 비중이 커요. Write Hole은 한 마디로 "데이터는 새 값인데 패리티는 옛날 값"인 상황이에요. 4번(데이터 쓰기)과 5번(패리티 쓰기)은 서로 다른 물리적 디스크에 쓰는 거라 동시에 완료되지 않아요.</p>
+    <p>만약 4번은 끝났는데 5번을 쓰기 전에 정전이 되면? 나중에 다른 디스크가 고장나서 패리티로 복구하려고 하면? 잘못된 패리티로 복구하니까 <strong>엉뚱한 데이터가 만들어져요</strong>. 이게 <strong>Silent Data Corruption</strong>이에요. 이 <span class="highlight">"지연된 위험(Latent Risk)"</span>이라는 개념을 답안에 꼭 넣으세요.</p>
+    <p>소문제 3, 해결 방안이에요. 크게 하드웨어와 소프트웨어 두 갈래인데, <span class="highlight">"배인카"</span>로 외우세요. 배터리 백업, Intent Log, COW.</p>
+    <p>하드웨어 방안은 BBU(Battery-Backed Unit)예요. Write-Back 캐시로 동작하니까 성능도 좋아지고요. 최근에는 Flash-Backed Cache라고 해서 슈퍼캐패시터+Flash를 사용하는 방식이 나왔어요.</p>
+    <p>소프트웨어 방안 중 첫 번째는 Intent Log예요. 쓰기 전에 "나 이거 쓸 거야"라는 로그를 먼저 기록하는 거예요. 두 번째이자 가장 근본적인 방안은 ZFS의 Copy-on-Write(COW)예요. 기존 블록을 직접 수정하는 게 아니라, 새 위치에 데이터와 패리티를 함께 기록하고 포인터만 갱신하는 방식이에요. 덮어쓰기 자체가 없으니까 Write Hole이 원천적으로 발생하지 않아요.</p>
+    <p>결론에서는 "RAID 5의 패리티 기반 구조는 Write Hole이라는 구조적 취약점을 내포하며, BBU(HW), Intent Log(SW), COW(FS) 등 다양한 계층에서 쓰기 원자성을 보장함으로써 해결 가능하다"라고 정리하세요. 필수 도식은 세 가지예요. RAID 5 분산 패리티 구조도, Write Hole 발생 시나리오 도식, ZFS COW vs 전통 방식 비교 도식. 이런 연결고리를 보여주면 답안이 훨씬 입체적으로 보입니다. 오늘도 수고 많으셨습니다!</p>
+  </div>
+</div>
+
+<div id="quiz" class="hidden">
+  <h2 class="text-xl font-bold text-gray-900 mb-6">퀴즈 & 암기</h2>
+
+  <!-- AI 실전 퀴즈 영역 -->
+  <div class="bg-indigo-50 rounded-xl p-6 border border-indigo-100 mb-8">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="font-bold text-indigo-900 text-lg flex items-center"><span class="mr-2">🧠</span> AI 실전 문제 생성</h3>
+      <button onclick="generateQuiz()" id="btn-quiz-gen" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm transition-colors flex items-center gap-2"><span>✨ 새로운 문제 생성</span></button>
+    </div>
+    <div id="quiz-loading" class="hidden py-8 text-center">
+      <div class="typing-indicator flex justify-center mb-2"><span></span><span></span><span></span></div>
+      <p class="text-indigo-600 text-sm">AI가 문제를 출제하고 있습니다...</p>
+    </div>
+    <div id="quiz-container" class="hidden space-y-4">
+      <div class="bg-white p-5 rounded-lg shadow-sm border border-indigo-100">
+        <div class="flex items-start gap-2 mb-4">
+          <span id="quiz-type-badge" class="bg-indigo-100 text-indigo-800 text-xs font-bold px-2 py-1 rounded whitespace-nowrap mt-1">객관식</span>
+          <p id="quiz-question" class="font-bold text-gray-800 text-lg"></p>
+        </div>
+        <div id="quiz-options" class="space-y-2"></div>
+        <div id="quiz-input-area" class="hidden mt-4">
+          <div class="flex gap-2">
+            <input type="text" id="quiz-answer-input" placeholder="정답을 입력하세요" class="flex-grow border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <button onclick="checkShortAnswer()" id="btn-short-submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-bold">제출</button>
+          </div>
+        </div>
+      </div>
+      <div id="quiz-feedback" class="hidden bg-white p-5 rounded-lg border-l-4"></div>
+    </div>
+    <div id="quiz-placeholder" class="text-center py-8 text-gray-500 border-2 border-dashed border-indigo-200 rounded-lg">
+      <p>&#39;새로운 문제 생성&#39; 버튼을 눌러 실력을 점검해보세요.</p>
+    </div>
+  </div>
+
+  <!-- 암기 노트 ① 두문자어 -->
+  <div class="bg-white rounded-xl shadow-sm border p-6 mb-6">
+    <h3 class="font-bold text-indigo-900 text-lg mb-4">📝 암기 노트 ① — 두문자어</h3>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="bg-indigo-50 rounded-lg p-4 border border-indigo-100">
+        <p class="font-bold text-indigo-800 mb-2">RAID 3대 기술: "스미패"</p>
+        <ul class="text-sm text-gray-700 space-y-1">
+          <li><strong>스</strong>: 스트라이핑(성능)</li>
+          <li><strong>미</strong>: 미러링(신뢰성)</li>
+          <li><strong>패</strong>: 패리티(효율+신뢰성)</li>
+        </ul>
+      </div>
+      <div class="bg-green-50 rounded-lg p-4 border border-green-100">
+        <p class="font-bold text-green-800 mb-2">RAID 레벨 순서: "영일오육"</p>
+        <ul class="text-sm text-gray-700 space-y-1">
+          <li><strong>영</strong>: RAID 0 — 보호 "영"</li>
+          <li><strong>일</strong>: RAID 1 — "일"대일 복제</li>
+          <li><strong>오</strong>: RAID 5 — "오"류 1개까지</li>
+          <li><strong>육</strong>: RAID 6 — "육"중 보호</li>
+        </ul>
+      </div>
+      <div class="bg-amber-50 rounded-lg p-4 border border-amber-100">
+        <p class="font-bold text-amber-800 mb-2">Write Hole 해결: "배인카"</p>
+        <ul class="text-sm text-gray-700 space-y-1">
+          <li><strong>배</strong>: 배터리 백업 캐시 (HW)</li>
+          <li><strong>인</strong>: Intent Log (SW)</li>
+          <li><strong>카</strong>: Copy-on-Write (FS)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- 암기 노트 ② 골격 답안 -->
+  <div class="bg-white rounded-xl shadow-sm border p-6 mb-6">
+    <h3 class="font-bold text-indigo-900 text-lg mb-4">📋 암기 노트 ② — 골격 답안 구조</h3>
+    <table class="w-full text-sm border-collapse">
+      <thead><tr class="bg-indigo-50"><th class="p-3 border">구분</th><th class="p-3 border">배분</th><th class="p-3 border">핵심 내용</th></tr></thead>
+      <tbody>
+        <tr><td class="p-2 border font-bold">서론</td><td class="p-2 border text-center">10%</td><td class="p-2 border">데이터 폭증 + 저장 시스템 신뢰성 요구 + RAID 개요</td></tr>
+        <tr><td class="p-2 border font-bold">소문제 1</td><td class="p-2 border text-center">25%</td><td class="p-2 border">RAID 0/1/5/6 각각 도식 + 특성 표, 레벨별 비교표 (9개 기준)</td></tr>
+        <tr><td class="p-2 border font-bold">소문제 2</td><td class="p-2 border text-center">30%</td><td class="p-2 border">정상 Write 5단계 + 장애 시나리오 도식, Silent Data Corruption, RAID 5 치명적 이유</td></tr>
+        <tr><td class="p-2 border font-bold">소문제 3</td><td class="p-2 border text-center">25%</td><td class="p-2 border">BBU/Flash Cache (HW) + Intent Log (SW) + ZFS COW (FS) + 3가지 비교표</td></tr>
+        <tr><td class="p-2 border font-bold">결론</td><td class="p-2 border text-center">10%</td><td class="p-2 border">SSD/NVMe 시대 RAID의 진화 + Erasure Coding</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 암기 노트 ③ 필수 도식 + 차별화 -->
+  <div class="bg-white rounded-xl shadow-sm border p-6 mb-6">
+    <h3 class="font-bold text-indigo-900 text-lg mb-4">🎯 암기 노트 ③ — 필수 도식 & 차별화 포인트</h3>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+      <div class="info-card purple">
+        <p class="font-bold text-purple-800 mb-2">필수 도식 3가지</p>
+        <ol class="text-sm text-gray-700 space-y-1 list-decimal ml-4">
+          <li>RAID 5 분산 패리티 구조도 — 패리티 분산 배치 표시</li>
+          <li>Write Hole 발생 시나리오 도식 — 정상 vs 장애 시 비교</li>
+          <li>ZFS COW vs 전통 방식 비교 도식</li>
+        </ol>
+      </div>
+      <div class="info-card teal">
+        <p class="font-bold text-teal-800 mb-2">차별화 포인트</p>
+        <ul class="text-sm text-gray-700 space-y-1 list-disc ml-4">
+          <li>RAID 기원 (1988년 UC Berkeley, Patterson et al.)</li>
+          <li>"지연된 위험(Latent Risk)" — Silent Data Corruption</li>
+          <li>ZFS COW + Merkle Tree 기반 원자적 갱신</li>
+          <li>대용량 디스크 리빌드 시간과 URE 문제</li>
+          <li>SSD/NVMe 환경에서의 Erasure Coding</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- 제2부 전체 -->
+  <div class="bg-white rounded-xl shadow-sm border p-6">
+    <h3 class="font-bold text-indigo-900 text-lg mb-4">📖 제2부 전체 — 암기 요약 자료</h3>
+    <div class="textbook-content">
+      <div class="def-box">
+        <p class="text-gray-800"><strong>한 줄 정의:</strong> RAID는 스트라이핑·미러링·패리티를 조합하여 성능과 신뢰성을 제공하며, RAID 5/6의 Write Hole은 데이터-패리티 비원자적 갱신 취약점으로 BBU, Intent Log, ZFS COW 등으로 해결한다.</p>
+      </div>
+
+      <h4>핵심 키워드 맵</h4>
+      <div class="bg-slate-50 rounded-lg border p-4 mb-4">
+        <div class="space-y-3 text-sm">
+          <div>
+            <p class="font-bold text-indigo-700">[RAID 레벨]</p>
+            <div class="ml-4 space-y-1 text-gray-700">
+              <p>├─ RAID 0: 스트라이핑, 100% 용량, 장애허용 0</p>
+              <p>├─ RAID 1: 미러링, 50% 용량, 장애허용 1</p>
+              <p>├─ RAID 5: 분산 패리티, (N-1)/N, 장애허용 1</p>
+              <p>└─ RAID 6: 이중 패리티, (N-2)/N, 장애허용 2</p>
+            </div>
+          </div>
+          <div>
+            <p class="font-bold text-red-700">[Write Hole]</p>
+            <div class="ml-4 space-y-1 text-gray-700">
+              <p>├─ 원인: 데이터/패리티 비원자적 갱신</p>
+              <p>├─ 위험: 디스크 장애 시 잘못된 복구 → Silent Corruption</p>
+              <p>└─ 대상: RAID 5/6 (패리티 기반)</p>
+            </div>
+          </div>
+          <div>
+            <p class="font-bold text-green-700">[해결 방안]</p>
+            <div class="ml-4 space-y-1 text-gray-700">
+              <p>├─ HW: BBU/Flash-Backed Cache (Write-Back)</p>
+              <p>├─ SW: Intent Log (Write-Ahead Logging)</p>
+              <p>└─ FS: ZFS COW (Copy-on-Write, 원자적 갱신)</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- AI 튜터 채팅 사이드바 -->
+<div class="chat-sidebar" id="chatSidebar">
+  <div class="flex items-center justify-between p-4 border-b bg-indigo-600 text-white">
+    <div class="flex items-center gap-2"><span class="text-xl">🤖</span><h3 class="font-bold">AI 튜터</h3></div>
+    <button onclick="toggleChat()" class="text-white hover:text-indigo-200 text-xl">&times;</button>
+  </div>
+  <div id="chatMessages" class="flex-grow overflow-y-auto p-4 space-y-3">
+    <div class="bg-indigo-50 rounded-lg p-3 text-sm text-indigo-800">안녕하세요! RAID 레벨별 구조, Write Hole 메커니즘, 해결 방안에 대해 궁금한 점을 물어보세요.</div>
+  </div>
+  <div class="p-4 border-t">
+    <div class="flex gap-2">
+      <input type="text" id="chatInput" placeholder="질문을 입력하세요..." class="flex-grow border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" onkeydown="if(event.key==='Enter')sendChat()">
+      <button onclick="sendChat()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium">전송</button>
+    </div>
+  </div>
+</div>
+<div class="chat-fab" onclick="toggleChat()">💬</div>
+
+<!-- API 설정 모달 -->
+<div id="settingsModal" class="fixed inset-0 bg-black bg-opacity-50 z-[1100] hidden flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-lg font-bold text-gray-900">🔑 API 설정</h3>
+      <button onclick="toggleSettings()" class="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
+    </div>
+    <div class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Gemini API Key</label>
+        <input type="password" id="apiKeyInput" placeholder="AIza..." class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+      </div>
+      <div class="flex gap-2">
+        <button onclick="saveApiKey()" class="flex-grow bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg text-sm font-medium">저장</button>
+        <button onclick="toggleSettings()" class="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50">취소</button>
+      </div>
+      <p class="text-xs text-gray-500">API Key는 브라우저에 로컬 저장되며 외부로 전송되지 않습니다.</p>
+    </div>
+  </div>
+</div>
+
+  </main>
+  <footer class="text-center text-sm text-gray-400 py-8 mt-12 border-t">
+    <p>박교익PE (132회 정보관리기술사, dr.code92@gmail.com)</p>
+    <p class="mt-1">Copyright &copy; KPC 정보관리기술사 ZIP-UP 심화반. All rights reserved.</p>
+  </footer>
+<script>
+    // ── 탭 네비게이션 ──
+    var isMentorMode = new URLSearchParams(window.location.search).get('mentor') === 'true';
+    var sections = ['overview','raidlevels','writehole','solutions','textbook','quiz'];
+    if(isMentorMode){ sections.splice(5,0,'script'); document.getElementById('scriptTabBtn').style.display=''; }
+    function navTo(id){
+        sections.forEach(function(s){
+            var el=document.getElementById(s);
+            if(el) el.style.display = s===id ? 'block' : 'none';
+        });
+        document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
+        document.querySelectorAll('.tab-btn').forEach(function(b){ if(b.getAttribute('onclick') && b.getAttribute('onclick').includes("'"+id+"'")) b.classList.add('active'); });
+        window.scrollTo({top:0,behavior:'smooth'});
+    }
+
+    // ── 클릭 확장 (tech-block / strategy-card) ──
+    document.querySelectorAll('.tech-block .header, .strategy-card .s-header').forEach(function(h){
+        h.addEventListener('click',function(){ this.parentElement.classList.toggle('open'); });
+    });
+
+    // ── 차트 ──
+    var ctx1 = document.getElementById('raidChart');
+    if(ctx1){
+        new Chart(ctx1,{type:'bar',data:{labels:['RAID 0','RAID 1','RAID 5','RAID 6'],datasets:[
+            {label:'용량 효율(%)',data:[100,50,75,50],backgroundColor:'rgba(99,102,241,0.7)'},
+            {label:'장애 허용(개)',data:[0,1,1,2],backgroundColor:'rgba(16,185,129,0.7)'}
+        ]},options:{responsive:true,plugins:{title:{display:true,text:'RAID 레벨별 용량 효율 vs 장애 허용'},legend:{position:'bottom'}},scales:{y:{beginAtZero:true}}}});
+    }
+
+    // ── API Key 관리 ──
+    function getApiKey(){ return localStorage.getItem('geminiKey') || localStorage.getItem('gemini_api_key') || ''; }
+    function saveApiKey(){
+        var k = document.getElementById('apiKeyInput').value.trim();
+        if(k){ localStorage.setItem('geminiKey',k); localStorage.setItem('gemini_api_key',k); alert('저장되었습니다.'); toggleSettings(); }
+        else{ alert('API Key를 입력해주세요.'); }
+    }
+    function toggleSettings(){
+        var m=document.getElementById('settingsModal');
+        m.classList.toggle('hidden');
+        if(!m.classList.contains('hidden')){ document.getElementById('apiKeyInput').value=getApiKey(); }
+    }
+
+    // ── AI 채팅 ──
+    function toggleChat(){ document.getElementById('chatSidebar').classList.toggle('open'); }
+    async function sendChat(){
+        var k=getApiKey();
+        if(!k){alert('API Key를 먼저 설정해주세요.');toggleSettings();return;}
+        var input=document.getElementById('chatInput');
+        var msg=input.value.trim(); if(!msg)return; input.value='';
+        var box=document.getElementById('chatMessages');
+        box.innerHTML+='<div class="bg-gray-100 rounded-lg p-3 text-sm text-gray-800 ml-8">'+msg+'</div>';
+        box.innerHTML+='<div id="chatLoading" class="typing-indicator flex mb-2"><span></span><span></span><span></span></div>';
+        box.scrollTop=box.scrollHeight;
+        try{
+            var sysPrompt="당신은 정보관리기술사 시험 멘토입니다. 'RAID 레벨별 구조, Write Hole 메커니즘, 해결 방안' 관련 질문에 전문적이고 명쾌하게 답변해주세요. 300자 이내로 핵심만 요약.";
+            var r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key='+k,{
+                method:'POST',headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({contents:[{role:'user',parts:[{text:sysPrompt+"\n\n질문: "+msg}]}]})
+            });
+            var d=await r.json();
+            var reply=d.candidates[0].content.parts[0].text;
+            document.getElementById('chatLoading').remove();
+            box.innerHTML+='<div class="bg-indigo-50 rounded-lg p-3 text-sm text-indigo-800 mr-8">'+marked.parse(reply)+'</div>';
+        }catch(e){
+            document.getElementById('chatLoading').remove();
+            box.innerHTML+='<div class="bg-red-50 rounded-lg p-3 text-sm text-red-600">오류: '+e.message+'</div>';
+        }
+        box.scrollTop=box.scrollHeight;
+    }
+
+    // ── 퀴즈 ──
+    var geminiKey = (typeof getApiKey === 'function') ? (getApiKey() || '') : (localStorage.getItem('geminiKey') || localStorage.getItem('gemini_api_key') || '');
+    var quizTypeHistory = [];
+    var currentQuizData = null;
+    var quizTopics = [
+        { category: "RAID 개요와 3대 기술", keywords: "스트라이핑, 미러링, 패리티, 성능, 신뢰성, 용량" },
+        { category: "RAID 0과 RAID 1", keywords: "스트라이핑, 미러링, 용량 효율, 100%, 50%, 장애허용 0, 장애허용 1" },
+        { category: "RAID 5 분산 패리티", keywords: "XOR, (N-1)/N, 분산 패리티, Read-Modify-Write, 1개 디스크 장애 허용" },
+        { category: "RAID 6 이중 패리티", keywords: "Reed-Solomon, (N-2)/N, 2개 디스크 장애, P패리티, Q패리티" },
+        { category: "RAID 레벨별 비교", keywords: "최소 디스크, 용량 효율, 읽기 성능, 쓰기 성능, 장애 허용, 비용 효율" },
+        { category: "Write Hole 메커니즘", keywords: "비원자적 갱신, 데이터-패리티 불일치, Silent Data Corruption, Latent Risk, 정전" },
+        { category: "하드웨어 해결 방안", keywords: "BBU, Battery-Backed Cache, Flash-Backed Cache, NVRAM, Write-Back, 슈퍼캐패시터" },
+        { category: "소프트웨어 해결 방안", keywords: "Intent Log, Write-Ahead Logging, ZFS COW, Copy-on-Write, RAID-Z, Merkle Tree, 원자적 갱신" }
+    ];
+
+    async function generateQuiz() {
+        geminiKey = (typeof getApiKey === 'function') ? (getApiKey() || '') : (localStorage.getItem('geminiKey') || localStorage.getItem('gemini_api_key') || '');
+        if (!geminiKey) { alert('API Key를 먼저 설정해주세요.'); toggleSettings(); return; }
+        var btn = document.getElementById('btn-quiz-gen');
+        btn.disabled = true; btn.innerHTML = '<span>생성 중...</span>';
+        document.getElementById('quiz-placeholder').classList.add('hidden');
+        document.getElementById('quiz-container').classList.add('hidden');
+        document.getElementById('quiz-loading').classList.remove('hidden');
+        var isMC;
+        var recent = quizTypeHistory.slice(-2);
+        if (recent.length >= 2 && recent[0] === recent[1]) { isMC = !recent[1]; }
+        else { isMC = Math.random() > 0.5; }
+        quizTypeHistory.push(isMC);
+        var selected = quizTopics[Math.floor(Math.random() * quizTopics.length)];
+        var quizType = isMC ? '객관식 (4지선다)' : '단답형';
+        var format = isMC
+            ? '{"question":"문제","options":["A","B","C","D"],"correctIndex":0,"explanation":"해설"}'
+            : '{"question":"문제","correctAnswer":"정답","explanation":"해설"}';
+        var prompt = "다음 카테고리에 대한 " + quizType + " 퀴즈 1문제를 만드세요.\n"
+            + "카테고리: " + selected.category + "\n"
+            + "관련 키워드: " + selected.keywords + "\n"
+            + "규칙: 반드시 위 카테고리와 키워드에 직접 관련된 문제를 출제하세요.\n"
+            + "JSON 형식으로 응답: " + format;
+        try {
+            var r = await fetch(
+                'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=' + geminiKey,
+                { method:'POST', headers:{'Content-Type':'application/json'},
+                  body: JSON.stringify({ contents:[{parts:[{text:prompt}]}], generationConfig:{responseMimeType:"application/json"} })
+                }
+            );
+            var d = await r.json();
+            var t = d.candidates[0].content.parts[0].text;
+            t = t.replace(/```json\s*/gi,"").replace(/```\s*/g,"").trim();
+            var depth=0, start=-1, end=-1;
+            for (var i=0;i<t.length;i++) {
+                if (t[i]==='{') { if(depth===0) start=i; depth++; }
+                else if (t[i]==='}') { depth--; if(depth===0 && start!==-1) { end=i; break; } }
+            }
+            if (start===-1||end===-1) throw new Error("No JSON found");
+            t = t.substring(start, end+1);
+            t = t.replace(/[\x00-\x1F\x7F]/g, function(c) { return c==='\n'||c==='\r'||c==='\t' ? ' ' : ''; });
+            currentQuizData = JSON.parse(t);
+            renderQuiz(isMC);
+        } catch(e) {
+            document.getElementById('quiz-loading').classList.add('hidden');
+            document.getElementById('quiz-placeholder').classList.remove('hidden');
+            document.getElementById('quiz-placeholder').innerHTML = '<p class="text-red-500">퀴즈 생성 오류: ' + e.message + '</p>';
+        }
+        btn.disabled = false; btn.innerHTML = '<span>✨ 새로운 문제 생성</span>';
+    }
+
+    function renderQuiz(isMC) {
+        document.getElementById('quiz-loading').classList.add('hidden');
+        document.getElementById('quiz-feedback').classList.add('hidden');
+        document.getElementById('quiz-container').classList.remove('hidden');
+        document.getElementById('quiz-type-badge').textContent = isMC ? '객관식' : '단답형';
+        document.getElementById('quiz-question').textContent = currentQuizData.question;
+        var optDiv = document.getElementById('quiz-options');
+        var inputDiv = document.getElementById('quiz-input-area');
+        if (isMC) {
+            optDiv.classList.remove('hidden');
+            inputDiv.classList.add('hidden');
+            var h = '';
+            var letters = ['A','B','C','D'];
+            currentQuizData.options.forEach(function(opt, i) {
+                h += '<button onclick="checkMultipleChoice(' + i + ', this)" class="w-full text-left p-4 rounded-lg border border-gray-200 hover:bg-indigo-50 hover:border-indigo-300 transition-all mb-2 flex items-center group">'
+                    + '<span class="w-8 h-8 rounded-full bg-gray-100 group-hover:bg-indigo-100 flex items-center justify-center text-sm font-bold text-gray-500 group-hover:text-indigo-600 mr-3 flex-shrink-0">' + letters[i] + '</span>'
+                    + '<span class="text-sm text-gray-700">' + opt + '</span></button>';
+            });
+            optDiv.innerHTML = h;
+        } else {
+            optDiv.classList.add('hidden');
+            inputDiv.classList.remove('hidden');
+            document.getElementById('quiz-answer-input').value = '';
+            document.getElementById('quiz-answer-input').focus();
+        }
+    }
+
+    function checkMultipleChoice(idx, btnEl) {
+        var correct = idx === currentQuizData.correctIndex;
+        document.querySelectorAll('#quiz-options button').forEach(function(b, i) {
+            b.disabled = true;
+            if (i === currentQuizData.correctIndex) { b.classList.add('bg-green-50','border-green-400'); b.querySelector('span:first-child').classList.add('bg-green-100','text-green-700'); }
+            else if (i === idx && !correct) { b.classList.add('bg-red-50','border-red-400'); b.querySelector('span:first-child').classList.add('bg-red-100','text-red-700'); }
+        });
+        showQuizFeedback(correct, currentQuizData.options[currentQuizData.correctIndex], currentQuizData.explanation);
+    }
+
+    async function checkShortAnswer() {
+        geminiKey = (typeof getApiKey === 'function') ? (getApiKey() || '') : (localStorage.getItem('geminiKey') || localStorage.getItem('gemini_api_key') || '');
+        var ans = document.getElementById('quiz-answer-input').value.trim();
+        if (!ans) { alert('답을 입력해주세요.'); return; }
+        var btn = document.getElementById('btn-short-submit');
+        btn.disabled = true; btn.textContent = '채점 중...';
+        try {
+            var gradingPrompt = "당신은 정보관리기술사 시험 채점관입니다. 아래 문제에 대해 사용자의 답안이 정답으로 인정될 수 있는지 판정하세요.\n\n"
+                + "문제: " + currentQuizData.question + "\n"
+                + "모범 정답: " + currentQuizData.correctAnswer + "\n"
+                + "사용자 답안: " + ans + "\n\n"
+                + "판정 기준:\n- 핵심 의미가 동일하면 정답\n- 약어/풀네임 모두 인정\n- 영어/한글 혼용 인정\n- 띄어쓰기/조사 차이는 무시\n- 의미가 명확히 다르면 오답\n\n"
+                + "Output JSON: {\"correct\":true/false,\"reason\":\"판정 이유\"}";
+            var r = await fetch(
+                'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=' + geminiKey,
+                { method:'POST', headers:{'Content-Type':'application/json'},
+                  body: JSON.stringify({ contents:[{parts:[{text:gradingPrompt}]}], generationConfig:{responseMimeType:"application/json"} })
+                }
+            );
+            var d = await r.json();
+            var gt = d.candidates[0].content.parts[0].text;
+            gt = gt.replace(/```json\s*/gi,"").replace(/```\s*/g,"").trim();
+            var gd=0,gs=-1,ge=-1;
+            for(var i=0;i<gt.length;i++){if(gt[i]==='{'){if(gd===0)gs=i;gd++;}else if(gt[i]==='}'){gd--;if(gd===0&&gs!==-1){ge=i;break;}}}
+            if(gs===-1||ge===-1) throw new Error("No JSON");
+            gt=gt.substring(gs,ge+1);
+            gt=gt.replace(/[\x00-\x1F\x7F]/g,function(c){return c==='\n'||c==='\r'||c==='\t'?' ':'';});
+            var result = JSON.parse(gt);
+            showQuizFeedback(result.correct, currentQuizData.correctAnswer, currentQuizData.explanation + (result.reason ? ' (AI: ' + result.reason + ')' : ''));
+        } catch(e) {
+            var normalize = function(s){return s.replace(/\s/g,'').toLowerCase();};
+            var correct = normalize(currentQuizData.correctAnswer).includes(normalize(ans)) || normalize(ans).includes(normalize(currentQuizData.correctAnswer));
+            showQuizFeedback(correct, currentQuizData.correctAnswer, currentQuizData.explanation + ' (로컬 채점)');
+        }
+        btn.disabled = false; btn.textContent = '제출';
+    }
+
+    function showQuizFeedback(correct, answer, explanation) {
+        var fb = document.getElementById('quiz-feedback');
+        fb.classList.remove('hidden','border-green-500','bg-green-50','border-red-500','bg-red-50');
+        if (correct) {
+            fb.classList.add('border-green-500','bg-green-50');
+            fb.innerHTML = '<p class="font-bold text-green-700 mb-1">✅ 정답입니다!</p><p class="text-sm text-green-600">' + explanation + '</p>';
+        } else {
+            fb.classList.add('border-red-500','bg-red-50');
+            fb.innerHTML = '<p class="font-bold text-red-700 mb-1">❌ 오답입니다.</p><p class="text-sm text-red-700 mb-1">정답: ' + answer + '</p><p class="text-sm text-red-600">' + explanation + '</p>';
+        }
+    }
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && document.getElementById('quiz-answer-input') === document.activeElement) { checkShortAnswer(); }
+    });
+
+    // ── 초기화 ──
+    var urlKey = new URLSearchParams(window.location.search).get('key');
+    if(urlKey){ localStorage.setItem('geminiKey', urlKey); localStorage.setItem('gemini_api_key', urlKey); }
+    navTo('overview');
+</script>
+</body>
+</html>

@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Naive RAG 한계, GraphRAG 동작 원리, 복합 질문 처리 우수성</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+body{font-family:'Noto Sans KR',sans-serif}
+.tab-btn{padding:0.5rem 1rem;font-size:0.85rem;font-weight:500;border-radius:0.5rem;white-space:nowrap;transition:all 0.2s}
+.tab-btn.active{background:#4f46e5;color:#fff;box-shadow:0 2px 8px rgba(79,70,229,0.3)}
+.tab-btn:not(.active){color:#6b7280}
+.tab-btn:not(.active):hover{background:#e0e7ff;color:#4338ca}
+.tab-btn.mentor-tab{color:#b45309}
+.tab-btn.mentor-tab.active{background:#d97706;color:#fff;box-shadow:0 2px 8px rgba(217,119,6,0.3)}
+.def-box{background:linear-gradient(135deg,#ede9fe 0%,#e0e7ff 100%);border-left:4px solid #6366f1;padding:1.5rem;border-radius:0.75rem;margin:1rem 0}
+.info-card{border-radius:0.75rem;padding:1.25rem;margin-bottom:1rem;border-left:4px solid}
+.info-card.indigo{background:#eef2ff;border-color:#6366f1}
+.info-card.green{background:#ecfdf5;border-color:#10b981}
+.info-card.purple{background:#faf5ff;border-color:#8b5cf6}
+.info-card.amber{background:#fffbeb;border-color:#f59e0b}
+.info-card.teal{background:#f0fdfa;border-color:#14b8a6}
+.info-card.red{background:#fef2f2;border-color:#ef4444}
+.tech-block{background:#fff;border:1px solid #e5e7eb;border-radius:0.75rem;margin-bottom:0.75rem;overflow:hidden;cursor:pointer}
+.tech-block .header{padding:1rem 1.25rem;display:flex;justify-content:space-between;align-items:center}
+.tech-block .body{padding:0 1.25rem 1.25rem;display:none}
+.tech-block.open .body{display:block}
+.tech-block .toggle{transition:transform 0.2s}
+.tech-block.open .toggle{transform:rotate(180deg)}
+.highlight{background:linear-gradient(120deg,#a78bfa 0%,#818cf8 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:700}
+.chat-sidebar{position:fixed;top:0;right:-400px;width:400px;height:100%;background:#fff;box-shadow:-4px 0 20px rgba(0,0,0,0.15);z-index:1000;transition:right 0.3s;display:flex;flex-direction:column}
+.chat-sidebar.open{right:0}
+.chat-fab{position:fixed;bottom:24px;right:24px;width:56px;height:56px;background:#4f46e5;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;cursor:pointer;box-shadow:0 4px 12px rgba(79,70,229,0.4);z-index:999;transition:transform 0.2s}
+.chat-fab:hover{transform:scale(1.1)}
+.typing-indicator span{display:inline-block;width:8px;height:8px;margin:0 2px;background:#6366f1;border-radius:50%;animation:typing 1s infinite}
+.typing-indicator span:nth-child(2){animation-delay:0.2s}
+.typing-indicator span:nth-child(3){animation-delay:0.4s}
+@keyframes typing{0%,100%{opacity:0.3;transform:scale(0.8)}50%{opacity:1;transform:scale(1.2)}}
+.strategy-card{background:#fff;border:1px solid #e5e7eb;border-radius:0.75rem;overflow:hidden;cursor:pointer;margin-bottom:0.75rem}
+.strategy-card .s-header{padding:1rem 1.25rem;display:flex;justify-content:space-between;align-items:center}
+.strategy-card .s-body{padding:0 1.25rem 1.25rem;display:none}
+.strategy-card.open .s-body{display:block}
+.strategy-card .s-toggle{transition:transform 0.2s}
+.strategy-card.open .s-toggle{transform:rotate(180deg)}
+.textbook-content h3{font-size:1.25rem;font-weight:700;color:#1e293b;margin-top:2.5rem;margin-bottom:1rem;padding-bottom:0.5rem;border-bottom:2px solid #e0e7ff}
+.textbook-content h4{font-size:1.1rem;font-weight:600;color:#334155;margin-top:1.5rem;margin-bottom:0.75rem}
+.textbook-content p{color:#374151;line-height:1.8;margin-bottom:0.75rem}
+.textbook-content table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:0.9rem}
+.textbook-content th{background:#f1f5f9;padding:0.625rem;border:1px solid #d1d5db;font-weight:600;text-align:left}
+.textbook-content td{padding:0.625rem;border:1px solid #d1d5db}
+.textbook-content blockquote{border-left:4px solid #6366f1;padding:1rem;background:#eef2ff;border-radius:0 0.5rem 0.5rem 0;margin:1rem 0}
+.textbook-content pre{background:#f8fafc;border:1px solid #e2e8f0;border-radius:0.5rem;padding:1rem;overflow-x:auto;font-size:0.85rem;margin:1rem 0}
+.insight-box{background:linear-gradient(135deg,#fef3c7 0%,#fde68a 100%);border-left:4px solid #f59e0b;padding:1.25rem;border-radius:0.75rem;margin:1rem 0}
+</style>
+</head>
+<body class="bg-gray-50">
+<div class="max-w-5xl mx-auto px-4 py-6">
+  <header class="bg-white rounded-2xl shadow-sm border p-6 mb-6">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <p class="text-sm text-indigo-600 font-medium tracking-wide mb-1">KPC 정보관리기술사 ZIP-UP 심화반</p>
+        <h1 class="text-2xl font-black text-gray-900">Naive RAG 한계, GraphRAG 동작 원리, 복합 질문 처리 우수성</h1>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="bg-indigo-100 text-indigo-700 text-xs font-bold px-3 py-1 rounded-full">2026</span>
+        <button onclick="toggleSettings()" class="bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs font-medium px-3 py-1.5 rounded-full transition-colors flex items-center gap-1">🔑 API 설정</button>
+      </div>
+    </div>
+    <nav class="flex gap-2 overflow-x-auto pb-2" id="tabNav">
+      <button class="tab-btn active" onclick="navTo('overview')">개요 및 개념</button>
+      <button class="tab-btn" onclick="navTo('naiverag')">Naive RAG 한계</button>
+      <button class="tab-btn" onclick="navTo('graphrag')">GraphRAG 동작</button>
+      <button class="tab-btn" onclick="navTo('advantage')">복합 질문 우수성</button>
+      <button class="tab-btn" onclick="navTo('textbook')">원문 학습</button>
+      <button class="tab-btn mentor-tab" onclick="navTo('script')" id="scriptTabBtn" style="display:none;">🎬 강의 스크립트</button>
+      <button class="tab-btn" onclick="navTo('quiz')">퀴즈 & 암기</button>
+    </nav>
+  </header>
+  <main>
+
+<div id="overview" class="space-y-6">
+  <!-- 정의 박스 -->
+  <div class="def-box">
+    <p class="font-bold text-indigo-900 text-lg mb-2">📘 GraphRAG의 정의</p>
+    <p class="text-indigo-800 leading-relaxed">GraphRAG란, <strong>지식 그래프(Knowledge Graph)를 활용하여 엔티티 간 관계를 구조화하고, 그래프 탐색을 통해 다단계 추론이 가능한 RAG 아키텍처</strong>이다. LLM으로 문서에서 엔티티와 관계를 추출하여 지식 그래프를 구축하고, 그래프 탐색과 커뮤니티 요약을 통해 Naive RAG의 단순 유사도 검색 한계를 극복하는 차세대 RAG 아키텍처이다.</p>
+  </div>
+
+  <!-- 개념 해설 -->
+  <div class="bg-white rounded-xl shadow-sm border p-6">
+    <h3 class="text-lg font-bold text-gray-900 mb-3">💡 개념 해설</h3>
+    <p class="text-gray-700 leading-relaxed mb-3">RAG(Retrieval-Augmented Generation)는 LLM이 답변을 생성하기 전에 외부 지식 저장소에서 관련 문서를 검색하여 참고하는 기법입니다. 기존 Naive RAG는 벡터 유사도 기반 검색만 수행하므로, 인과관계·다단계 추론이 불가능합니다.</p>
+    <p class="text-gray-700 leading-relaxed">GraphRAG는 이 한계를 극복하기 위해, 문서에서 엔티티와 관계를 추출하여 <strong>지식 그래프</strong>를 구축하고, 밀접 연결 엔티티를 <strong>커뮤니티</strong>로 클러스터링한 뒤, 그래프 탐색과 커뮤니티 요약을 활용하여 복합 질문에 포괄적으로 답변합니다.</p>
+  </div>
+
+  <!-- 3단계 학습 구조 -->
+  <div class="bg-white rounded-xl shadow-sm border p-6">
+    <h3 class="text-lg font-bold text-gray-900 mb-4">🎯 3단계 학습 구조: 한계 → 해결 → 논증</h3>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="info-card indigo">
+        <div class="flex items-center gap-2 mb-2"><span class="bg-indigo-100 text-indigo-700 text-xs font-bold px-2 py-1 rounded-full">소문제 1</span><span class="font-bold text-indigo-800">문제 인식</span></div>
+        <p class="text-sm text-indigo-700 font-semibold mb-1">Naive RAG의 한계점</p>
+        <p class="text-sm text-indigo-600">벡터 유사도 검색의 구조적 한계 6가지 분석</p>
+      </div>
+      <div class="info-card green">
+        <div class="flex items-center gap-2 mb-2"><span class="bg-green-100 text-green-700 text-xs font-bold px-2 py-1 rounded-full">소문제 2</span><span class="font-bold text-green-800">해결 기술</span></div>
+        <p class="text-sm text-green-700 font-semibold mb-1">GraphRAG 동작 원리</p>
+        <p class="text-sm text-green-600">KG 구축(엔그커요) + Local/Global 검색</p>
+      </div>
+      <div class="info-card purple">
+        <div class="flex items-center gap-2 mb-2"><span class="bg-purple-100 text-purple-700 text-xs font-bold px-2 py-1 rounded-full">소문제 3</span><span class="font-bold text-purple-800">우수성 논증</span></div>
+        <p class="text-sm text-purple-700 font-semibold mb-1">복합 질문 처리 우수성</p>
+        <p class="text-sm text-purple-600">관계 탐색, 커뮤니티 요약, Multi-hop, 환각 감소</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 핵심 기술 3가지 -->
+  <div class="bg-white rounded-xl shadow-sm border p-6">
+    <h3 class="text-lg font-bold text-gray-900 mb-4">🔑 핵심 기술 개념</h3>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-xl p-5 border border-indigo-100">
+        <div class="text-3xl mb-2">🔍</div>
+        <p class="font-bold text-indigo-800 mb-1">Naive RAG</p>
+        <p class="text-sm text-indigo-600">벡터 임베딩 기반 유사도 검색으로 관련 청크를 찾아 LLM에 제공</p>
+        <p class="text-xs text-gray-500 mt-2">Meta AI, 2020</p>
+      </div>
+      <div class="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-5 border border-green-100">
+        <div class="text-3xl mb-2">🕸️</div>
+        <p class="font-bold text-green-800 mb-1">GraphRAG</p>
+        <p class="text-sm text-green-600">지식 그래프 + 커뮤니티 요약 기반 관계 탐색형 RAG</p>
+        <p class="text-xs text-gray-500 mt-2">Microsoft Research, 2024</p>
+      </div>
+      <div class="bg-gradient-to-br from-purple-50 to-violet-50 rounded-xl p-5 border border-purple-100">
+        <div class="text-3xl mb-2">🌐</div>
+        <p class="font-bold text-purple-800 mb-1">복합 질문(Global Q)</p>
+        <p class="text-sm text-purple-600">전체 문서 거시적 이해를 요구하는 질문 — 단일 청크로 불가</p>
+        <p class="text-xs text-gray-500 mt-2">포괄성 72~83% 우승률</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 차트: Naive RAG vs GraphRAG -->
+  <div class="bg-white rounded-xl shadow-sm border p-6">
+    <h3 class="text-lg font-bold text-gray-900 mb-4">📊 GraphRAG vs Naive RAG 성능 비교 (MS Research 2024)</h3>
+    <div style="max-width:600px;margin:0 auto;"><canvas id="chartOverview"></canvas></div>
+    <script>
+    new Chart(document.getElementById('chartOverview'),{type:'bar',data:{labels:['포괄성(Comprehensiveness)','다양성(Diversity)'],datasets:[{label:'GraphRAG 우승률 (%)',data:[77.5,72.5],backgroundColor:['rgba(99,102,241,0.7)','rgba(139,92,246,0.7)'],borderColor:['#6366f1','#8b5cf6'],borderWidth:1},{label:'Naive RAG 우승률 (%)',data:[22.5,27.5],backgroundColor:['rgba(209,213,219,0.5)','rgba(209,213,219,0.5)'],borderColor:['#9ca3af','#9ca3af'],borderWidth:1}]},options:{responsive:true,plugins:{legend:{position:'bottom'}},scales:{y:{beginAtZero:true,max:100,ticks:{callback:function(v){return v+'%'}}}}}});
+    </script>
+  </div>
+</div>
+
+<div id="naiverag" style="display:none;" class="space-y-6">
+  <h2 class="text-xl font-bold text-gray-900 flex items-center gap-2">🔍 Naive RAG의 한계</h2>
+
+  <!-- RAG 개요 -->
+  <div class="info-card indigo">
+    <p class="font-bold text-indigo-800 mb-2">RAG(Retrieval-Augmented Generation) 개요</p>
+    <p class="text-sm text-indigo-700">RAG는 LLM이 응답 생성 전에 <strong>외부 지식 저장소에서 관련 문서를 검색하여 컨텍스트로 제공</strong>함으로써 환각을 줄이고 사실 기반 응답을 생성하는 기법이다. 2020년 Meta AI Research의 Lewis et al.이 제안하였다.</p>
+  </div>
+
+  <!-- Naive RAG 아키텍처 시각화 -->
+  <div class="bg-white rounded-xl shadow-sm border p-6">
+    <h3 class="text-lg font-bold text-gray-900 mb-4">📐 Naive RAG 아키텍처</h3>
+    <!-- Step 1: 인덱싱 -->
+    <div class="mb-4">
+      <p class="text-sm font-bold text-gray-600 mb-3">[1] 인덱싱 단계</p>
+      <div class="flex flex-wrap items-center justify-center gap-2">
+        <div class="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-center">
+          <p class="text-sm font-bold text-blue-700">📄 문서</p>
+        </div>
+        <span class="text-gray-400 font-bold text-xl">→</span>
+        <div class="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-center">
+          <p class="text-sm font-bold text-blue-700">✂️ 청킹</p>
+          <p class="text-xs text-blue-500">Chunking</p>
+        </div>
+        <span class="text-gray-400 font-bold text-xl">→</span>
+        <div class="bg-indigo-50 border border-indigo-200 rounded-lg px-4 py-3 text-center">
+          <p class="text-sm font-bold text-indigo-700">🔢 벡터 임베딩</p>
+        </div>
+        <span class="text-gray-400 font-bold text-xl">→</span>
+        <div class="bg-indigo-100 border border-indigo-300 rounded-lg px-4 py-3 text-center">
+          <p class="text-sm font-bold text-indigo-800">💾 Vector DB</p>
+          <p class="text-xs text-indigo-500">FAISS, Pinecone</p>
+        </div>
+      </div>
+    </div>
+    <!-- Step 2: 검색 + 생성 -->
+    <div>
+      <p class="text-sm font-bold text-gray-600 mb-3">[2] 검색 + 생성 단계</p>
+      <div class="flex flex-wrap items-center justify-center gap-2">
+        <div class="bg-green-50 border border-green-200 rounded-lg px-4 py-3 text-center">
+          <p class="text-sm font-bold text-green-700">❓ 사용자 질문</p>
+        </div>
+        <span class="text-gray-400 font-bold text-xl">→</span>
+        <div class="bg-green-50 border border-green-200 rounded-lg px-4 py-3 text-center">
+          <p class="text-sm font-bold text-green-700">🔍 유사도 검색</p>
+          <p class="text-xs text-green-500">Top-K</p>
+        </div>
+        <span class="text-gray-400 font-bold text-xl">→</span>
+        <div class="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-center">
+          <p class="text-sm font-bold text-amber-700">📋 검색 청크 + 질문</p>
+        </div>
+        <span class="text-gray-400 font-bold text-xl">→</span>
+        <div class="bg-purple-100 border border-purple-300 rounded-lg px-4 py-3 text-center">
+          <p class="text-sm font-bold text-purple-800">🤖 LLM → 응답</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6가지 한계 -->
+  <div class="bg-white rounded-xl shadow-sm border p-6">
+    <h3 class="text-lg font-bold text-gray-900 mb-4">⚠️ Naive RAG 6대 구조적 한계</h3>
+    <div class="space-y-3">
+      <div class="tech-block">
+        <div class="header"><div class="flex items-center gap-3"><span class="bg-red-100 text-red-700 text-xs font-bold px-2 py-1 rounded-full">1</span><span class="font-semibold text-gray-800">의미적 유사성 편향</span></div><span class="toggle text-gray-400">▼</span></div>
+        <div class="body"><p class="text-sm text-gray-600 mb-2">벡터 코사인 유사도는 단어/문장의 표면적 의미만 비교하며, <strong>인과관계·시간순서·논리적 관계</strong>를 포착하지 못한다.</p><div class="bg-red-50 rounded-lg p-3"><p class="text-sm text-red-700">💡 예시: "A가 B를 인수한 이유"를 질문하면, "인수"와 유사한 단어가 포함된 무관한 문서가 검색됨</p></div></div>
+      </div>
+      <div class="tech-block">
+        <div class="header"><div class="flex items-center gap-3"><span class="bg-red-100 text-red-700 text-xs font-bold px-2 py-1 rounded-full">2</span><span class="font-semibold text-gray-800">청킹(Chunking) 정보 단절</span></div><span class="toggle text-gray-400">▼</span></div>
+        <div class="body"><p class="text-sm text-gray-600 mb-2">문서를 일정 크기로 분할하면 문맥이 절단되어 <strong>청크 간 관계 정보가 소실</strong>된다.</p><div class="bg-red-50 rounded-lg p-3"><p class="text-sm text-red-700">💡 예시: 원인(3페이지)과 결과(7페이지)가 다른 청크에 속하면 인과관계를 추론할 수 없음</p></div></div>
+      </div>
+      <div class="tech-block">
+        <div class="header"><div class="flex items-center gap-3"><span class="bg-red-100 text-red-700 text-xs font-bold px-2 py-1 rounded-full">3</span><span class="font-semibold text-gray-800">단일 홉(Single-hop) 검색 한계</span></div><span class="toggle text-gray-400">▼</span></div>
+        <div class="body"><p class="text-sm text-gray-600 mb-2">Top-K 유사도 검색은 질문과 직접 유사한 문서만 반환하며, <strong>다단계 추론(Multi-hop)이 불가능</strong>하다.</p><div class="bg-red-50 rounded-lg p-3"><p class="text-sm text-red-700">💡 예시: A→B→C 관계에서 A와 C의 관계를 추론하려면 B를 경유해야 하나 직접 유사도만 검색</p></div></div>
+      </div>
+      <div class="tech-block">
+        <div class="header"><div class="flex items-center gap-3"><span class="bg-red-100 text-red-700 text-xs font-bold px-2 py-1 rounded-full">4</span><span class="font-semibold text-gray-800">글로벌 컨텍스트 부재</span></div><span class="toggle text-gray-400">▼</span></div>
+        <div class="body"><p class="text-sm text-gray-600 mb-2">전체 문서 집합의 <strong>거시적 구조(주제 분포, 전체 관계망)</strong>를 파악하지 못한다.</p><div class="bg-red-50 rounded-lg p-3"><p class="text-sm text-red-700">💡 예시: "이 문서 전체에서 가장 중요한 주제 3가지는?" 글로벌 질문에 대응 불가</p></div></div>
+      </div>
+      <div class="tech-block">
+        <div class="header"><div class="flex items-center gap-3"><span class="bg-red-100 text-red-700 text-xs font-bold px-2 py-1 rounded-full">5</span><span class="font-semibold text-gray-800">환각(Hallucination) 불완전 차단</span></div><span class="toggle text-gray-400">▼</span></div>
+        <div class="body"><p class="text-sm text-gray-600 mb-2">검색된 청크가 부정확하거나 불완전하면 <strong>LLM이 여전히 환각 응답을 생성</strong>한다.</p><div class="bg-red-50 rounded-lg p-3"><p class="text-sm text-red-700">💡 예시: 부분적으로 관련된 청크가 검색되면 LLM이 나머지를 추측으로 채움</p></div></div>
+      </div>
+      <div class="tech-block">
+        <div class="header"><div class="flex items-center gap-3"><span class="bg-red-100 text-red-700 text-xs font-bold px-2 py-1 rounded-full">6</span><span class="font-semibold text-gray-800">엔티티 중심 질문 취약</span></div><span class="toggle text-gray-400">▼</span></div>
+        <div class="body"><p class="text-sm text-gray-600 mb-2">특정 인물·조직·개념 간의 관계를 묻는 질문에서 <strong>관계 정보를 검색하기 어렵다</strong>.</p><div class="bg-red-50 rounded-lg p-3"><p class="text-sm text-red-700">💡 예시: "삼성전자와 TSMC의 기술 경쟁 관계에서 핵심 차이점은?" 체계적 응답 불가</p></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RAG 발전 단계 -->
+  <div class="bg-white rounded-xl shadow-sm border p-6">
+    <h3 class="text-lg font-bold text-gray-900 mb-4">📈 RAG 발전 단계</h3>
+    <div class="flex flex-wrap items-center justify-center gap-2">
+      <div class="bg-gray-100 border border-gray-300 rounded-lg px-4 py-3 text-center">
+        <p class="text-sm font-bold text-gray-700">Naive RAG</p>
+        <p class="text-xs text-gray-500">단순 검색+생성</p>
+      </div>
+      <span class="text-gray-400 font-bold text-xl">→</span>
+      <div class="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-center">
+        <p class="text-sm font-bold text-blue-700">Advanced RAG</p>
+        <p class="text-xs text-blue-500">쿼리 재작성, Re-ranking</p>
+      </div>
+      <span class="text-gray-400 font-bold text-xl">→</span>
+      <div class="bg-purple-50 border border-purple-200 rounded-lg px-4 py-3 text-center">
+        <p class="text-sm font-bold text-purple-700">Modular RAG</p>
+        <p class="text-xs text-purple-500">모듈 조합</p>
+      </div>
+      <span class="text-gray-400 font-bold text-xl">→</span>
+      <div class="bg-indigo-100 border border-indigo-300 rounded-lg px-5 py-3 text-center">
+        <p class="text-sm font-bold text-indigo-800">🕸️ GraphRAG</p>
+        <p class="text-xs text-indigo-600">지식 그래프 기반</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 두문자어 암기 -->
+  <div class="insight-box">
+    <p class="font-bold text-amber-800 mb-2">🧠 암기 TIP: Naive RAG 4대 핵심 한계 = "의청싱글"</p>
+    <p class="text-sm text-amber-700"><strong>의</strong>미적 유사성 편향 → <strong>청</strong>킹 정보 단절 → <strong>싱</strong>gle-hop 한계 → <strong>글</strong>로벌 컨텍스트 부재</p>
+  </div>
+</div>
+
+<div id="graphrag" style="display:none;" class="space-y-6">
+  <h2 class="text-xl font-bold text-gray-900 flex items-center gap-2">🕸️ GraphRAG 동작 원리</h2>
+
+  <!-- 핵심 차별점 -->
+  <div class="def-box">
+    <p class="font-bold text-indigo-900 mb-2">📘 GraphRAG 핵심 차별점</p>
+    <p class="text-indigo-800">Naive RAG가 "비구조화된 텍스트 청크의 벡터 유사도 검색"에 의존하는 반면, GraphRAG는 <strong>"구조화된 지식 그래프의 관계 탐색"</strong>을 통해 검색한다. 2024년 Microsoft Research가 체계화하였다.</p>
+  </div>
+
+  <!-- Indexing Phase 4단계 -->
+  <div class="bg-white rounded-xl shadow-sm border p-6">
+    <h3 class="text-lg font-bold text-gray-900 mb-2">⚙️ Indexing Phase (오프라인) — "엔그커요"</h3>
+    <p class="text-sm text-gray-500 mb-4">LLM을 활용한 지식 그래프 자동 구축 4단계</p>
+
+    <div class="space-y-3">
+      <div class="tech-block">
+        <div class="header"><div class="flex items-center gap-3"><span class="bg-indigo-100 text-indigo-700 text-xs font-bold px-2.5 py-1 rounded-full">Step 1</span><span class="font-semibold text-gray-800">엔티티 및 관계 추출 (Entity & Relation Extraction)</span></div><span class="toggle text-gray-400">▼</span></div>
+        <div class="body">
+          <p class="text-sm text-gray-600 mb-3">LLM을 활용하여 원문 문서에서 <strong>엔티티(Entity)</strong>와 <strong>관계(Relation)</strong>를 자동 추출한다.</p>
+          <table class="w-full text-sm border-collapse"><thead><tr class="bg-gray-50"><th class="border border-gray-200 px-3 py-2 text-left">요소</th><th class="border border-gray-200 px-3 py-2 text-left">설명</th><th class="border border-gray-200 px-3 py-2 text-left">예시</th></tr></thead><tbody><tr><td class="border border-gray-200 px-3 py-2 font-medium">엔티티(Node)</td><td class="border border-gray-200 px-3 py-2">문서의 핵심 개체</td><td class="border border-gray-200 px-3 py-2">"삼성전자", "GAA 트랜지스터"</td></tr><tr><td class="border border-gray-200 px-3 py-2 font-medium">관계(Edge)</td><td class="border border-gray-200 px-3 py-2">엔티티 간 의미적 관계</td><td class="border border-gray-200 px-3 py-2">"삼성전자 —개발→ GAA"</td></tr><tr><td class="border border-gray-200 px-3 py-2 font-medium">속성(Attribute)</td><td class="border border-gray-200 px-3 py-2">부가 정보</td><td class="border border-gray-200 px-3 py-2">시점: 2024년, 중요도: 높음</td></tr></tbody></table>
+        </div>
+      </div>
+
+      <div class="tech-block">
+        <div class="header"><div class="flex items-center gap-3"><span class="bg-green-100 text-green-700 text-xs font-bold px-2.5 py-1 rounded-full">Step 2</span><span class="font-semibold text-gray-800">지식 그래프 구축 (Knowledge Graph Construction)</span></div><span class="toggle text-gray-400">▼</span></div>
+        <div class="body">
+          <p class="text-sm text-gray-600 mb-3">추출된 엔티티와 관계를 <strong>트리플(Triple: Subject-Predicate-Object)</strong> 형태로 구조화하여 그래프를 구축한다.</p>
+          <div class="bg-slate-50 rounded-lg p-4 border">
+            <div class="flex flex-wrap items-center justify-center gap-3 text-sm">
+              <div class="bg-indigo-100 text-indigo-700 px-3 py-2 rounded-lg font-medium">삼성전자</div>
+              <span class="text-gray-500 font-bold">—[개발]→</span>
+              <div class="bg-green-100 text-green-700 px-3 py-2 rounded-lg font-medium">GAA 트랜지스터</div>
+              <span class="text-gray-500 font-bold">—[적용]→</span>
+              <div class="bg-purple-100 text-purple-700 px-3 py-2 rounded-lg font-medium">2나노 공정</div>
+            </div>
+            <div class="flex flex-wrap items-center justify-center gap-3 text-sm mt-3">
+              <div class="bg-amber-100 text-amber-700 px-3 py-2 rounded-lg font-medium">TSMC</div>
+              <span class="text-gray-500 font-bold">—[경쟁]→</span>
+              <div class="bg-indigo-100 text-indigo-700 px-3 py-2 rounded-lg font-medium">삼성전자</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tech-block">
+        <div class="header"><div class="flex items-center gap-3"><span class="bg-purple-100 text-purple-700 text-xs font-bold px-2.5 py-1 rounded-full">Step 3</span><span class="font-semibold text-gray-800">커뮤니티 탐지 (Leiden Algorithm)</span></div><span class="toggle text-gray-400">▼</span></div>
+        <div class="body">
+          <p class="text-sm text-gray-600 mb-3"><strong>Leiden 알고리즘</strong>으로 밀접 연결된 엔티티 그룹을 커뮤니티로 클러스터링한다. 계층적(Hierarchical) 구조로 다양한 추상화 수준을 제공한다.</p>
+          <table class="w-full text-sm border-collapse"><thead><tr class="bg-gray-50"><th class="border border-gray-200 px-3 py-2 text-left">커뮤니티 레벨</th><th class="border border-gray-200 px-3 py-2 text-left">입도</th><th class="border border-gray-200 px-3 py-2 text-left">활용</th></tr></thead><tbody><tr><td class="border border-gray-200 px-3 py-2">Level 0 (최하위)</td><td class="border border-gray-200 px-3 py-2">개별 엔티티 수준</td><td class="border border-gray-200 px-3 py-2">Local 질문 대응</td></tr><tr><td class="border border-gray-200 px-3 py-2">Level 1</td><td class="border border-gray-200 px-3 py-2">소규모 관련 그룹</td><td class="border border-gray-200 px-3 py-2">세부 주제 응답</td></tr><tr><td class="border border-gray-200 px-3 py-2">Level 2+ (상위)</td><td class="border border-gray-200 px-3 py-2">대규모 주제 클러스터</td><td class="border border-gray-200 px-3 py-2">Global 질문 대응</td></tr></tbody></table>
+        </div>
+      </div>
+
+      <div class="tech-block">
+        <div class="header"><div class="flex items-center gap-3"><span class="bg-amber-100 text-amber-700 text-xs font-bold px-2.5 py-1 rounded-full">Step 4</span><span class="font-semibold text-gray-800">커뮤니티 요약 생성 (Community Summary)</span></div><span class="toggle text-gray-400">▼</span></div>
+        <div class="body">
+          <p class="text-sm text-gray-600 mb-2">각 커뮤니티에 대해 LLM이 <strong>요약 보고서</strong>를 생성한다. 핵심 엔티티, 관계, 주요 사실을 포함하며, 글로벌 질문 응답의 핵심 자료가 된다.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Query Phase -->
+  <div class="bg-white rounded-xl shadow-sm border p-6">
+    <h3 class="text-lg font-bold text-gray-900 mb-4">🔎 Query Phase (온라인)</h3>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="info-card indigo">
+        <p class="font-bold text-indigo-800 mb-2">🔵 Local Search (로컬 검색)</p>
+        <ol class="text-sm text-indigo-700 space-y-1 list-decimal list-inside">
+          <li>질문에서 핵심 엔티티 식별</li>
+          <li>지식 그래프에서 이웃 노드(Neighbor) 탐색</li>
+          <li>관련 엔티티, 관계, 원문 청크 수집</li>
+          <li>LLM에 전달하여 응답 생성</li>
+        </ol>
+        <p class="text-xs text-indigo-500 mt-2">특정 엔티티 관련 상세 질문에 적합</p>
+      </div>
+      <div class="info-card green">
+        <p class="font-bold text-green-800 mb-2">🟢 Global Search (글로벌 검색)</p>
+        <ol class="text-sm text-green-700 space-y-1 list-decimal list-inside">
+          <li>질문 범위에 맞는 커뮤니티 레벨 선택</li>
+          <li>해당 레벨 커뮤니티 요약 수집</li>
+          <li>Map: 각 요약에서 관련 정보 추출</li>
+          <li>Reduce: 통합하여 최종 응답 생성</li>
+        </ol>
+        <p class="text-xs text-green-500 mt-2">전체 문서 대상 거시적 질문에 적합</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- GraphRAG 전체 아키텍처 시각화 -->
+  <div class="bg-white rounded-xl shadow-sm border p-6">
+    <h3 class="text-lg font-bold text-gray-900 mb-4">📐 GraphRAG 전체 아키텍처</h3>
+    <!-- Indexing Phase -->
+    <div class="mb-6">
+      <p class="text-sm font-bold text-indigo-600 mb-3 bg-indigo-50 rounded-lg px-3 py-2 inline-block">Indexing Phase (오프라인)</p>
+      <div class="flex flex-wrap items-center justify-center gap-2">
+        <div class="bg-indigo-50 border border-indigo-200 rounded-lg px-4 py-3 text-center">
+          <p class="text-sm font-bold text-indigo-700">📄 원문 문서</p>
+        </div>
+        <span class="text-gray-400 font-bold text-xl">→</span>
+        <div class="bg-indigo-50 border border-indigo-200 rounded-lg px-4 py-3 text-center">
+          <p class="text-sm font-bold text-indigo-700">🤖 LLM 기반</p>
+          <p class="text-xs text-indigo-500">엔티티 추출</p>
+        </div>
+        <span class="text-gray-400 font-bold text-xl">→</span>
+        <div class="bg-green-50 border border-green-200 rounded-lg px-4 py-3 text-center">
+          <p class="text-sm font-bold text-green-700">🕸️ KG 구축</p>
+          <p class="text-xs text-green-500">노드+엣지</p>
+        </div>
+        <span class="text-gray-400 font-bold text-xl">→</span>
+        <div class="bg-purple-50 border border-purple-200 rounded-lg px-4 py-3 text-center">
+          <p class="text-sm font-bold text-purple-700">🔗 커뮤니티</p>
+          <p class="text-xs text-purple-500">Leiden 알고리즘</p>
+        </div>
+        <span class="text-gray-400 font-bold text-xl">→</span>
+        <div class="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-center">
+          <p class="text-sm font-bold text-amber-700">📋 커뮤니티</p>
+          <p class="text-xs text-amber-500">요약 생성</p>
+        </div>
+      </div>
+    </div>
+    <!-- Query Phase -->
+    <div>
+      <p class="text-sm font-bold text-green-600 mb-3 bg-green-50 rounded-lg px-3 py-2 inline-block">Query Phase (온라인)</p>
+      <div class="flex flex-wrap items-center justify-center gap-2">
+        <div class="bg-green-50 border border-green-200 rounded-lg px-4 py-3 text-center">
+          <p class="text-sm font-bold text-green-700">❓ 사용자 질문</p>
+        </div>
+        <span class="text-gray-400 font-bold text-xl">→</span>
+        <div class="bg-green-50 border border-green-200 rounded-lg px-4 py-3 text-center">
+          <p class="text-sm font-bold text-green-700">📊 Local/Global</p>
+          <p class="text-xs text-green-500">질문 유형 판별</p>
+        </div>
+        <span class="text-gray-400 font-bold text-xl">→</span>
+        <div class="bg-teal-50 border border-teal-200 rounded-lg px-4 py-3 text-center">
+          <p class="text-sm font-bold text-teal-700">🔍 그래프 탐색</p>
+          <p class="text-xs text-teal-500">+ 커뮤니티 요약</p>
+        </div>
+        <span class="text-gray-400 font-bold text-xl">→</span>
+        <div class="bg-purple-100 border border-purple-300 rounded-lg px-4 py-3 text-center">
+          <p class="text-sm font-bold text-purple-800">🤖 LLM 응답</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Naive RAG vs GraphRAG 비교표 -->
+  <div class="bg-white rounded-xl shadow-sm border p-6">
+    <h3 class="text-lg font-bold text-gray-900 mb-4">⚖️ Naive RAG vs GraphRAG 비교</h3>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm border-collapse"><thead><tr class="bg-gray-50"><th class="border border-gray-200 px-3 py-2 text-left">비교 기준</th><th class="border border-gray-200 px-3 py-2 text-left bg-red-50 text-red-700">Naive RAG</th><th class="border border-gray-200 px-3 py-2 text-left bg-green-50 text-green-700">GraphRAG</th></tr></thead><tbody>
+        <tr><td class="border border-gray-200 px-3 py-2 font-medium">지식 표현</td><td class="border border-gray-200 px-3 py-2">비구조화 텍스트 청크</td><td class="border border-gray-200 px-3 py-2">구조화된 KG (노드+엣지)</td></tr>
+        <tr><td class="border border-gray-200 px-3 py-2 font-medium">검색 방식</td><td class="border border-gray-200 px-3 py-2">벡터 코사인 유사도 (Top-K)</td><td class="border border-gray-200 px-3 py-2">그래프 탐색 + 커뮤니티 요약</td></tr>
+        <tr><td class="border border-gray-200 px-3 py-2 font-medium">관계 추론</td><td class="border border-gray-200 px-3 py-2">❌ 불가 (단순 유사성)</td><td class="border border-gray-200 px-3 py-2">✅ 가능 (엣지 기반)</td></tr>
+        <tr><td class="border border-gray-200 px-3 py-2 font-medium">다단계 추론</td><td class="border border-gray-200 px-3 py-2">❌ Single-hop</td><td class="border border-gray-200 px-3 py-2">✅ Multi-hop 경로 탐색</td></tr>
+        <tr><td class="border border-gray-200 px-3 py-2 font-medium">글로벌 질문</td><td class="border border-gray-200 px-3 py-2">❌ 취약</td><td class="border border-gray-200 px-3 py-2">✅ 우수 (커뮤니티 요약)</td></tr>
+        <tr><td class="border border-gray-200 px-3 py-2 font-medium">인덱싱 비용</td><td class="border border-gray-200 px-3 py-2">✅ 낮음 (임베딩만)</td><td class="border border-gray-200 px-3 py-2">❌ 높음 (LLM 추출+그래프)</td></tr>
+        <tr><td class="border border-gray-200 px-3 py-2 font-medium">최신성 유지</td><td class="border border-gray-200 px-3 py-2">✅ 용이</td><td class="border border-gray-200 px-3 py-2">❌ 어려움 (재구축 필요)</td></tr>
+        <tr><td class="border border-gray-200 px-3 py-2 font-medium">적용 난이도</td><td class="border border-gray-200 px-3 py-2">✅ 낮음</td><td class="border border-gray-200 px-3 py-2">❌ 높음</td></tr>
+      </tbody></table>
+    </div>
+  </div>
+
+  <!-- 암기 TIP -->
+  <div class="insight-box">
+    <p class="font-bold text-amber-800 mb-2">🧠 암기 TIP: GraphRAG Indexing 4단계 = "엔그커요"</p>
+    <p class="text-sm text-amber-700"><strong>엔</strong>티티/관계 추출 → <strong>그</strong>래프 구축(트리플) → <strong>커</strong>뮤니티 탐지(Leiden) → <strong>요</strong>약 생성</p>
+  </div>
+</div>
+
+<div id="advantage" style="display:none;" class="space-y-6">
+  <h2 class="text-xl font-bold text-gray-900 flex items-center gap-2">🏆 복합 질문 처리 시 GraphRAG 우수성</h2>
+
+  <!-- 복합 질문 정의 -->
+  <div class="def-box">
+    <p class="font-bold text-indigo-900 mb-2">📘 복합 질문(Global Question)의 정의</p>
+    <p class="text-indigo-800">복합 질문이란, <strong>전체 문서 집합에 대한 거시적 이해</strong>를 요구하는 질문으로, 단일 청크의 정보만으로는 답변할 수 없는 질문이다.</p>
+  </div>
+
+  <!-- 질문 유형 비교 -->
+  <div class="bg-white rounded-xl shadow-sm border p-6">
+    <h3 class="text-lg font-bold text-gray-900 mb-4">📋 질문 유형별 대응 능력 비교</h3>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm border-collapse"><thead><tr class="bg-gray-50"><th class="border border-gray-200 px-3 py-2 text-left">질문 유형</th><th class="border border-gray-200 px-3 py-2 text-left">예시</th><th class="border border-gray-200 px-3 py-2 text-center bg-red-50 text-red-700">Naive RAG</th><th class="border border-gray-200 px-3 py-2 text-center bg-green-50 text-green-700">GraphRAG</th></tr></thead><tbody>
+        <tr><td class="border border-gray-200 px-3 py-2 font-medium">로컬(Local)</td><td class="border border-gray-200 px-3 py-2">"GPT-4의 파라미터 수는?"</td><td class="border border-gray-200 px-3 py-2 text-center">✅ 가능</td><td class="border border-gray-200 px-3 py-2 text-center">✅ 가능</td></tr>
+        <tr><td class="border border-gray-200 px-3 py-2 font-medium">글로벌(Global)</td><td class="border border-gray-200 px-3 py-2">"AI 산업의 주요 경쟁 구도는?"</td><td class="border border-gray-200 px-3 py-2 text-center text-red-600 font-bold">❌ 불가</td><td class="border border-gray-200 px-3 py-2 text-center text-green-600 font-bold">✅ 가능</td></tr>
+        <tr><td class="border border-gray-200 px-3 py-2 font-medium">다단계(Multi-hop)</td><td class="border border-gray-200 px-3 py-2">"A가 B에 투자한 이유와 C에 미친 영향?"</td><td class="border border-gray-200 px-3 py-2 text-center text-red-600 font-bold">❌ 불가</td><td class="border border-gray-200 px-3 py-2 text-center text-green-600 font-bold">✅ 가능</td></tr>
+        <tr><td class="border border-gray-200 px-3 py-2 font-medium">비교 분석</td><td class="border border-gray-200 px-3 py-2">"한국과 EU의 AI 규제 차이?"</td><td class="border border-gray-200 px-3 py-2 text-center text-amber-600">부분적</td><td class="border border-gray-200 px-3 py-2 text-center text-green-600 font-bold">✅ 우수</td></tr>
+      </tbody></table>
+    </div>
+  </div>
+
+  <!-- 4가지 논리적 근거 -->
+  <div class="bg-white rounded-xl shadow-sm border p-6">
+    <h3 class="text-lg font-bold text-gray-900 mb-4">🔬 GraphRAG 우수성의 4가지 논리적 근거</h3>
+    <div class="space-y-3">
+      <div class="tech-block">
+        <div class="header"><div class="flex items-center gap-3"><span class="bg-indigo-100 text-indigo-700 text-xs font-bold px-2.5 py-1 rounded-full">근거 1</span><span class="font-semibold text-gray-800">관계 기반 탐색의 우월성</span></div><span class="toggle text-gray-400">▼</span></div>
+        <div class="body">
+          <p class="text-sm text-gray-600 mb-3">Naive RAG는 "의미적 거리(Semantic Distance)"만 측정하지만, GraphRAG는 <strong>"관계적 경로(Relational Path)"</strong>를 추적한다.</p>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div class="bg-red-50 rounded-lg p-3 border border-red-100">
+              <p class="text-xs font-bold text-red-700 mb-1">❌ Naive RAG</p>
+              <p class="text-sm text-red-600">Query → 벡터 유사도 → "삼성전자 2나노" 관련 청크만 검색 → TSMC 관계 누락</p>
+            </div>
+            <div class="bg-green-50 rounded-lg p-3 border border-green-100">
+              <p class="text-xs font-bold text-green-700 mb-1">✅ GraphRAG</p>
+              <p class="text-sm text-green-600">삼성전자 —[개발]→ 2나노 —[경쟁]→ TSMC 경로 추적 → 인과관계 기반 응답</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tech-block">
+        <div class="header"><div class="flex items-center gap-3"><span class="bg-green-100 text-green-700 text-xs font-bold px-2.5 py-1 rounded-full">근거 2</span><span class="font-semibold text-gray-800">커뮤니티 요약을 통한 글로벌 컨텍스트 확보</span></div><span class="toggle text-gray-400">▼</span></div>
+        <div class="body">
+          <p class="text-sm text-gray-600 mb-3">Microsoft Research(2024) 실험 결과, 글로벌 질문에 대해:</p>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+            <div class="bg-indigo-50 rounded-lg p-4 text-center border border-indigo-100">
+              <p class="text-3xl font-black text-indigo-700">72~83%</p>
+              <p class="text-sm text-indigo-600 font-medium">Comprehensiveness(포괄성) 우승률</p>
+            </div>
+            <div class="bg-purple-50 rounded-lg p-4 text-center border border-purple-100">
+              <p class="text-3xl font-black text-purple-700">67~78%</p>
+              <p class="text-sm text-purple-600 font-medium">Diversity(다양성) 우승률</p>
+            </div>
+          </div>
+          <p class="text-sm text-gray-600">커뮤니티 요약이 전체 문서의 주제별 구조를 사전 파악하고 있으므로, 글로벌 질문에 <strong>누락 없는 포괄적 응답</strong>이 가능하다.</p>
+        </div>
+      </div>
+
+      <div class="tech-block">
+        <div class="header"><div class="flex items-center gap-3"><span class="bg-purple-100 text-purple-700 text-xs font-bold px-2.5 py-1 rounded-full">근거 3</span><span class="font-semibold text-gray-800">Multi-hop 추론 능력</span></div><span class="toggle text-gray-400">▼</span></div>
+        <div class="body">
+          <table class="w-full text-sm border-collapse"><thead><tr class="bg-gray-50"><th class="border border-gray-200 px-3 py-2 text-left">추론 유형</th><th class="border border-gray-200 px-3 py-2 text-center">Naive RAG</th><th class="border border-gray-200 px-3 py-2 text-center">GraphRAG</th></tr></thead><tbody>
+            <tr><td class="border border-gray-200 px-3 py-2">1-hop (직접 관계)</td><td class="border border-gray-200 px-3 py-2 text-center">✅ 가능</td><td class="border border-gray-200 px-3 py-2 text-center">✅ 가능</td></tr>
+            <tr><td class="border border-gray-200 px-3 py-2">2-hop (간접 관계)</td><td class="border border-gray-200 px-3 py-2 text-center text-red-600">❌ 어려움</td><td class="border border-gray-200 px-3 py-2 text-center text-green-600">✅ 가능</td></tr>
+            <tr><td class="border border-gray-200 px-3 py-2">3-hop 이상 (다단계)</td><td class="border border-gray-200 px-3 py-2 text-center text-red-600">❌ 불가</td><td class="border border-gray-200 px-3 py-2 text-center text-green-600">✅ 가능</td></tr>
+            <tr><td class="border border-gray-200 px-3 py-2">추론 근거 제시</td><td class="border border-gray-200 px-3 py-2 text-center text-red-600">❌ 불가</td><td class="border border-gray-200 px-3 py-2 text-center text-green-600">✅ 경로 정보</td></tr>
+          </tbody></table>
+        </div>
+      </div>
+
+      <div class="tech-block">
+        <div class="header"><div class="flex items-center gap-3"><span class="bg-amber-100 text-amber-700 text-xs font-bold px-2.5 py-1 rounded-full">근거 4</span><span class="font-semibold text-gray-800">환각(Hallucination) 감소</span></div><span class="toggle text-gray-400">▼</span></div>
+        <div class="body">
+          <p class="text-sm text-gray-600 mb-2">GraphRAG는 <strong>구조화된 사실(Fact)</strong> 기반으로 응답하므로 환각이 감소한다:</p>
+          <ul class="text-sm text-gray-600 space-y-1">
+            <li class="flex items-start gap-2"><span class="text-green-500">✅</span> 엔티티와 관계가 명시적으로 존재하는 경우에만 응답</li>
+            <li class="flex items-start gap-2"><span class="text-green-500">✅</span> 그래프에 없는 정보는 "정보 없음"으로 응답 가능</li>
+            <li class="flex items-start gap-2"><span class="text-green-500">✅</span> 응답의 출처 추적(Provenance) 가능: 엔티티-관계 경로 제시</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 한계와 보완 -->
+  <div class="bg-white rounded-xl shadow-sm border p-6">
+    <h3 class="text-lg font-bold text-gray-900 mb-4">⚠️ GraphRAG의 한계와 보완 전략</h3>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm border-collapse"><thead><tr class="bg-gray-50"><th class="border border-gray-200 px-3 py-2 text-left">한계</th><th class="border border-gray-200 px-3 py-2 text-left">원인</th><th class="border border-gray-200 px-3 py-2 text-left">보완 전략</th></tr></thead><tbody>
+        <tr><td class="border border-gray-200 px-3 py-2 font-medium">높은 인덱싱 비용</td><td class="border border-gray-200 px-3 py-2">LLM 기반 엔티티 추출에 대규모 API 호출</td><td class="border border-gray-200 px-3 py-2">경량 NER 모델 + LLM 하이브리드</td></tr>
+        <tr><td class="border border-gray-200 px-3 py-2 font-medium">그래프 최신성 유지</td><td class="border border-gray-200 px-3 py-2">문서 변경 시 그래프 재구축 필요</td><td class="border border-gray-200 px-3 py-2">증분 업데이트(Incremental Update)</td></tr>
+        <tr><td class="border border-gray-200 px-3 py-2 font-medium">엔티티 추출 오류</td><td class="border border-gray-200 px-3 py-2">LLM 엔티티 인식 오류 전파</td><td class="border border-gray-200 px-3 py-2">Human-in-the-Loop 검증</td></tr>
+        <tr><td class="border border-gray-200 px-3 py-2 font-medium">대규모 그래프 탐색</td><td class="border border-gray-200 px-3 py-2">노드/엣지 증가 시 탐색 시간 증가</td><td class="border border-gray-200 px-3 py-2">Neo4j 인덱싱 최적화</td></tr>
+      </tbody></table>
+    </div>
+  </div>
+
+  <!-- 연관 이론 -->
+  <div class="insight-box">
+    <p class="font-bold text-amber-800 mb-2">🔗 연관 이론 연결</p>
+    <p class="text-sm text-amber-700 mb-1"><strong>지식 그래프</strong>: Google KG(2012), Wikidata, DBpedia — GraphRAG는 이를 특정 도메인에 자동 구축</p>
+    <p class="text-sm text-amber-700 mb-1"><strong>프롬프트 엔지니어링</strong>: CoT, ToT와 결합하면 더 강력한 추론 가능</p>
+    <p class="text-sm text-amber-700"><strong>하이브리드 RAG</strong>: 실무에서 벡터 DB + 그래프 DB 결합이 주류 (로컬=벡터, 글로벌=그래프)</p>
+  </div>
+</div>
+
+<div id="textbook" style="display:none;" class="space-y-4">
+  <h2 class="text-xl font-bold text-gray-900 flex items-center gap-2">📖 원문 학습</h2>
+  <div class="textbook-content bg-white rounded-xl shadow-sm border p-6">
+
+    <div class="def-box mb-4">
+      <p class="font-bold text-indigo-900">📘 2교시형 문제 구조 분석</p>
+      <p class="text-sm text-indigo-800 mt-1">이 문제는 3개의 소문제로 구성되어 있으며, 소문제 간에 <strong>문제 인식 → 해결 기술 → 우수성 논증</strong>의 논리적 연결이 존재한다.</p>
+      <ul class="text-sm text-indigo-700 mt-2 space-y-1">
+        <li>• 소문제 1: 기존 벡터 임베딩 기반 <strong>Naive RAG의 한계점</strong> (문제 인식)</li>
+        <li>• 소문제 2: 지식 그래프 기반 <strong>GraphRAG의 개념 및 동작 원리</strong> (해결 기술)</li>
+        <li>• 소문제 3: 복합 질문(Global Question) 처리 시 <strong>GraphRAG 우수성의 논리적 근거</strong> (우수성 논증)</li>
+      </ul>
+    </div>
+
+    <h3>제1장 벡터 임베딩 기반 Naive RAG의 한계점 (소문제 1)</h3>
+
+    <h4>1.1 RAG(Retrieval-Augmented Generation)의 개요</h4>
+    <p>RAG(검색 증강 생성)란, LLM(Large Language Model)이 응답을 생성하기 전에 <strong>외부 지식 저장소에서 관련 문서를 검색하여 컨텍스트로 제공</strong>함으로써, 환각(Hallucination)을 줄이고 사실 기반 응답을 생성하는 기법이다.</p>
+    <p>2020년 Meta(Facebook) AI Research의 Lewis et al.이 "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks" 논문에서 제안하였다.</p>
+
+    <p class="font-bold mt-4 mb-2">Naive RAG의 아키텍처:</p>
+    <div class="bg-slate-50 rounded-lg p-4 border mb-4">
+      <div class="mb-3">
+        <p class="text-sm font-bold text-gray-600 mb-2">[1] 인덱싱</p>
+        <div class="flex flex-wrap items-center gap-2 text-sm">
+          <span class="bg-blue-100 text-blue-700 px-3 py-1.5 rounded font-medium">문서</span>
+          <span class="text-gray-400">→</span>
+          <span class="bg-blue-100 text-blue-700 px-3 py-1.5 rounded font-medium">청킹(Chunking)</span>
+          <span class="text-gray-400">→</span>
+          <span class="bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded font-medium">벡터 임베딩</span>
+          <span class="text-gray-400">→</span>
+          <span class="bg-indigo-200 text-indigo-800 px-3 py-1.5 rounded font-medium">Vector DB (FAISS, Pinecone)</span>
+        </div>
+      </div>
+      <div>
+        <p class="text-sm font-bold text-gray-600 mb-2">[2] 검색 + 생성</p>
+        <div class="flex flex-wrap items-center gap-2 text-sm">
+          <span class="bg-green-100 text-green-700 px-3 py-1.5 rounded font-medium">사용자 질문</span>
+          <span class="text-gray-400">→</span>
+          <span class="bg-green-100 text-green-700 px-3 py-1.5 rounded font-medium">임베딩 → 유사도 검색(Top-K)</span>
+          <span class="text-gray-400">→</span>
+          <span class="bg-purple-100 text-purple-700 px-3 py-1.5 rounded font-medium">검색된 청크 + 질문 → LLM → 응답</span>
+        </div>
+      </div>
+    </div>
+
+    <h4>1.2 Naive RAG의 구조적 한계</h4>
+    <table><thead><tr><th>한계 유형</th><th>상세 설명</th><th>구체적 예시</th></tr></thead><tbody>
+      <tr><td><strong>의미적 유사성 편향</strong></td><td>벡터 코사인 유사도는 단어/문장의 표면적 의미만 비교하며, 인과관계·시간순서·논리적 관계를 포착하지 못함</td><td>"A가 B를 인수한 이유"를 질문하면, "인수"와 유사한 단어가 포함된 무관한 문서가 검색됨</td></tr>
+      <tr><td><strong>청킹(Chunking) 정보 단절</strong></td><td>문서를 일정 크기로 분할하면 문맥이 절단되어 청크 간 관계 정보가 소실됨</td><td>원인(3페이지)과 결과(7페이지)가 다른 청크에 속하면 인과관계를 추론할 수 없음</td></tr>
+      <tr><td><strong>단일 홉(Single-hop) 검색 한계</strong></td><td>Top-K 유사도 검색은 질문과 직접 유사한 문서만 반환하며, 다단계 추론(Multi-hop)이 불가능</td><td>"A→B→C" 관계에서 A와 C의 관계를 추론하려면 B를 경유해야 하나, 직접 유사도만 검색</td></tr>
+      <tr><td><strong>글로벌 컨텍스트 부재</strong></td><td>전체 문서 집합의 거시적 구조(주제 분포, 전체 관계망)를 파악하지 못함</td><td>"이 문서 전체에서 가장 중요한 주제 3가지는?" 글로벌 질문에 대응 불가</td></tr>
+      <tr><td><strong>환각(Hallucination) 불완전 차단</strong></td><td>검색된 청크가 부정확하거나 불완전하면 LLM이 여전히 환각 응답을 생성</td><td>부분적으로 관련된 청크가 검색되면 LLM이 나머지를 추측으로 채움</td></tr>
+      <tr><td><strong>엔티티 중심 질문 취약</strong></td><td>특정 인물·조직·개념 간의 관계를 묻는 질문에서 관계 정보를 검색하기 어려움</td><td>"삼성전자와 TSMC의 기술 경쟁 관계에서 핵심 차이점은?" 체계적 응답 불가</td></tr>
+    </tbody></table>
+
+    <h4>1.3 Naive RAG의 발전 단계</h4>
+    <table><thead><tr><th>단계</th><th>특징</th><th>한계</th></tr></thead><tbody>
+      <tr><td>Naive RAG</td><td>단순 검색 + 생성</td><td>위의 한계 전부</td></tr>
+      <tr><td>Advanced RAG</td><td>쿼리 재작성, Re-ranking, 하이브리드 검색</td><td>여전히 청크 단위, 관계 추론 불가</td></tr>
+      <tr><td>Modular RAG</td><td>검색/생성 모듈 조합 가능</td><td>구조적 복잡성 증가</td></tr>
+      <tr><td><strong>GraphRAG</strong></td><td>지식 그래프 기반 관계 탐색</td><td>그래프 구축 비용, 최신성 유지</td></tr>
+    </tbody></table>
+
+    <h3>제2장 GraphRAG의 개념 및 동작 원리 (소문제 2)</h3>
+
+    <h4>2.1 GraphRAG의 개요</h4>
+    <div class="def-box">
+      <p class="text-indigo-800">GraphRAG란, <strong>지식 그래프(Knowledge Graph)를 활용하여 엔티티 간 관계를 구조화하고, 그래프 탐색을 통해 다단계 추론이 가능한 RAG 아키텍처</strong>이다. 2024년 Microsoft Research가 "From Local to Global: A Graph RAG Approach to Query-Focused Summarization" 논문에서 체계화하였다.</p>
+    </div>
+    <p><strong>핵심 차별점</strong>: Naive RAG가 "비구조화된 텍스트 청크의 벡터 유사도 검색"에 의존하는 반면, GraphRAG는 "구조화된 지식 그래프의 관계 탐색"을 통해 검색한다.</p>
+
+    <h4>2.2 GraphRAG 아키텍처</h4>
+    <div class="bg-slate-50 rounded-lg p-4 border mb-4">
+      <p class="text-sm font-bold text-indigo-600 mb-2">[Indexing Phase - 오프라인]</p>
+      <div class="flex flex-wrap items-center gap-2 text-sm mb-3">
+        <span class="bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded font-medium">원문 문서</span>
+        <span class="text-gray-400">→</span>
+        <span class="bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded font-medium">LLM 엔티티 추출</span>
+        <span class="text-gray-400">→</span>
+        <span class="bg-green-100 text-green-700 px-3 py-1.5 rounded font-medium">KG 구축(노드+엣지)</span>
+        <span class="text-gray-400">→</span>
+        <span class="bg-purple-100 text-purple-700 px-3 py-1.5 rounded font-medium">커뮤니티 탐지(Leiden)</span>
+        <span class="text-gray-400">→</span>
+        <span class="bg-amber-100 text-amber-700 px-3 py-1.5 rounded font-medium">커뮤니티 요약</span>
+      </div>
+      <p class="text-sm font-bold text-green-600 mb-2">[Query Phase - 온라인]</p>
+      <div class="flex flex-wrap items-center gap-2 text-sm">
+        <span class="bg-green-100 text-green-700 px-3 py-1.5 rounded font-medium">사용자 질문</span>
+        <span class="text-gray-400">→</span>
+        <span class="bg-green-100 text-green-700 px-3 py-1.5 rounded font-medium">Local/Global 판별</span>
+        <span class="text-gray-400">→</span>
+        <span class="bg-teal-100 text-teal-700 px-3 py-1.5 rounded font-medium">그래프 탐색 + 커뮤니티 요약</span>
+        <span class="text-gray-400">→</span>
+        <span class="bg-purple-100 text-purple-700 px-3 py-1.5 rounded font-medium">LLM 응답 생성</span>
+      </div>
+    </div>
+
+    <h4>2.3 GraphRAG 동작 원리 — Indexing Phase</h4>
+
+    <p class="font-bold">[Step 1] 엔티티 및 관계 추출(Entity &amp; Relation Extraction)</p>
+    <p>LLM을 활용하여 원문 문서에서 <strong>엔티티(Entity)</strong>와 <strong>관계(Relation)</strong>를 자동 추출한다.</p>
+    <table><thead><tr><th>요소</th><th>설명</th><th>예시</th></tr></thead><tbody>
+      <tr><td>엔티티(Node)</td><td>문서에 등장하는 핵심 개체</td><td>"삼성전자", "GAA 트랜지스터", "2나노 공정"</td></tr>
+      <tr><td>관계(Edge)</td><td>엔티티 간의 의미적 관계</td><td>"삼성전자 —개발→ GAA 트랜지스터"</td></tr>
+      <tr><td>속성(Attribute)</td><td>엔티티/관계의 부가 정보</td><td>시점: 2024년, 중요도: 높음</td></tr>
+    </tbody></table>
+
+    <p class="font-bold mt-4">[Step 2] 지식 그래프 구축(Knowledge Graph Construction)</p>
+    <p>추출된 엔티티와 관계를 <strong>트리플(Triple: Subject-Predicate-Object)</strong> 형태로 구조화하여 그래프를 구축한다.</p>
+    <div class="bg-slate-50 rounded-lg p-4 border text-sm my-3">
+      <p class="font-medium text-gray-700 mb-2">예시 트리플:</p>
+      <div class="space-y-1 text-gray-600">
+        <p>(삼성전자) —[개발]→ (GAA 트랜지스터)</p>
+        <p>(GAA 트랜지스터) —[적용]→ (2나노 공정)</p>
+        <p>(TSMC) —[경쟁]→ (삼성전자)</p>
+        <p>(2나노 공정) —[목표시기]→ (2025년)</p>
+      </div>
+    </div>
+
+    <p class="font-bold mt-4">[Step 3] 커뮤니티 탐지(Community Detection)</p>
+    <p><strong>Leiden 알고리즘</strong>을 적용하여 밀접하게 연결된 엔티티 그룹을 <strong>커뮤니티(Community)</strong>로 클러스터링한다. 커뮤니티는 계층적(Hierarchical)으로 구성되어 다양한 추상화 수준에서 정보를 제공한다.</p>
+    <table><thead><tr><th>커뮤니티 레벨</th><th>입도(Granularity)</th><th>활용</th></tr></thead><tbody>
+      <tr><td>Level 0 (최하위)</td><td>개별 엔티티 수준</td><td>Local 질문 대응</td></tr>
+      <tr><td>Level 1</td><td>소규모 관련 엔티티 그룹</td><td>세부 주제 응답</td></tr>
+      <tr><td>Level 2+ (상위)</td><td>대규모 주제 클러스터</td><td>Global 질문 대응</td></tr>
+    </tbody></table>
+
+    <p class="font-bold mt-4">[Step 4] 커뮤니티 요약(Community Summary) 생성</p>
+    <p>각 커뮤니티에 대해 LLM이 <strong>요약 보고서(Community Summary)</strong>를 생성한다. 이 요약은 해당 커뮤니티의 핵심 엔티티, 관계, 주요 사실을 포함하며, <strong>글로벌 질문</strong> 응답의 핵심 자료가 된다.</p>
+
+    <h4>2.4 GraphRAG 동작 원리 — Query Phase</h4>
+
+    <p class="font-bold">Local Search (로컬 검색):</p>
+    <ol class="list-decimal list-inside text-sm text-gray-700 space-y-1 mb-3">
+      <li>질문에서 핵심 엔티티 식별</li>
+      <li>지식 그래프에서 해당 엔티티의 <strong>이웃 노드(Neighbor)</strong> 탐색</li>
+      <li>관련 엔티티, 관계, 원문 청크를 컨텍스트로 수집</li>
+      <li>LLM에 전달하여 응답 생성</li>
+    </ol>
+
+    <p class="font-bold">Global Search (글로벌 검색):</p>
+    <ol class="list-decimal list-inside text-sm text-gray-700 space-y-1 mb-3">
+      <li>질문의 범위에 맞는 <strong>커뮤니티 레벨</strong> 선택</li>
+      <li>해당 레벨의 <strong>커뮤니티 요약</strong>들을 수집</li>
+      <li>Map-Reduce 방식으로 각 커뮤니티 요약에서 관련 정보를 추출(Map)</li>
+      <li>추출된 정보를 통합하여 최종 응답 생성(Reduce)</li>
+    </ol>
+
+    <h4>2.5 GraphRAG vs Naive RAG 아키텍처 비교</h4>
+    <table><thead><tr><th>비교 기준</th><th>Naive RAG</th><th>GraphRAG</th></tr></thead><tbody>
+      <tr><td>지식 표현</td><td>비구조화 텍스트 청크</td><td>구조화된 지식 그래프(노드+엣지)</td></tr>
+      <tr><td>검색 방식</td><td>벡터 코사인 유사도(Top-K)</td><td>그래프 탐색(BFS/DFS) + 커뮤니티 요약</td></tr>
+      <tr><td>관계 추론</td><td>불가 (단순 유사성)</td><td>가능 (엣지 기반 관계 추적)</td></tr>
+      <tr><td>다단계 추론</td><td>불가 (Single-hop)</td><td>가능 (Multi-hop 경로 탐색)</td></tr>
+      <tr><td>글로벌 질문</td><td>취약</td><td>우수 (커뮤니티 요약 활용)</td></tr>
+      <tr><td>인덱싱 비용</td><td>낮음 (임베딩만)</td><td>높음 (LLM 기반 엔티티 추출 + 그래프 구축)</td></tr>
+      <tr><td>최신성 유지</td><td>용이 (문서 추가만)</td><td>어려움 (그래프 재구축 필요)</td></tr>
+      <tr><td>적용 난이도</td><td>낮음</td><td>높음 (그래프 구축 파이프라인 필요)</td></tr>
+    </tbody></table>
+
+    <h3>제3장 복합 질문 처리 시 GraphRAG 우수성의 논리적 근거 (소문제 3)</h3>
+
+    <h4>3.1 복합 질문(Global Question)의 정의</h4>
+    <p>복합 질문이란, <strong>전체 문서 집합에 대한 거시적 이해</strong>를 요구하는 질문으로, 단일 청크의 정보만으로는 답변할 수 없는 질문이다.</p>
+    <table><thead><tr><th>질문 유형</th><th>예시</th><th>Naive RAG</th><th>GraphRAG</th></tr></thead><tbody>
+      <tr><td>로컬(Local)</td><td>"GPT-4의 파라미터 수는?"</td><td>가능</td><td>가능</td></tr>
+      <tr><td>글로벌(Global)</td><td>"AI 산업의 주요 경쟁 구도는?"</td><td><strong>불가</strong></td><td><strong>가능</strong></td></tr>
+      <tr><td>다단계(Multi-hop)</td><td>"A가 B에 투자한 이유와 그 결과로 C에 미친 영향?"</td><td><strong>불가</strong></td><td><strong>가능</strong></td></tr>
+      <tr><td>비교 분석</td><td>"한국과 EU의 AI 규제 접근 방식 차이점?"</td><td>부분적</td><td><strong>우수</strong></td></tr>
+    </tbody></table>
+
+    <h4>3.2 GraphRAG 우수성의 논리적 근거</h4>
+
+    <p class="font-bold">[근거 1] 관계 기반 탐색의 우월성</p>
+    <p>Naive RAG는 "의미적 거리(Semantic Distance)"만 측정하지만, GraphRAG는 <strong>"관계적 경로(Relational Path)"</strong>를 추적한다.</p>
+    <div class="bg-slate-50 rounded-lg p-4 border text-sm my-3">
+      <p class="font-medium mb-2">예시: "삼성전자의 2나노 공정이 TSMC에 미치는 영향은?"</p>
+      <p class="text-red-600 mb-1">[Naive RAG] Query → 벡터 유사도 → "삼성전자 2나노" 관련 청크 검색 → TSMC와의 관계 정보 누락 가능</p>
+      <p class="text-green-600">[GraphRAG] 삼성전자 —[개발]→ 2나노 —[경쟁]→ TSMC → 경로상 관계 정보 모두 수집 → 인과관계 기반 응답</p>
+    </div>
+
+    <p class="font-bold">[근거 2] 커뮤니티 요약을 통한 글로벌 컨텍스트 확보</p>
+    <p>Microsoft Research의 실험(2024) 결과, 글로벌 질문에 대해:</p>
+    <ul class="list-disc list-inside text-sm text-gray-700 space-y-1 mb-2">
+      <li>GraphRAG의 <strong>Comprehensiveness(포괄성)</strong>: Naive RAG 대비 <strong>72~83% 우승률</strong></li>
+      <li>GraphRAG의 <strong>Diversity(다양성)</strong>: Naive RAG 대비 <strong>67~78% 우승률</strong></li>
+    </ul>
+    <p>커뮤니티 요약이 전체 문서 집합의 주제별 구조를 사전에 파악하고 있으므로, 글로벌 질문에 대해 <strong>누락 없는 포괄적 응답</strong>이 가능하다.</p>
+
+    <p class="font-bold mt-4">[근거 3] Multi-hop 추론 능력</p>
+    <table><thead><tr><th>추론 유형</th><th>Naive RAG</th><th>GraphRAG</th></tr></thead><tbody>
+      <tr><td>1-hop (직접 관계)</td><td>가능</td><td>가능</td></tr>
+      <tr><td>2-hop (간접 관계)</td><td>어려움</td><td>가능</td></tr>
+      <tr><td>3-hop 이상 (다단계)</td><td>불가</td><td>가능 (경로 길이 제한 내)</td></tr>
+      <tr><td>추론 근거 제시</td><td>불가</td><td>가능 (경로 정보 제공)</td></tr>
+    </tbody></table>
+
+    <p class="font-bold mt-4">[근거 4] 환각(Hallucination) 감소</p>
+    <p>GraphRAG는 <strong>구조화된 사실(Fact)</strong> 기반으로 응답하므로 환각이 줄어든다.</p>
+    <ul class="list-disc list-inside text-sm text-gray-700 space-y-1 mb-2">
+      <li>엔티티와 관계가 명시적으로 존재하는 경우에만 응답</li>
+      <li>그래프에 없는 정보에 대해서는 "정보 없음"으로 응답 가능</li>
+      <li>응답의 <strong>출처 추적(Provenance)</strong>이 가능: 어떤 엔티티-관계 경로를 통해 응답했는지 제시</li>
+    </ul>
+
+    <h4>3.3 GraphRAG의 한계와 보완 전략</h4>
+    <table><thead><tr><th>한계</th><th>원인</th><th>보완 전략</th></tr></thead><tbody>
+      <tr><td>높은 인덱싱 비용</td><td>LLM 기반 엔티티 추출에 대규모 API 호출 필요</td><td>경량 NER 모델 + LLM 하이브리드</td></tr>
+      <tr><td>그래프 최신성 유지</td><td>문서 변경 시 그래프 재구축 필요</td><td>증분 업데이트(Incremental Update)</td></tr>
+      <tr><td>엔티티 추출 오류</td><td>LLM의 엔티티 인식 오류 전파</td><td>인간 검증(Human-in-the-Loop)</td></tr>
+      <tr><td>대규모 그래프 탐색 비용</td><td>노드/엣지 수 증가 시 탐색 시간 증가</td><td>그래프 DB 인덱싱(Neo4j) 최적화</td></tr>
+    </tbody></table>
+
+    <h4>3.4 연관 이론 연결</h4>
+    <p><strong>지식 그래프(Knowledge Graph)와의 관계</strong>: GraphRAG의 핵심은 지식 그래프이다. Google이 2012년 Knowledge Graph를 도입한 이후, Wikidata, DBpedia 등 대규모 지식 그래프가 구축되었다. GraphRAG는 이를 특정 도메인에 자동 구축하는 기술이다.</p>
+    <p><strong>프롬프트 엔지니어링과의 관계</strong>: Chain-of-Thought(CoT), Tree-of-Thought(ToT) 등 LLM의 추론 능력을 향상시키는 기법과 GraphRAG를 결합하면 더 강력한 추론이 가능하다.</p>
+    <p><strong>벡터 DB + 그래프 DB 하이브리드</strong>: 실무에서는 Naive RAG와 GraphRAG를 결합한 하이브리드 접근이 주류이다. 로컬 질문은 벡터 검색으로, 글로벌/복합 질문은 그래프 탐색으로 처리한다.</p>
+
+    <h3>소문제 간 통합 분석</h3>
+    <table><thead><tr><th>관점</th><th>소문제 1</th><th>소문제 2</th><th>소문제 3</th></tr></thead><tbody>
+      <tr><td>층위</td><td>문제 인식</td><td>해결 기술</td><td>우수성 논증</td></tr>
+      <tr><td>핵심 질문</td><td>Naive RAG가 왜 실패?</td><td>GraphRAG는 어떻게 동작?</td><td>왜 GraphRAG가 우수?</td></tr>
+      <tr><td>핵심 개념</td><td>벡터 유사도 한계</td><td>KG 구축 + 그래프 탐색</td><td>Multi-hop, 커뮤니티 요약</td></tr>
+      <tr><td>연결 고리</td><td>관계 추론 불가 →</td><td>그래프로 관계 구조화 →</td><td>관계 탐색으로 추론 가능</td></tr>
+    </tbody></table>
+
+    <div class="insight-box mt-4">
+      <p class="text-sm text-amber-800">결론적으로, 초거대 AI의 환각을 차단하고 다층적 추론을 실현하기 위해 <strong>Naive RAG의 벡터 유사도 한계를 지식 그래프 기반 GraphRAG가 극복</strong>하며, 특히 복합 질문에서 <strong>관계 기반 탐색과 커뮤니티 요약을 통해 포괄적이고 정확한 응답</strong>을 생성한다.</p>
+    </div>
+
+  </div>
+</div>
+</div><!-- close section before script -->
+
+<div id="script" style="display:none;" class="space-y-6">
+  <h2 class="text-xl font-bold text-amber-700 flex items-center gap-2">🎬 강의 스크립트 <span class="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full">멘토 전용</span></h2>
+  <div class="bg-white rounded-xl shadow-sm border p-6 leading-relaxed text-gray-700">
+    <p class="mb-4">안녕하세요, 여러분. 오늘은 2026년 기술사 시험에서 가장 핫한 AI 트렌드 토픽 중 하나인 GraphRAG를 다뤄볼 건데요. 요즘 ChatGPT, Claude 같은 초거대 AI를 안 쓰는 기업이 없잖아요? 그런데 이 AI들이 가짜 정보를 진짜처럼 말하는 "환각(Hallucination)" 문제가 심각하거든요. RAG가 이걸 해결하려고 나온 기술인데, 기존 RAG도 한계가 있어요. 그래서 나온 게 GraphRAG예요.</p>
+
+    <p class="mb-4">여러분, RAG라는 용어 자체를 모르시는 분은 없을 거예요. 2024~2025년에 기업용 AI 시스템의 사실상 표준 아키텍처가 되었으니까요. 그런데 기존 RAG의 한계를 지적하고 그 대안으로 GraphRAG를 묻는 문제가 나온다면, 이건 단순 트렌드가 아니라 "AI 시스템 아키텍처의 진화"를 이해하고 있느냐를 검증하는 문제예요.</p>
+
+    <p class="mb-4">이 토픽이 왜 시험에 나올까요? 2024년에 Microsoft Research가 GraphRAG 논문을 발표하면서 업계에 큰 반향을 일으켰고, 2025~2026년에 실무 도입이 본격화되고 있거든요. 출제위원들이 최신 트렌드를 좋아하시는데, AI + 데이터 + 아키텍처가 결합된 이 토픽은 2교시형으로 딱이에요. 특히 "기존 한계 → 새 기술 → 왜 좋은지 논증"이라는 3단 구조가 2교시형에 완벽하게 맞아떨어지거든요.</p>
+
+    <p class="mb-4">소문제 구조부터 잡아볼게요. 소문제 1은 "기존 Naive RAG가 왜 복잡한 질문에 실패하느냐"라는 문제 인식이에요. 소문제 2는 "GraphRAG가 이걸 어떻게 해결하느냐"라는 기술 설명이고요. 소문제 3은 "복합 질문에서 왜 GraphRAG가 더 좋으냐"라는 논리적 입증이에요. <strong class="highlight">"한계 → 해결 → 논증"</strong>의 삼단 구조입니다.</p>
+
+    <p class="mb-4">소문제 1, Naive RAG의 한계부터 갈게요. RAG는 2020년 Meta AI에서 제안한 기술인데, 기본 원리가 뭐냐면 사용자가 질문하면 벡터 DB에서 비슷한 문서 조각(청크)을 찾아서 LLM에 넣어주는 거예요. "참고자료 여기 있으니까 이걸 보고 대답해"라고 하는 거죠. 이러면 LLM이 학습 데이터에 없는 최신 정보도 답할 수 있고, 환각도 줄어들어요.</p>
+
+    <p class="mb-4">그런데 문제가 뭐냐면, 벡터 유사도 검색은 "단어의 의미가 비슷한 것"만 찾지, "이것 때문에 저것이 발생했다"는 인과관계는 못 찾아요. 이게 첫 번째 한계인 <strong>의미적 유사성 편향</strong>이에요. 두 번째 한계는 <strong>청킹 정보 단절</strong>이에요. 긴 문서를 500토큰, 1000토큰 단위로 자르면 원인이 3페이지에 있고 결과가 7페이지에 있을 때, 인과관계의 실이 끊어지는 거죠. 세 번째가 <strong>Single-hop 한계</strong>예요. A→B→C라는 관계가 있을 때, B를 경유해야 알 수 있는데 직접 유사도만 비교하니까 B를 놓치는 거예요. 네 번째는 <strong>글로벌 컨텍스트 부재</strong>예요. 이 네 가지 한계를 <strong class="highlight">"의청싱글"</strong>로 외우세요.</p>
+
+    <p class="mb-4">소문제 2, GraphRAG 동작 원리입니다. 이 부분이 30%로 가장 비중이 커요. GraphRAG의 핵심 아이디어는 "텍스트를 그냥 청크로 자르지 말고, 엔티티와 관계를 추출해서 지식 그래프를 만들자"는 거예요.</p>
+
+    <p class="mb-4">동작 과정이 크게 두 단계인데, <strong>Indexing Phase(오프라인)</strong>와 <strong>Query Phase(온라인)</strong>예요. Indexing이 핵심인데 4단계로 진행돼요. <strong class="highlight">"엔그커요"</strong>로 외우세요.</p>
+
+    <p class="mb-4">첫째, <strong>엔티티 추출</strong>. LLM이 문서를 읽으면서 엔티티와 관계를 뽑아내요. 트리플(Subject-Predicate-Object) 형태예요. 둘째, <strong>그래프 구축</strong>. 추출된 트리플들을 모아서 지식 그래프를 만들어요. 셋째, <strong>커뮤니티 탐지</strong>. 이게 GraphRAG의 비밀 병기인데요, Leiden 알고리즘으로 밀접하게 연결된 엔티티 그룹을 "커뮤니티"로 묶어요. 넷째, <strong>요약 생성</strong>. 각 커뮤니티에 대해 LLM이 요약 보고서를 만들어요.</p>
+
+    <p class="mb-4">Query 단계에서는 Local Search와 Global Search 두 가지가 있어요. Local은 특정 엔티티의 이웃 노드를 BFS로 탐색하고, Global은 커뮤니티 요약들을 Map-Reduce로 통합하는 거예요.</p>
+
+    <p class="mb-4">소문제 3, GraphRAG의 우수성 논증이에요. 논리적 근거 4가지를 표로 정리하세요. 첫째, <strong>관계 기반 탐색</strong>. 둘째, <strong>커뮤니티 요약</strong> — Microsoft 실험에서 포괄성(Comprehensiveness)이 72~83% 우승률이었다는 수치를 꼭 쓰세요. 셋째, <strong>Multi-hop 추론</strong>. 넷째, <strong>환각 감소</strong> — 구조화된 사실 기반이니까 그래프에 없는 정보는 "모른다"고 답할 수 있어요.</p>
+
+    <p class="mb-4">결론에서는 "Naive RAG의 벡터 유사도 한계를 GraphRAG가 지식 그래프 기반 관계 탐색으로 극복하며, 특히 커뮤니티 요약과 Multi-hop 추론으로 복합 질문에서 압도적 우수성을 보인다"고 정리하세요. 미래 전망으로 벡터 DB + 그래프 DB 하이브리드 RAG가 실무 표준이 되고 있다는 점을 한 줄 넣으면 완성이에요.</p>
+
+    <p class="mb-4">분량 배분은 서론 10%, 소문제 1이 25%, 소문제 2가 30%, 소문제 3이 25%, 결론 10%입니다. 필수 도식은 세 가지: GraphRAG 전체 아키텍처, Naive RAG vs GraphRAG 비교표, Naive RAG 한계 도식. 특히 지식 그래프는 1교시에서 단독으로 나올 수도 있으니까 미리 정리해두세요.</p>
+
+    <p>마지막으로, GraphRAG의 한계도 반드시 언급하세요. 높은 인덱싱 비용, 그래프 최신성 유지 어려움, 엔티티 추출 오류 전파 문제. 이런 한계를 쓰고 "그래서 실무에서는 벡터 검색과 그래프 탐색을 결합한 하이브리드 RAG가 주류"라고 마무리하면 균형 잡힌 시야를 보여줄 수 있습니다. 오늘도 수고 많으셨습니다!</p>
+  </div>
+</div>
+
+<div id="quiz" style="display:none;" class="space-y-6">
+  <h2 class="text-xl font-bold text-gray-900 flex items-center gap-2">🧪 퀴즈 & 암기</h2>
+
+  <!-- 퀴즈 섹션 -->
+  <div class="bg-white rounded-xl shadow-sm border p-6">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-lg font-bold text-gray-900">🎯 AI 퀴즈</h3>
+      <button id="btn-quiz-gen" onclick="generateQuiz()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"><span>✨ 새로운 문제 생성</span></button>
+    </div>
+    <div id="quiz-placeholder" class="text-center py-8 text-gray-400"><p>버튼을 클릭하여 AI가 생성하는 퀴즈에 도전하세요!</p></div>
+    <div id="quiz-loading" class="hidden text-center py-8"><div class="typing-indicator inline-flex"><span></span><span></span><span></span></div><p class="text-sm text-gray-500 mt-2">AI가 문제를 생성 중입니다...</p></div>
+    <div id="quiz-container" class="hidden">
+      <div class="mb-4"><span id="quiz-type-badge" class="bg-indigo-100 text-indigo-700 text-xs font-bold px-2 py-1 rounded-full"></span></div>
+      <p id="quiz-question" class="text-gray-800 font-medium mb-4"></p>
+      <div id="quiz-options" class="space-y-2 hidden"></div>
+      <div id="quiz-input-area" class="hidden"><div class="flex gap-2"><input type="text" id="quiz-answer-input" placeholder="정답을 입력하세요..." class="flex-grow border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"><button id="btn-short-submit" onclick="checkShortAnswer()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium">제출</button></div></div>
+      <div id="quiz-feedback" class="hidden mt-4 p-4 rounded-lg border-2"></div>
+    </div>
+  </div>
+
+  <!-- 암기 노트 ① 두문자어 -->
+  <div class="bg-white rounded-xl shadow-sm border p-6">
+    <h3 class="text-lg font-bold text-gray-900 mb-4">📝 암기 노트 ① 두문자어</h3>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="bg-gradient-to-br from-red-50 to-orange-50 rounded-xl p-5 border border-red-100">
+        <p class="font-bold text-red-800 text-lg mb-2">🔴 "의청싱글"</p>
+        <p class="text-sm text-red-600 mb-3">Naive RAG 4대 핵심 한계</p>
+        <div class="space-y-1.5 text-sm">
+          <p class="text-red-700"><strong class="highlight">의</strong>미적 유사성 편향</p>
+          <p class="text-red-700"><strong class="highlight">청</strong>킹 정보 단절</p>
+          <p class="text-red-700"><strong class="highlight">싱</strong>gle-hop 검색 한계</p>
+          <p class="text-red-700"><strong class="highlight">글</strong>로벌 컨텍스트 부재</p>
+        </div>
+      </div>
+      <div class="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-5 border border-green-100">
+        <p class="font-bold text-green-800 text-lg mb-2">🟢 "엔그커요"</p>
+        <p class="text-sm text-green-600 mb-3">GraphRAG Indexing 4단계</p>
+        <div class="space-y-1.5 text-sm">
+          <p class="text-green-700"><strong class="highlight">엔</strong>티티/관계 추출 (LLM 기반)</p>
+          <p class="text-green-700"><strong class="highlight">그</strong>래프 구축 (트리플: S-P-O)</p>
+          <p class="text-green-700"><strong class="highlight">커</strong>뮤니티 탐지 (Leiden 알고리즘)</p>
+          <p class="text-green-700"><strong class="highlight">요</strong>약 생성 (커뮤니티별 보고서)</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 암기 노트 ② 골격 답안 -->
+  <div class="bg-white rounded-xl shadow-sm border p-6">
+    <h3 class="text-lg font-bold text-gray-900 mb-4">📝 암기 노트 ② 골격 답안 구조</h3>
+    <table class="w-full text-sm border-collapse"><thead><tr class="bg-gray-50"><th class="border border-gray-200 px-3 py-2 text-left">구분</th><th class="border border-gray-200 px-3 py-2 text-left">비율</th><th class="border border-gray-200 px-3 py-2 text-left">핵심 내용</th></tr></thead><tbody>
+      <tr><td class="border border-gray-200 px-3 py-2 font-medium">서론</td><td class="border border-gray-200 px-3 py-2">10%</td><td class="border border-gray-200 px-3 py-2">초거대 AI 환각 문제 + RAG 등장 배경 + 벡터 기반 한계 인식</td></tr>
+      <tr><td class="border border-gray-200 px-3 py-2 font-medium">소문제 1</td><td class="border border-gray-200 px-3 py-2">25%</td><td class="border border-gray-200 px-3 py-2">Naive RAG 아키텍처 도식 + 한계 6가지 표 + 발전 단계표</td></tr>
+      <tr><td class="border border-gray-200 px-3 py-2 font-medium">소문제 2</td><td class="border border-gray-200 px-3 py-2">30%</td><td class="border border-gray-200 px-3 py-2">GraphRAG 아키텍처 도식 + Indexing 4단계 + Local/Global Search</td></tr>
+      <tr><td class="border border-gray-200 px-3 py-2 font-medium">소문제 3</td><td class="border border-gray-200 px-3 py-2">25%</td><td class="border border-gray-200 px-3 py-2">4가지 논리적 근거 + MS Research 수치(72~83%) + 비교표</td></tr>
+      <tr><td class="border border-gray-200 px-3 py-2 font-medium">결론</td><td class="border border-gray-200 px-3 py-2">10%</td><td class="border border-gray-200 px-3 py-2">하이브리드 RAG 전망 + 지식 그래프 자동 구축의 미래</td></tr>
+    </tbody></table>
+  </div>
+
+  <!-- 암기 노트 ③ 필수 도식 + 차별화 포인트 -->
+  <div class="bg-white rounded-xl shadow-sm border p-6">
+    <h3 class="text-lg font-bold text-gray-900 mb-4">📝 암기 노트 ③ 필수 도식 & 차별화 포인트</h3>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+      <div class="info-card indigo">
+        <p class="font-bold text-indigo-800 mb-2">📐 필수 도식 3가지</p>
+        <ol class="text-sm text-indigo-700 space-y-1 list-decimal list-inside">
+          <li><strong>GraphRAG 전체 아키텍처</strong> — Indexing + Query Phase (가장 중요)</li>
+          <li><strong>Naive RAG vs GraphRAG 비교표</strong> — 8개 비교 기준</li>
+          <li><strong>Naive RAG 아키텍처</strong> — 한계점 시각화</li>
+        </ol>
+      </div>
+      <div class="info-card green">
+        <p class="font-bold text-green-800 mb-2">⭐ 차별화 포인트</p>
+        <ul class="text-sm text-green-700 space-y-1">
+          <li>• Microsoft Research 논문 인용 (2024, "From Local to Global")</li>
+          <li>• Leiden 알고리즘 기반 커뮤니티 탐지</li>
+          <li>• 실험 수치: Comprehensiveness 72~83% 우승률</li>
+          <li>• Map-Reduce 기반 Global Search 메커니즘</li>
+          <li>• 하이브리드 RAG(벡터+그래프) 실무 트렌드</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- 제2부 전체 -->
+  <div class="bg-white rounded-xl shadow-sm border p-6">
+    <h3 class="text-lg font-bold text-gray-900 mb-4">📚 제2부 암기 요약 자료 (전체)</h3>
+    <div class="textbook-content">
+
+      <div class="def-box mb-4">
+        <p class="font-bold text-indigo-900">한 줄 정의</p>
+        <p class="text-sm text-indigo-800">GraphRAG는 LLM으로 문서에서 엔티티와 관계를 추출하여 지식 그래프를 구축하고, 그래프 탐색과 커뮤니티 요약을 통해 Naive RAG의 단순 유사도 검색 한계를 극복하는 차세대 RAG 아키텍처이다.</p>
+      </div>
+
+      <h4>핵심 키워드 맵</h4>
+      <div class="bg-slate-50 rounded-lg p-4 border mb-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+          <div>
+            <p class="font-bold text-red-700 mb-2">[Naive RAG 한계]</p>
+            <ul class="text-gray-600 space-y-0.5">
+              <li>├ 의미적 유사성 편향: 인과관계 불가</li>
+              <li>├ 청킹 단절: 문맥 소실</li>
+              <li>├ Single-hop: 다단계 추론 불가</li>
+              <li>└ 글로벌 컨텍스트 부재</li>
+            </ul>
+          </div>
+          <div>
+            <p class="font-bold text-green-700 mb-2">[GraphRAG 동작]</p>
+            <ul class="text-gray-600 space-y-0.5">
+              <li>├ Indexing: 엔티티 추출 → KG 구축</li>
+              <li>│  → 커뮤니티 탐지 → 요약</li>
+              <li>└ Query: Local(이웃 탐색)</li>
+              <li>  / Global(커뮤니티 Map-Reduce)</li>
+            </ul>
+          </div>
+          <div>
+            <p class="font-bold text-purple-700 mb-2">[우수성 근거]</p>
+            <ul class="text-gray-600 space-y-0.5">
+              <li>├ 관계 기반 탐색 (경로 추적)</li>
+              <li>├ 커뮤니티 요약 (글로벌 컨텍스트)</li>
+              <li>├ Multi-hop 추론 (2-hop, 3-hop)</li>
+              <li>└ 환각 감소 (구조화된 사실 기반)</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <h4>두문자어 암기법</h4>
+      <p><strong>Naive RAG 한계</strong>: <strong>"의청싱글"</strong> — 의미적 유사성 편향, 청킹 정보 단절, Single-hop 검색 한계, 글로벌 컨텍스트 부재</p>
+      <p><strong>GraphRAG Indexing 4단계</strong>: <strong>"엔그커요"</strong> — 엔티티/관계 추출(LLM 기반), 그래프 구축(트리플: S-P-O), 커뮤니티 탐지(Leiden 알고리즘), 요약 생성(커뮤니티별 요약 보고서)</p>
+
+      <h4>골격 답안 구조</h4>
+      <p><strong>[서론 — 10%]</strong> 초거대 AI 환각 문제 + RAG 등장 배경 + 벡터 기반 한계 인식</p>
+      <p><strong>[소문제 1 — 25%]</strong> Naive RAG 한계: 아키텍처 도식 + 한계 6가지 표(의미 유사성, 청킹 단절, Single-hop, 글로벌 부재, 환각, 엔티티) + 발전 단계표</p>
+      <p><strong>[소문제 2 — 30%]</strong> GraphRAG 동작 원리: 아키텍처 도식(필수) + Indexing 4단계 + Local/Global Search 비교</p>
+      <p><strong>[소문제 3 — 25%]</strong> 우수성 논증: 4가지 근거(관계 탐색, 커뮤니티 요약, Multi-hop, 환각 감소) + MS Research 수치(72~83%)</p>
+      <p><strong>[결론 — 10%]</strong> 하이브리드 RAG 전망 + 지식 그래프 자동 구축의 미래</p>
+
+      <h4>필수 도식</h4>
+      <ol class="list-decimal list-inside text-sm space-y-1">
+        <li><strong>GraphRAG 전체 아키텍처</strong> — Indexing + Query Phase (가장 중요)</li>
+        <li><strong>Naive RAG vs GraphRAG 비교표</strong> — 8개 비교 기준</li>
+        <li><strong>Naive RAG 아키텍처</strong> — 한계점 시각화</li>
+      </ol>
+
+      <h4>차별화 포인트</h4>
+      <ul class="list-disc list-inside text-sm space-y-1">
+        <li>Microsoft Research 논문 인용 (2024, "From Local to Global")</li>
+        <li>Leiden 알고리즘 기반 커뮤니티 탐지 언급</li>
+        <li>실험 수치: Comprehensiveness 72~83% 우승률</li>
+        <li>Map-Reduce 기반 Global Search 메커니즘</li>
+        <li>하이브리드 RAG (벡터+그래프) 실무 트렌드</li>
+      </ul>
+
+    </div>
+  </div>
+</div>
+
+<div class="chat-sidebar" id="chatSidebar">
+  <div class="flex items-center justify-between p-4 border-b bg-indigo-600 text-white">
+    <div class="flex items-center gap-2"><span class="text-xl">🤖</span><h3 class="font-bold">AI 튜터</h3></div>
+    <button onclick="toggleChat()" class="text-white hover:text-indigo-200 text-xl">&times;</button>
+  </div>
+  <div id="chatMessages" class="flex-grow overflow-y-auto p-4 space-y-3">
+    <div class="bg-indigo-50 rounded-lg p-3 text-sm text-indigo-800">안녕하세요! Naive RAG 한계, GraphRAG, 복합 질문 처리에 대해 질문해주세요.</div>
+  </div>
+  <div class="p-4 border-t"><div class="flex gap-2">
+    <input type="text" id="chatInput" placeholder="질문을 입력하세요..." class="flex-grow border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" onkeydown="if(event.key==='Enter')sendChat()">
+    <button onclick="sendChat()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium">전송</button>
+  </div></div>
+</div>
+<div class="chat-fab" onclick="toggleChat()">💬</div>
+<div id="settingsModal" class="fixed inset-0 bg-black bg-opacity-50 z-[1100] hidden flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+    <div class="flex items-center justify-between mb-4"><h3 class="text-lg font-bold text-gray-900">🔑 API 설정</h3><button onclick="toggleSettings()" class="text-gray-400 hover:text-gray-600 text-xl">&times;</button></div>
+    <div class="space-y-4">
+      <div><label class="block text-sm font-medium text-gray-700 mb-1">Gemini API Key</label><input type="password" id="apiKeyInput" placeholder="AIza..." class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"></div>
+      <div class="flex gap-2"><button onclick="saveApiKey()" class="flex-grow bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg text-sm font-medium">저장</button><button onclick="toggleSettings()" class="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50">취소</button></div>
+      <p class="text-xs text-gray-500">API Key는 브라우저에 로컬 저장되며 외부로 전송되지 않습니다.</p>
+    </div>
+  </div>
+</div>
+
+  </main>
+  <footer class="text-center text-sm text-gray-400 py-8 mt-12 border-t">
+    <p>박교익PE (132회 정보관리기술사, dr.code92@gmail.com)</p>
+    <p class="mt-1">Copyright &copy; KPC 정보관리기술사 ZIP-UP 심화반. All rights reserved.</p>
+  </footer>
+<script>
+    var isMentorMode = new URLSearchParams(window.location.search).get('mentor') === 'true';
+    var sections = ['overview','naiverag','graphrag','advantage','textbook','quiz'];
+    if(isMentorMode){ sections.splice(5,0,'script'); document.getElementById('scriptTabBtn').style.display=''; }
+    function navTo(id){ sections.forEach(function(s){var el=document.getElementById(s);if(el)el.style.display=s===id?'block':'none';}); document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active');}); document.querySelectorAll('.tab-btn').forEach(function(b){if(b.getAttribute('onclick')&&b.getAttribute('onclick').includes("'"+id+"'"))b.classList.add('active');}); window.scrollTo({top:0,behavior:'smooth'}); }
+    document.querySelectorAll('.tech-block .header, .strategy-card .s-header').forEach(function(h){ h.addEventListener('click',function(){this.parentElement.classList.toggle('open');}); });
+    function getApiKey(){return localStorage.getItem('geminiKey')||localStorage.getItem('gemini_api_key')||'';}
+    function saveApiKey(){var k=document.getElementById('apiKeyInput').value.trim();if(k){localStorage.setItem('geminiKey',k);localStorage.setItem('gemini_api_key',k);alert('저장되었습니다.');toggleSettings();}else{alert('API Key를 입력해주세요.');}}
+    function toggleSettings(){var m=document.getElementById('settingsModal');m.classList.toggle('hidden');if(!m.classList.contains('hidden')){document.getElementById('apiKeyInput').value=getApiKey();}}
+    function toggleChat(){document.getElementById('chatSidebar').classList.toggle('open');}
+    async function sendChat(){var k=getApiKey();if(!k){alert('API Key를 먼저 설정해주세요.');toggleSettings();return;}var input=document.getElementById('chatInput');var msg=input.value.trim();if(!msg)return;input.value='';var box=document.getElementById('chatMessages');box.innerHTML+='<div class="bg-gray-100 rounded-lg p-3 text-sm text-gray-800 ml-8">'+msg+'</div>';box.innerHTML+='<div id="chatLoading" class="typing-indicator flex mb-2"><span></span><span></span><span></span></div>';box.scrollTop=box.scrollHeight;try{var sysPrompt="당신은 정보관리기술사 시험 멘토입니다. 'Naive RAG 한계, GraphRAG 동작 원리, 복합 질문 처리' 관련 질문에 전문적이고 명쾌하게 답변해주세요. 300자 이내로 핵심만 요약.";var r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key='+k,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{role:'user',parts:[{text:sysPrompt+"\n\n질문: "+msg}]}]})});var d=await r.json();var reply=d.candidates[0].content.parts[0].text;document.getElementById('chatLoading').remove();box.innerHTML+='<div class="bg-indigo-50 rounded-lg p-3 text-sm text-indigo-800 mr-8">'+marked.parse(reply)+'</div>';}catch(e){document.getElementById('chatLoading').remove();box.innerHTML+='<div class="bg-red-50 rounded-lg p-3 text-sm text-red-600">오류: '+e.message+'</div>';}box.scrollTop=box.scrollHeight;}
+
+    // ── 퀴즈 ──
+    var geminiKey=(typeof getApiKey==='function')?(getApiKey()||''):(localStorage.getItem('geminiKey')||localStorage.getItem('gemini_api_key')||'');
+    var quizTypeHistory=[];var currentQuizData=null;
+    var quizTopics=[
+        {category:"RAG 개요와 배경",keywords:"RAG, 검색 증강 생성, LLM, 환각, Hallucination, Meta AI, 2020년"},
+        {category:"Naive RAG 아키텍처",keywords:"청킹, 벡터 임베딩, Vector DB, FAISS, 유사도 검색, Top-K"},
+        {category:"Naive RAG 한계",keywords:"의미적 유사성 편향, 청킹 단절, Single-hop, 글로벌 컨텍스트 부재, 환각"},
+        {category:"GraphRAG 개요",keywords:"지식 그래프, Knowledge Graph, 엔티티, 관계, Microsoft Research, 2024"},
+        {category:"GraphRAG Indexing Phase",keywords:"엔티티 추출, 트리플, Leiden 알고리즘, 커뮤니티 탐지, 커뮤니티 요약"},
+        {category:"GraphRAG Query Phase",keywords:"Local Search, Global Search, Map-Reduce, BFS, 이웃 노드 탐색"},
+        {category:"GraphRAG 우수성 근거",keywords:"관계 기반 탐색, Multi-hop 추론, 포괄성 72~83%, 환각 감소, Provenance"},
+        {category:"GraphRAG 한계와 보완",keywords:"인덱싱 비용, 그래프 최신성, 증분 업데이트, 하이브리드 RAG, 벡터+그래프"}
+    ];
+    async function generateQuiz(){geminiKey=(typeof getApiKey==='function')?(getApiKey()||''):(localStorage.getItem('geminiKey')||localStorage.getItem('gemini_api_key')||'');if(!geminiKey){alert('API Key를 먼저 설정해주세요.');toggleSettings();return;}var btn=document.getElementById('btn-quiz-gen');btn.disabled=true;btn.innerHTML='<span>생성 중...</span>';document.getElementById('quiz-placeholder').classList.add('hidden');document.getElementById('quiz-container').classList.add('hidden');document.getElementById('quiz-loading').classList.remove('hidden');var isMC;var recent=quizTypeHistory.slice(-2);if(recent.length>=2&&recent[0]===recent[1]){isMC=!recent[1];}else{isMC=Math.random()>0.5;}quizTypeHistory.push(isMC);var selected=quizTopics[Math.floor(Math.random()*quizTopics.length)];var quizType=isMC?'객관식 (4지선다)':'단답형';var format=isMC?'{"question":"문제","options":["A","B","C","D"],"correctIndex":0,"explanation":"해설"}':'{"question":"문제","correctAnswer":"정답","explanation":"해설"}';var prompt="다음 카테고리에 대한 "+quizType+" 퀴즈 1문제를 만드세요.\n카테고리: "+selected.category+"\n관련 키워드: "+selected.keywords+"\n규칙: 반드시 위 카테고리와 키워드에 직접 관련된 문제를 출제하세요.\nJSON 형식으로 응답: "+format;try{var r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key='+geminiKey,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{responseMimeType:"application/json"}})});var d=await r.json();var t=d.candidates[0].content.parts[0].text;t=t.replace(/```json\s*/gi,"").replace(/```\s*/g,"").trim();var depth=0,start=-1,end=-1;for(var i=0;i<t.length;i++){if(t[i]==='{'){if(depth===0)start=i;depth++;}else if(t[i]==='}'){depth--;if(depth===0&&start!==-1){end=i;break;}}}if(start===-1||end===-1)throw new Error("No JSON found");t=t.substring(start,end+1);t=t.replace(/[\x00-\x1F\x7F]/g,function(c){return c==='\n'||c==='\r'||c==='\t'?' ':'';});currentQuizData=JSON.parse(t);renderQuiz(isMC);}catch(e){document.getElementById('quiz-loading').classList.add('hidden');document.getElementById('quiz-placeholder').classList.remove('hidden');document.getElementById('quiz-placeholder').innerHTML='<p class="text-red-500">퀴즈 생성 오류: '+e.message+'</p>';}btn.disabled=false;btn.innerHTML='<span>✨ 새로운 문제 생성</span>';}
+    function renderQuiz(isMC){document.getElementById('quiz-loading').classList.add('hidden');document.getElementById('quiz-feedback').classList.add('hidden');document.getElementById('quiz-container').classList.remove('hidden');document.getElementById('quiz-type-badge').textContent=isMC?'객관식':'단답형';document.getElementById('quiz-question').textContent=currentQuizData.question;var optDiv=document.getElementById('quiz-options');var inputDiv=document.getElementById('quiz-input-area');if(isMC){optDiv.classList.remove('hidden');inputDiv.classList.add('hidden');var h='';var letters=['A','B','C','D'];currentQuizData.options.forEach(function(opt,i){h+='<button onclick="checkMultipleChoice('+i+', this)" class="w-full text-left p-4 rounded-lg border border-gray-200 hover:bg-indigo-50 hover:border-indigo-300 transition-all mb-2 flex items-center group"><span class="w-8 h-8 rounded-full bg-gray-100 group-hover:bg-indigo-100 flex items-center justify-center text-sm font-bold text-gray-500 group-hover:text-indigo-600 mr-3 flex-shrink-0">'+letters[i]+'</span><span class="text-sm text-gray-700">'+opt+'</span></button>';});optDiv.innerHTML=h;}else{optDiv.classList.add('hidden');inputDiv.classList.remove('hidden');document.getElementById('quiz-answer-input').value='';document.getElementById('quiz-answer-input').focus();}}
+    function checkMultipleChoice(idx,btnEl){var correct=idx===currentQuizData.correctIndex;document.querySelectorAll('#quiz-options button').forEach(function(b,i){b.disabled=true;if(i===currentQuizData.correctIndex){b.classList.add('bg-green-50','border-green-400');b.querySelector('span:first-child').classList.add('bg-green-100','text-green-700');}else if(i===idx&&!correct){b.classList.add('bg-red-50','border-red-400');b.querySelector('span:first-child').classList.add('bg-red-100','text-red-700');}});showQuizFeedback(correct,currentQuizData.options[currentQuizData.correctIndex],currentQuizData.explanation);}
+    async function checkShortAnswer(){geminiKey=(typeof getApiKey==='function')?(getApiKey()||''):(localStorage.getItem('geminiKey')||localStorage.getItem('gemini_api_key')||'');var ans=document.getElementById('quiz-answer-input').value.trim();if(!ans){alert('답을 입력해주세요.');return;}var btn=document.getElementById('btn-short-submit');btn.disabled=true;btn.textContent='채점 중...';try{var gradingPrompt="당신은 정보관리기술사 시험 채점관입니다. 아래 문제에 대해 사용자의 답안이 정답으로 인정될 수 있는지 판정하세요.\n\n문제: "+currentQuizData.question+"\n모범 정답: "+currentQuizData.correctAnswer+"\n사용자 답안: "+ans+"\n\n판정 기준:\n- 핵심 의미가 동일하면 정답\n- 약어/풀네임 모두 인정\n- 영어/한글 혼용 인정\n- 띄어쓰기/조사 차이는 무시\n- 의미가 명확히 다르면 오답\n\nOutput JSON: {\"correct\":true/false,\"reason\":\"판정 이유\"}";var r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key='+geminiKey,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:gradingPrompt}]}],generationConfig:{responseMimeType:"application/json"}})});var d=await r.json();var gt=d.candidates[0].content.parts[0].text;gt=gt.replace(/```json\s*/gi,"").replace(/```\s*/g,"").trim();var gd=0,gs=-1,ge=-1;for(var i=0;i<gt.length;i++){if(gt[i]==='{'){if(gd===0)gs=i;gd++;}else if(gt[i]==='}'){gd--;if(gd===0&&gs!==-1){ge=i;break;}}}if(gs===-1||ge===-1)throw new Error("No JSON");gt=gt.substring(gs,ge+1);gt=gt.replace(/[\x00-\x1F\x7F]/g,function(c){return c==='\n'||c==='\r'||c==='\t'?' ':'';});var result=JSON.parse(gt);showQuizFeedback(result.correct,currentQuizData.correctAnswer,currentQuizData.explanation+(result.reason?' (AI: '+result.reason+')':''));}catch(e){var normalize=function(s){return s.replace(/\s/g,'').toLowerCase();};var correct=normalize(currentQuizData.correctAnswer).includes(normalize(ans))||normalize(ans).includes(normalize(currentQuizData.correctAnswer));showQuizFeedback(correct,currentQuizData.correctAnswer,currentQuizData.explanation+' (로컬 채점)');}btn.disabled=false;btn.textContent='제출';}
+    function showQuizFeedback(correct,answer,explanation){var fb=document.getElementById('quiz-feedback');fb.classList.remove('hidden','border-green-500','bg-green-50','border-red-500','bg-red-50');if(correct){fb.classList.add('border-green-500','bg-green-50');fb.innerHTML='<p class="font-bold text-green-700 mb-1">✅ 정답입니다!</p><p class="text-sm text-green-600">'+explanation+'</p>';}else{fb.classList.add('border-red-500','bg-red-50');fb.innerHTML='<p class="font-bold text-red-700 mb-1">❌ 오답입니다.</p><p class="text-sm text-red-700 mb-1">정답: '+answer+'</p><p class="text-sm text-red-600">'+explanation+'</p>';}}
+    document.addEventListener('keydown',function(e){if(e.key==='Enter'&&document.getElementById('quiz-answer-input')===document.activeElement){checkShortAnswer();}});
+    var urlKey=new URLSearchParams(window.location.search).get('key');if(urlKey){localStorage.setItem('geminiKey',urlKey);localStorage.setItem('gemini_api_key',urlKey);}
+    navTo('overview');
+</script>
+</body>
+</html>

@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>정규화·반정규화·무결성 유지</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+        body { font-family: 'Noto Sans KR', sans-serif; background-color: #f5f5f4; color: #1f2937; }
+        .chart-container { position: relative; width: 100%; max-width: 600px; margin-left: auto; margin-right: auto; height: 350px; max-height: 400px; }
+        .nav-item.active { border-bottom: 2px solid #4f46e5; color: #4f46e5; font-weight: 700; }
+        .tech-block { transition: all 0.3s ease; cursor: pointer; }
+        .tech-block:hover { transform: translateY(-2px); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        .tech-block.selected { ring: 2px; ring-color: #4f46e5; background-color: #eef2ff; border-color: #4f46e5; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        #chat-sidebar { transition: transform 0.3s ease-in-out; }
+        #chat-sidebar.closed { transform: translateX(100%); }
+        #chat-sidebar.open { transform: translateX(0); }
+        .def-box { background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%); border-left: 4px solid #4f46e5; border-radius: 8px; padding: 1.25rem; margin-bottom: 1rem; }
+        .def-box p { color: #312e81; font-weight: 500; margin: 0; line-height: 1.8; }
+        .insight-box { background-color: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 1rem; margin: 1rem 0; }
+        .insight-box::before { content: '💡'; margin-right: 0.5rem; }
+        .textbook-content h3 { font-size: 1.25rem; font-weight: 700; color: #1e3a8a; margin-top: 1.5rem; margin-bottom: 0.75rem; border-left: 4px solid #4f46e5; padding-left: 0.75rem; }
+        .textbook-content h4 { font-size: 1.1rem; font-weight: 600; color: #374151; margin-top: 1rem; margin-bottom: 0.5rem; }
+        .textbook-content p { margin-bottom: 1rem; line-height: 1.8; color: #4b5563; }
+        .textbook-content ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 1rem; color: #4b5563; }
+        .textbook-content li { margin-bottom: 0.5rem; line-height: 1.7; }
+        .textbook-content table { width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; font-size: 0.95rem; }
+        .textbook-content th, .textbook-content td { border: 1px solid #e5e7eb; padding: 0.75rem; text-align: left; }
+        .textbook-content th { background-color: #f9fafb; font-weight: 600; color: #1f2937; }
+        .textbook-content .highlight { background-color: #eef2ff; color: #4338ca; font-weight: 600; padding: 0 4px; border-radius: 4px; }
+        .textbook-content pre { background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem; overflow-x: auto; margin-bottom: 1rem; font-size: 0.85rem; line-height: 1.6; }
+        .textbook-content code { font-family: 'Courier New', monospace; }
+        .chat-msg { border-radius: 12px; padding: 10px 14px; margin-bottom: 10px; max-width: 85%; font-size: 0.95rem; }
+        .chat-msg.user { background-color: #4f46e5; color: white; align-self: flex-end; margin-left: auto; }
+        .chat-msg.ai { background-color: #f3f4f6; color: #1f2937; align-self: flex-start; border: 1px solid #e5e7eb; }
+        .typing-indicator span { display: inline-block; width: 6px; height: 6px; background-color: #4f46e5; border-radius: 50%; animation: typing 1.4s infinite ease-in-out both; margin: 0 2px; }
+        .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+        .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes typing { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
+        .strategy-card { cursor: pointer; transition: all 0.3s ease; }
+        .strategy-card:hover { transform: translateY(-2px); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body class="bg-stone-100 min-h-screen flex flex-col overflow-x-hidden">
+    <header class="bg-white shadow-sm sticky top-0 z-40">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center pt-3 pb-1">
+                <div class="flex flex-col justify-center min-w-0">
+                    <span class="text-[10px] sm:text-xs text-indigo-600 font-bold uppercase tracking-wider leading-tight">KPC 정보관리기술사 ZIP-UP 심화반</span>
+                    <div class="flex items-center gap-2">
+                        <span class="text-lg sm:text-xl font-bold text-gray-900 tracking-tight truncate">정규화·반정규화·무결성 유지</span>
+                        <span class="text-[10px] sm:text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-bold flex-shrink-0">2026</span>
+                    </div>
+                </div>
+            </div>
+            <nav class="flex space-x-1 sm:space-x-4 overflow-x-auto no-scrollbar pb-1 items-center">
+                <button onclick="navTo('overview')" id="nav-overview" class="nav-item active px-1 pt-1 pb-2 text-xs sm:text-sm font-medium whitespace-nowrap">개요 및 개념</button>
+                <button onclick="navTo('normalization')" id="nav-normalization" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium whitespace-nowrap">정규화 단계</button>
+                <button onclick="navTo('denormalization')" id="nav-denormalization" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium whitespace-nowrap">반정규화 기법</button>
+                <button onclick="navTo('integrity')" id="nav-integrity" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium whitespace-nowrap">무결성 유지</button>
+                <button onclick="navTo('textbook')" id="nav-textbook" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium whitespace-nowrap">원문 학습</button>
+                <button onclick="navTo('script')" id="nav-script" class="nav-item hidden px-1 pt-1 pb-2 text-xs sm:text-sm font-medium whitespace-nowrap text-amber-700">🎬 강의 스크립트</button>
+                <button onclick="navTo('quiz')" id="nav-quiz" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium whitespace-nowrap">퀴즈 &amp; 암기</button>
+                <span class="w-px h-4 bg-gray-300 flex-shrink-0"></span>
+                <button onclick="toggleSettings()" class="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium text-indigo-600 hover:bg-indigo-50 border border-indigo-200 hover:border-indigo-400 transition-all whitespace-nowrap flex-shrink-0" title="API Key 설정">🔑 API</button>
+            </nav>
+        </div>
+    </header>
+    <main class="flex-grow max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12 pb-24">
+
+        <!-- ==================== SECTION 1: 개요 및 개념 ==================== -->
+        <section id="overview" class="space-y-6">
+            <div class="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+                <h2 class="text-2xl font-bold text-gray-900 mb-6">개요 및 개념</h2>
+
+                <div class="def-box">
+                    <p><strong>정규화(Normalization)</strong>란 관계형 데이터베이스 설계에서 데이터 중복을 최소화하고 이상현상(Anomaly)을 제거하기 위해, 릴레이션을 체계적으로 분해하는 과정이다. (E.F. Codd, 1970)</p>
+                </div>
+                <div class="def-box">
+                    <p><strong>반정규화(De-normalization)</strong>란 성능 향상을 위해 정규화된 릴레이션을 의도적으로 중복·통합·분리하는 물리적 설계 기법이다.</p>
+                </div>
+
+                <p class="text-gray-600 leading-relaxed mt-4">정규화의 궁극적 목적은 <strong>"하나의 사실(Fact)은 하나의 장소(Place)에만 저장"</strong>하는 것이며, 이를 통해 삽입 이상, 갱신 이상, 삭제 이상의 세 가지 이상현상을 방지한다. 그러나 실무에서는 정규화된 DB에서 다수의 조인(Join) 연산이 성능 저하를 유발하기 때문에, 반정규화를 통해 성능을 확보하되 무결성 유지 방안으로 부작용을 통제해야 한다.</p>
+
+                <div class="insight-box">
+                    <span class="text-gray-800 font-medium">이 문제의 3개 소문제는 <strong>이론(정규화) → 실무(반정규화) → 보완(무결성 유지)</strong>의 논리적 연결 구조를 갖는다. 서론에서 이 흐름을 예고하면 답안의 구조적 완성도가 높아진다.</span>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+                    <div class="p-5 rounded-lg bg-indigo-50 border border-indigo-200">
+                        <h3 class="font-bold text-indigo-800 mb-2">소문제 1: 정규화</h3>
+                        <p class="text-sm text-indigo-700">1NF~BCNF 단계별 정의 및 이상현상 제거 과정. 핵심 키워드: <strong>"원완이결"</strong></p>
+                    </div>
+                    <div class="p-5 rounded-lg bg-green-50 border border-green-200">
+                        <h3 class="font-bold text-green-800 mb-2">소문제 2: 반정규화</h3>
+                        <p class="text-sm text-green-700">테이블·컬럼·관계 수준 기법과 판단 기준. 핵심 키워드: <strong>"테컬관"</strong></p>
+                    </div>
+                    <div class="p-5 rounded-lg bg-amber-50 border border-amber-200">
+                        <h3 class="font-bold text-amber-800 mb-2">소문제 3: 무결성 유지</h3>
+                        <p class="text-sm text-amber-700">반정규화 부작용 해결 5방안. 핵심 키워드: <strong>"트애배물모"</strong></p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== SECTION 2: 정규화 단계 ==================== -->
+        <section id="normalization" class="hidden space-y-6">
+            <div class="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+                <h2 class="text-2xl font-bold text-gray-900 mb-2">정규화 단계 (1NF → BCNF)</h2>
+                <p class="text-gray-600 mb-6">각 정규형을 클릭하면 정의, 변환 예시, 제거되는 이상현상을 확인할 수 있습니다.</p>
+
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                    <div id="block-1nf" class="tech-block selected bg-white border-2 border-blue-300 rounded-xl p-4 text-center" onclick="updateNormDetail('1nf')">
+                        <div class="text-2xl mb-1">1️⃣</div>
+                        <h3 class="font-bold text-blue-800">1NF</h3>
+                        <p class="text-xs text-gray-500 mt-1">원자값</p>
+                    </div>
+                    <div id="block-2nf" class="tech-block bg-white border-2 border-green-300 rounded-xl p-4 text-center" onclick="updateNormDetail('2nf')">
+                        <div class="text-2xl mb-1">2️⃣</div>
+                        <h3 class="font-bold text-green-800">2NF</h3>
+                        <p class="text-xs text-gray-500 mt-1">완전 FD</p>
+                    </div>
+                    <div id="block-3nf" class="tech-block bg-white border-2 border-purple-300 rounded-xl p-4 text-center" onclick="updateNormDetail('3nf')">
+                        <div class="text-2xl mb-1">3️⃣</div>
+                        <h3 class="font-bold text-purple-800">3NF</h3>
+                        <p class="text-xs text-gray-500 mt-1">이행 FD 제거</p>
+                    </div>
+                    <div id="block-bcnf" class="tech-block bg-white border-2 border-amber-300 rounded-xl p-4 text-center" onclick="updateNormDetail('bcnf')">
+                        <div class="text-2xl mb-1">🅱️</div>
+                        <h3 class="font-bold text-amber-800">BCNF</h3>
+                        <p class="text-xs text-gray-500 mt-1">결정자=후보키</p>
+                    </div>
+                </div>
+
+                <div id="norm-detail-content">
+                    <div class="p-5 rounded-lg border-l-4 border-blue-500 bg-blue-50 animate-fade-in">
+                        <h3 class="text-lg font-bold text-gray-900 mb-3">제1정규형(1NF)</h3>
+                        <h4 class="font-bold text-blue-800 mb-2">정의: 모든 속성값이 원자값(Atomic Value)</h4>
+                        <p class="text-sm text-gray-700 mb-3">다치 속성이나 반복 그룹이 존재하지 않아야 한다.</p>
+                        <div class="bg-white rounded-lg p-4 border">
+                            <pre class="text-xs"><code>[비정규형]
+학생(학번, 이름, {수강과목1, 수강과목2, ...})
+
+[1NF 적용 후]
+학생(학번, 이름)
+수강(학번, 과목코드)
+→ 반복 그룹을 별도 릴레이션으로 분리</code></pre>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-2">제거: 반복 그룹으로 인한 구조적 삽입/삭제 이상</p>
+                    </div>
+                </div>
+
+                <!-- 종합 비교표 -->
+                <div class="mt-8">
+                    <h3 class="text-lg font-bold text-gray-900 mb-3">정규화 단계 종합 비교표</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm border-collapse">
+                            <thead><tr class="bg-gray-50"><th class="border p-3 text-left font-bold">정규형</th><th class="border p-3 text-left font-bold">조건</th><th class="border p-3 text-left font-bold">제거 대상</th><th class="border p-3 text-left font-bold">핵심 키워드</th></tr></thead>
+                            <tbody>
+                                <tr><td class="border p-3 font-medium text-blue-700">1NF</td><td class="border p-3">원자값 보장</td><td class="border p-3">반복 그룹, 다치 속성</td><td class="border p-3">Atomic Value</td></tr>
+                                <tr class="bg-gray-50"><td class="border p-3 font-medium text-green-700">2NF</td><td class="border p-3">완전 함수 종속</td><td class="border p-3">부분 함수 종속(Partial FD)</td><td class="border p-3">Full FD</td></tr>
+                                <tr><td class="border p-3 font-medium text-purple-700">3NF</td><td class="border p-3">이행 종속 제거</td><td class="border p-3">이행적 함수 종속(Transitive FD)</td><td class="border p-3">No Transitive FD</td></tr>
+                                <tr class="bg-gray-50"><td class="border p-3 font-medium text-amber-700">BCNF</td><td class="border p-3">모든 결정자가 후보키</td><td class="border p-3">비후보키 결정자</td><td class="border p-3">Every Determinant is CK</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 이상현상 -->
+                <div class="mt-8">
+                    <h3 class="text-lg font-bold text-gray-900 mb-3">이상현상(Anomaly) 3종 — <span class="text-indigo-600">"삽갱삭"</span></h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="p-4 rounded-lg bg-red-50 border border-red-200">
+                            <h4 class="font-bold text-red-800 mb-1">삽입 이상</h4>
+                            <p class="text-sm text-red-700">새 데이터 삽입 시 불필요한 데이터를 함께 삽입해야 하는 문제</p>
+                        </div>
+                        <div class="p-4 rounded-lg bg-orange-50 border border-orange-200">
+                            <h4 class="font-bold text-orange-800 mb-1">갱신 이상</h4>
+                            <p class="text-sm text-orange-700">중복 데이터 중 일부만 수정하여 불일치가 발생하는 문제</p>
+                        </div>
+                        <div class="p-4 rounded-lg bg-yellow-50 border border-yellow-200">
+                            <h4 class="font-bold text-yellow-800 mb-1">삭제 이상</h4>
+                            <p class="text-sm text-yellow-700">유용한 데이터가 의도치 않게 함께 삭제되는 문제</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== SECTION 3: 반정규화 기법 ==================== -->
+        <section id="denormalization" class="hidden space-y-6">
+            <div class="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+                <h2 class="text-2xl font-bold text-gray-900 mb-2">반정규화 기법 — <span class="text-indigo-600">"테컬관"</span></h2>
+                <p class="text-gray-600 mb-6">성능 향상을 위해 의도적으로 중복·통합·분리하는 물리적 설계 기법. 테이블·컬럼·관계 수준으로 분류됩니다.</p>
+
+                <!-- 판단 기준 -->
+                <div class="bg-indigo-50 rounded-xl p-5 border border-indigo-100 mb-8">
+                    <h3 class="font-bold text-indigo-900 mb-3">⚖️ 반정규화 판단 기준</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <div class="bg-white rounded-lg p-3 border text-center">
+                            <div class="text-xl mb-1">🔄</div>
+                            <p class="text-xs font-bold text-gray-800">조인 빈도</p>
+                            <p class="text-xs text-gray-500">3개 이상 테이블 빈번 조인</p>
+                        </div>
+                        <div class="bg-white rounded-lg p-3 border text-center">
+                            <div class="text-xl mb-1">⏱️</div>
+                            <p class="text-xs font-bold text-gray-800">응답 시간</p>
+                            <p class="text-xs text-gray-500">SLA 기준 초과</p>
+                        </div>
+                        <div class="bg-white rounded-lg p-3 border text-center">
+                            <div class="text-xl mb-1">📊</div>
+                            <p class="text-xs font-bold text-gray-800">데이터 양</p>
+                            <p class="text-xs text-gray-500">100만 건 이상</p>
+                        </div>
+                        <div class="bg-white rounded-lg p-3 border text-center">
+                            <div class="text-xl mb-1">📖</div>
+                            <p class="text-xs font-bold text-gray-800">변경 빈도</p>
+                            <p class="text-xs text-gray-500">조회 &gt;&gt; 변경</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 테이블 수준 -->
+                <div class="mb-6">
+                    <h3 class="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-indigo-500"></span> 테이블 수준 — "병분중"</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm border-collapse">
+                            <thead><tr class="bg-indigo-50"><th class="border p-3 text-left font-bold">기법</th><th class="border p-3 text-left font-bold">설명</th><th class="border p-3 text-left font-bold">적용 사례</th></tr></thead>
+                            <tbody>
+                                <tr><td class="border p-3 font-medium">테이블 병합(Merge)</td><td class="border p-3">1:1 또는 1:N 관계 테이블을 하나로 통합</td><td class="border p-3">고객-고객상세 통합</td></tr>
+                                <tr class="bg-gray-50"><td class="border p-3 font-medium">수평 분할(Split)</td><td class="border p-3">행 기준 분리 (파티셔닝)</td><td class="border p-3">거래내역 연도별 분할</td></tr>
+                                <tr><td class="border p-3 font-medium">수직 분할(Split)</td><td class="border p-3">컬럼 기준 분리 (자주 사용 vs 비사용)</td><td class="border p-3">BLOB 별도 테이블 분리</td></tr>
+                                <tr class="bg-gray-50"><td class="border p-3 font-medium">중복 테이블 추가</td><td class="border p-3">집계·이력·진행 테이블 별도 생성</td><td class="border p-3">일별 매출 집계 테이블</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 컬럼 수준 -->
+                <div class="mb-6">
+                    <h3 class="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-green-500"></span> 컬럼 수준</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm border-collapse">
+                            <thead><tr class="bg-green-50"><th class="border p-3 text-left font-bold">기법</th><th class="border p-3 text-left font-bold">설명</th><th class="border p-3 text-left font-bold">적용 사례</th></tr></thead>
+                            <tbody>
+                                <tr><td class="border p-3 font-medium">중복 컬럼 추가</td><td class="border p-3">조인 줄이기 위해 다른 테이블 컬럼을 중복 배치</td><td class="border p-3">주문에 고객명 추가</td></tr>
+                                <tr class="bg-gray-50"><td class="border p-3 font-medium">파생 컬럼 추가</td><td class="border p-3">계산 결과를 미리 저장</td><td class="border p-3">주문 총액 컬럼</td></tr>
+                                <tr><td class="border p-3 font-medium">PK에 의한 컬럼 추가</td><td class="border p-3">복합키 조회 단순화</td><td class="border p-3">인조식별자(Surrogate Key)</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 관계 수준 -->
+                <div class="mb-6">
+                    <h3 class="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-amber-500"></span> 관계 수준</h3>
+                    <div class="p-4 rounded-lg bg-amber-50 border border-amber-200">
+                        <p class="text-sm text-amber-800"><strong>중복 관계 추가:</strong> 조인 경로를 단축하기 위해 직접적 FK 관계 추가. 예) 손자 테이블에서 조부모 테이블로 직접 FK 설정.</p>
+                    </div>
+                </div>
+
+                <!-- 성능 개선 사례 -->
+                <div class="bg-green-50 rounded-xl p-5 border border-green-200">
+                    <h3 class="font-bold text-green-900 mb-2">📈 실무 성능 개선 사례</h3>
+                    <p class="text-sm text-green-800">국내 대형 은행: 정규화된 8테이블 조인 쿼리 <strong>평균 12초</strong> → 반정규화 후 <strong>0.8초</strong>로 <strong>93% 성능 개선</strong></p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== SECTION 4: 무결성 유지 ==================== -->
+        <section id="integrity" class="hidden space-y-6">
+            <div class="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+                <h2 class="text-2xl font-bold text-gray-900 mb-2">무결성 유지 방안 — <span class="text-indigo-600">"트애배물모"</span></h2>
+                <p class="text-gray-600 mb-6">반정규화로 인한 데이터 불일치 문제를 해결하는 5가지 방안을 비교합니다.</p>
+
+                <!-- 5 strategy cards -->
+                <div class="space-y-4 mb-8">
+                    <div class="strategy-card bg-white border-2 border-indigo-200 rounded-xl p-5" onclick="toggleStrategy(this)">
+                        <div class="strategy-summary flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <span class="text-2xl">⚡</span>
+                                <div><h3 class="font-bold text-indigo-800">1. 트리거(Trigger) 기반 동기화</h3><p class="text-xs text-gray-500">실시간 | DBMS 강제 | 핵심 금융 데이터</p></div>
+                            </div>
+                            <span class="text-gray-400 text-sm">▼ 상세보기</span>
+                        </div>
+                        <div class="strategy-detail hidden mt-4 pt-4 border-t">
+                            <p class="text-sm text-gray-700 mb-3">원본 데이터 변경 시 중복 데이터를 자동으로 동기화. DBMS 수준에서 강제하므로 누락 가능성이 낮으나, 트리거 체인으로 인한 성능 저하와 디버깅 어려움이 단점.</p>
+                            <div class="bg-gray-50 rounded-lg p-3 border"><pre class="text-xs"><code>CREATE TRIGGER trg_sync_customer_name
+AFTER UPDATE OF customer_name ON Customer
+FOR EACH ROW
+BEGIN
+  UPDATE Orders SET customer_name = NEW.customer_name
+  WHERE customer_id = NEW.customer_id;
+END;</code></pre></div>
+                        </div>
+                    </div>
+
+                    <div class="strategy-card bg-white border-2 border-green-200 rounded-xl p-5" onclick="toggleStrategy(this)">
+                        <div class="strategy-summary flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <span class="text-2xl">💻</span>
+                                <div><h3 class="font-bold text-green-800">2. 애플리케이션 로직 동기화</h3><p class="text-xs text-gray-500">실시간 | 비즈니스 로직 통합 | 일반 업무 시스템</p></div>
+                            </div>
+                            <span class="text-gray-400 text-sm">▼ 상세보기</span>
+                        </div>
+                        <div class="strategy-detail hidden mt-4 pt-4 border-t">
+                            <p class="text-sm text-gray-700">애플리케이션 레이어에서 원본과 중복 데이터를 동시에 갱신하는 로직 구현. 비즈니스 로직과 통합 관리 가능하나, 개발자 실수로 인한 동기화 누락 위험 존재.</p>
+                        </div>
+                    </div>
+
+                    <div class="strategy-card bg-white border-2 border-purple-200 rounded-xl p-5" onclick="toggleStrategy(this)">
+                        <div class="strategy-summary flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <span class="text-2xl">🔄</span>
+                                <div><h3 class="font-bold text-purple-800">3. 배치 처리(Batch) 동기화</h3><p class="text-xs text-gray-500">준실시간/주기적 | 성능 부하 분산 | 집계/통계</p></div>
+                            </div>
+                            <span class="text-gray-400 text-sm">▼ 상세보기</span>
+                        </div>
+                        <div class="strategy-detail hidden mt-4 pt-4 border-t">
+                            <p class="text-sm text-gray-700">실시간 동기화가 불필요한 경우 배치 스케줄러(Cron, Spring Batch)로 주기적 갱신. 집계·통계 테이블에 적용. 일시적 불일치 허용.</p>
+                        </div>
+                    </div>
+
+                    <div class="strategy-card bg-white border-2 border-amber-200 rounded-xl p-5" onclick="toggleStrategy(this)">
+                        <div class="strategy-summary flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <span class="text-2xl">🔒</span>
+                                <div><h3 class="font-bold text-amber-800">4. 물리적 제약조건(Constraint)</h3><p class="text-xs text-gray-500">실시간 | DBMS 레벨 | 단순 무결성 규칙</p></div>
+                            </div>
+                            <span class="text-gray-400 text-sm">▼ 상세보기</span>
+                        </div>
+                        <div class="strategy-detail hidden mt-4 pt-4 border-t">
+                            <p class="text-sm text-gray-700">CHECK, UNIQUE, NOT NULL 등 DBMS 물리적 제약조건으로 데이터 무결성 강제. 간단하고 확실하나 복잡한 규칙 표현에 한계.</p>
+                        </div>
+                    </div>
+
+                    <div class="strategy-card bg-white border-2 border-teal-200 rounded-xl p-5" onclick="toggleStrategy(this)">
+                        <div class="strategy-summary flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <span class="text-2xl">📡</span>
+                                <div><h3 class="font-bold text-teal-800">5. DQM 모니터링</h3><p class="text-xs text-gray-500">주기적 | 전사 데이터 품질 | 대규모 시스템</p></div>
+                            </div>
+                            <span class="text-gray-400 text-sm">▼ 상세보기</span>
+                        </div>
+                        <div class="strategy-detail hidden mt-4 pt-4 border-t">
+                            <p class="text-sm text-gray-700">데이터 품질 관리(DQM) 체계와 연계하여 원본-중복 간 불일치를 주기적으로 탐지·보정. 사후 탐지 방식으로 사전 방지는 아님.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 비교표 -->
+                <h3 class="text-lg font-bold text-gray-900 mb-3">종합 비교표</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm border-collapse">
+                        <thead><tr class="bg-gray-50"><th class="border p-3 font-bold">방안</th><th class="border p-3 font-bold">동기화 시점</th><th class="border p-3 font-bold">장점</th><th class="border p-3 font-bold">단점</th><th class="border p-3 font-bold">적합 상황</th></tr></thead>
+                        <tbody>
+                            <tr><td class="border p-3 font-medium">트리거</td><td class="border p-3">실시간</td><td class="border p-3">누락 방지, DBMS 강제</td><td class="border p-3">성능 저하, 디버깅 난이</td><td class="border p-3">핵심 금융 데이터</td></tr>
+                            <tr class="bg-gray-50"><td class="border p-3 font-medium">애플리케이션</td><td class="border p-3">실시간</td><td class="border p-3">비즈니스 로직 통합</td><td class="border p-3">개발자 실수 위험</td><td class="border p-3">일반 업무 시스템</td></tr>
+                            <tr><td class="border p-3 font-medium">배치 처리</td><td class="border p-3">준실시간</td><td class="border p-3">성능 부하 분산</td><td class="border p-3">일시적 불일치</td><td class="border p-3">집계/통계 데이터</td></tr>
+                            <tr class="bg-gray-50"><td class="border p-3 font-medium">물리적 제약</td><td class="border p-3">실시간</td><td class="border p-3">DBMS 레벨 강제</td><td class="border p-3">복잡 규칙 한계</td><td class="border p-3">단순 무결성</td></tr>
+                            <tr><td class="border p-3 font-medium">DQM</td><td class="border p-3">주기적</td><td class="border p-3">전사 품질 관리</td><td class="border p-3">사후 탐지</td><td class="border p-3">대규모 시스템</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- 실무 사례 -->
+                <div class="mt-6 bg-amber-50 rounded-xl p-5 border border-amber-200">
+                    <h3 class="font-bold text-amber-900 mb-2">🏢 S보험사 차세대 프로젝트 사례</h3>
+                    <p class="text-sm text-amber-800">2,000만 건 계약 데이터 관리. 12테이블 조인 15초 → 4테이블 반정규화 후 0.5초. 핵심 계약 데이터: <strong>트리거</strong>, 통계 테이블: <strong>야간 배치</strong>, 전사: <strong>DQM 월 1회 전수 검사</strong>. 데이터 불일치율 <strong>0.001% 이하</strong> 유지.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== SECTION 5: 원문 학습 ==================== -->
+        <section id="textbook" class="hidden space-y-6">
+            <div class="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+                <h2 class="text-2xl font-bold text-gray-900 mb-6">원문 학습 — 제1부 상세 해설</h2>
+                <div class="textbook-content">
+                    <h3>제1장 1NF~BCNF 단계별 정의 및 이상현상 제거 과정 (소문제 1)</h3>
+
+                    <h4>1.1 정규화의 개요</h4>
+                    <div class="def-box"><p><strong>정규화(Normalization)</strong>란 관계형 데이터베이스 설계에서 데이터 중복을 최소화하고 이상현상(Anomaly)을 제거하기 위해, 릴레이션(Relation)을 체계적으로 분해하는 과정이다. E.F. Codd가 1970년 "A Relational Model of Data for Large Shared Data Banks" 논문에서 제1정규형을 정의한 이래, R. Boyce와 E.F. Codd가 BCNF(1974)까지 이론 체계를 완성하였다.</p></div>
+                    <div class="insight-box"><span class="text-gray-800 font-medium">정규화의 궁극적 목적은 <strong>"하나의 사실(Fact)은 하나의 장소(Place)에만 저장"</strong>하는 것이며, 이를 통해 삽입 이상, 갱신 이상, 삭제 이상의 세 가지 이상현상을 방지한다.</span></div>
+
+                    <h4>1.2 이상현상(Anomaly)의 유형</h4>
+                    <table>
+                        <thead><tr><th>이상현상 유형</th><th>정의</th><th>구체적 예시</th></tr></thead>
+                        <tbody>
+                            <tr><td><strong>삽입 이상</strong></td><td>새로운 데이터를 삽입할 때 불필요한 데이터를 함께 삽입해야 하는 문제</td><td>학과 정보를 추가하려면 아직 없는 학생 정보를 임의로 만들어야 함</td></tr>
+                            <tr><td><strong>갱신 이상</strong></td><td>중복 데이터 중 일부만 수정하여 데이터 불일치가 발생하는 문제</td><td>교수의 학과 정보가 5개 튜플에 중복 → 1개만 수정 시 불일치</td></tr>
+                            <tr><td><strong>삭제 이상</strong></td><td>유용한 데이터가 의도치 않게 함께 삭제되는 문제</td><td>마지막 수강 학생을 삭제하면 과목 정보도 소실</td></tr>
+                        </tbody>
+                    </table>
+
+                    <h4>1.3 정규화 단계별 상세</h4>
+
+                    <p><strong>[비정규형(UNF) → 제1정규형(1NF)]</strong></p>
+                    <p><strong>정의:</strong> 릴레이션의 모든 속성값이 원자값(Atomic Value)을 가져야 한다.</p>
+                    <pre><code>[비정규형]
+학생(학번, 이름, {수강과목1, 수강과목2, ...})
+
+[1NF 적용 후]
+학생(학번, 이름)
+수강(학번, 과목코드)
+→ 반복 그룹을 별도 릴레이션으로 분리</code></pre>
+                    <p><strong>제거되는 이상:</strong> 반복 그룹으로 인한 구조적 삽입/삭제 이상 제거</p>
+
+                    <p><strong>[1NF → 제2정규형(2NF)]</strong></p>
+                    <p><strong>정의:</strong> 1NF를 만족하면서, 모든 비주요 속성이 기본키에 대해 완전 함수적 종속을 만족해야 한다. 부분 함수적 종속(Partial FD) 제거.</p>
+                    <pre><code>[1NF 상태] — 기본키: (학번, 과목코드)
+수강(학번, 과목코드, 학생이름, 성적, 과목명)
+
+함수적 종속:
+- {학번, 과목코드} → 성적      (완전 FD ✓)
+- {학번} → 학생이름              (부분 FD ✗)
+- {과목코드} → 과목명            (부분 FD ✗)
+
+[2NF 적용 후]
+학생(학번, 학생이름)
+과목(과목코드, 과목명)
+수강(학번, 과목코드, 성적)</code></pre>
+                    <p><strong>제거되는 이상:</strong> 부분 종속으로 인한 갱신 이상 제거</p>
+
+                    <p><strong>[2NF → 제3정규형(3NF)]</strong></p>
+                    <p><strong>정의:</strong> 2NF를 만족하면서, 모든 비주요 속성이 기본키에 대해 이행적 함수 종속을 갖지 않아야 한다.</p>
+                    <pre><code>[2NF 상태] — 기본키: (학번)
+학생(학번, 학생이름, 학과코드, 학과명, 학과전화번호)
+
+함수적 종속:
+- 학번 → 학과코드          (직접 FD)
+- 학과코드 → 학과명, 학과전화번호  (이행적 FD)
+∴ 학번 → 학과코드 → 학과명  (이행적 종속 ✗)
+
+[3NF 적용 후]
+학생(학번, 학생이름, 학과코드)
+학과(학과코드, 학과명, 학과전화번호)</code></pre>
+                    <p><strong>제거되는 이상:</strong> 이행 종속으로 인한 삭제 이상 제거</p>
+
+                    <p><strong>[3NF → BCNF(Boyce-Codd Normal Form)]</strong></p>
+                    <p><strong>정의:</strong> 릴레이션의 모든 결정자(Determinant)가 후보키(Candidate Key)여야 한다.</p>
+                    <pre><code>[3NF이지만 BCNF 아닌 상태]
+수강지도(학번, 과목코드, 교수명)
+후보키: {학번, 과목코드}
+
+함수적 종속:
+- {학번, 과목코드} → 교수명   (후보키 → 비주요속성)
+- 교수명 → 과목코드           (비후보키인 결정자 존재 ✗)
+
+[BCNF 적용 후]
+교수과목(교수명, 과목코드)
+학생지도(학번, 교수명)</code></pre>
+                    <p><strong>제거되는 이상:</strong> 후보키 이외의 결정자로 인한 갱신 이상 제거</p>
+
+                    <h4>1.4 정규화 단계 종합 비교표</h4>
+                    <table>
+                        <thead><tr><th>정규형</th><th>조건</th><th>제거 대상</th><th>핵심 키워드</th></tr></thead>
+                        <tbody>
+                            <tr><td>1NF</td><td>원자값 보장</td><td>반복 그룹, 다치 속성</td><td>Atomic Value</td></tr>
+                            <tr><td>2NF</td><td>완전 함수 종속</td><td>부분 함수 종속(Partial FD)</td><td>Full FD</td></tr>
+                            <tr><td>3NF</td><td>이행 종속 제거</td><td>이행적 함수 종속(Transitive FD)</td><td>No Transitive FD</td></tr>
+                            <tr><td>BCNF</td><td>모든 결정자가 후보키</td><td>비후보키 결정자</td><td>Every Determinant is CK</td></tr>
+                        </tbody>
+                    </table>
+
+                    <h4>1.5 연관 이론 연결</h4>
+                    <p><strong>Codd의 12가지 규칙과 정규화의 관계:</strong> Codd는 관계형 데이터베이스의 12가지 규칙(Codd's 12 Rules, 1985)을 제시하였으며, 그중 Rule 6(뷰 갱신 규칙)과 Rule 10(무결성 독립성)은 정규화를 통해 달성되는 데이터 무결성과 직접적으로 연결된다.</p>
+                    <p><strong>함수적 종속성과 Armstrong의 공리:</strong> 정규화의 이론적 기반은 Armstrong의 공리(반사율, 확대율, 이행율)이며, 이를 통해 함수적 종속성의 완전한 추론이 가능하다. 클로저(Closure) 연산을 통해 슈퍼키와 후보키를 체계적으로 도출할 수 있다.</p>
+
+                    <h3>제2장 반정규화 정의 및 주요 적용 기법 (소문제 2)</h3>
+
+                    <h4>2.1 반정규화의 개요</h4>
+                    <div class="def-box"><p><strong>반정규화(De-normalization)</strong>란 정규화로 분해된 릴레이션을 성능 향상을 목적으로 의도적으로 중복, 통합, 분리하는 데이터 모델링 기법이다.</p></div>
+                    <p>정규화된 DB에서 복잡한 조회 쿼리를 실행하면 다수의 조인(Join) 연산이 발생하여 응답 시간이 증가한다. 국내 대형 은행의 사례에서, 정규화된 계좌-거래 테이블의 8테이블 조인 쿼리가 평균 응답 시간 12초를 기록하였으나, 반정규화 적용 후 0.8초로 93% 성능 개선을 달성한 바 있다.</p>
+
+                    <h4>2.2 반정규화의 판단 기준</h4>
+                    <table>
+                        <thead><tr><th>판단 기준</th><th>구체적 조건</th></tr></thead>
+                        <tbody>
+                            <tr><td>조인 빈도</td><td>해당 쿼리의 실행 빈도가 높고, 조인 테이블 수가 3개 이상</td></tr>
+                            <tr><td>응답 시간</td><td>SLA(Service Level Agreement) 기준 응답 시간 초과</td></tr>
+                            <tr><td>데이터 양</td><td>조인 대상 테이블의 레코드 수가 100만 건 이상</td></tr>
+                            <tr><td>변경 빈도</td><td>조회 대비 변경(Insert/Update/Delete) 빈도가 낮음</td></tr>
+                        </tbody>
+                    </table>
+
+                    <h4>2.3 반정규화 주요 적용 기법</h4>
+                    <p><strong>[테이블 수준 반정규화]</strong></p>
+                    <table>
+                        <thead><tr><th>기법</th><th>설명</th><th>적용 사례</th></tr></thead>
+                        <tbody>
+                            <tr><td>테이블 병합(Merge)</td><td>1:1 또는 1:N 관계 테이블을 하나로 통합</td><td>고객-고객상세 통합</td></tr>
+                            <tr><td>테이블 분할 - 수평</td><td>행 기준으로 테이블 분리 (파티셔닝)</td><td>거래내역 연도별 분할</td></tr>
+                            <tr><td>테이블 분할 - 수직</td><td>컬럼 기준으로 자주 사용/비사용 분리</td><td>BLOB 컬럼 별도 분리</td></tr>
+                            <tr><td>중복 테이블 추가</td><td>집계, 이력, 진행 테이블 별도 생성</td><td>일별 매출 집계 테이블</td></tr>
+                        </tbody>
+                    </table>
+                    <p><strong>[컬럼 수준 반정규화]</strong></p>
+                    <table>
+                        <thead><tr><th>기법</th><th>설명</th><th>적용 사례</th></tr></thead>
+                        <tbody>
+                            <tr><td>중복 컬럼 추가</td><td>조인을 줄이기 위해 다른 테이블의 컬럼을 중복 배치</td><td>주문 테이블에 고객명 추가</td></tr>
+                            <tr><td>파생 컬럼 추가</td><td>계산 결과를 미리 저장하여 실시간 연산 제거</td><td>주문 테이블에 총액 컬럼 추가</td></tr>
+                            <tr><td>PK에 의한 컬럼 추가</td><td>복합키 조회를 단순화하기 위해 단일 PK 추가</td><td>인조식별자(Surrogate Key)</td></tr>
+                        </tbody>
+                    </table>
+                    <p><strong>[관계 수준 반정규화]</strong></p>
+                    <table>
+                        <thead><tr><th>기법</th><th>설명</th><th>적용 사례</th></tr></thead>
+                        <tbody>
+                            <tr><td>중복 관계 추가</td><td>조인 경로를 단축하기 위해 직접적 FK 관계 추가</td><td>손자 테이블 → 조부모 테이블 직접 FK</td></tr>
+                        </tbody>
+                    </table>
+
+                    <h3>제3장 반정규화에 따른 데이터 불일치 문제 해결 및 무결성 유지 방안 (소문제 3)</h3>
+
+                    <h4>3.1 반정규화로 인한 무결성 훼손 문제</h4>
+                    <table>
+                        <thead><tr><th>반정규화 기법</th><th>발생 가능한 무결성 문제</th></tr></thead>
+                        <tbody>
+                            <tr><td>중복 컬럼 추가</td><td>원본 변경 시 중복 컬럼 미갱신 → 불일치</td></tr>
+                            <tr><td>파생 컬럼 추가</td><td>원본 데이터 변경 시 파생값 불일치</td></tr>
+                            <tr><td>테이블 병합</td><td>NULL 값 증가, 도메인 혼재</td></tr>
+                            <tr><td>중복 테이블 추가(집계)</td><td>원본과 집계값 불일치</td></tr>
+                        </tbody>
+                    </table>
+
+                    <h4>3.2 무결성 유지 방안</h4>
+                    <p><strong>[방안 1] 트리거(Trigger) 기반 동기화</strong></p>
+                    <p>데이터베이스 트리거를 활용하여 원본 데이터 변경 시 중복 데이터를 자동으로 동기화한다. DBMS 수준에서 강제하므로 누락 가능성이 낮으나, 트리거 체인으로 인한 성능 저하와 디버깅 어려움이 단점이다.</p>
+                    <pre><code>-- 중복 컬럼 동기화 트리거 예시
+CREATE TRIGGER trg_sync_customer_name
+AFTER UPDATE OF customer_name ON Customer
+FOR EACH ROW
+BEGIN
+  UPDATE Orders SET customer_name = NEW.customer_name
+  WHERE customer_id = NEW.customer_id;
+END;</code></pre>
+
+                    <p><strong>[방안 2] 애플리케이션 로직 동기화</strong></p>
+                    <p>애플리케이션 레이어에서 원본과 중복 데이터를 동시에 갱신하는 로직을 구현한다. 비즈니스 로직과 통합 관리가 가능하나, 개발자의 실수로 인한 동기화 누락 위험이 존재한다.</p>
+
+                    <p><strong>[방안 3] 배치 처리(Batch Processing) 동기화</strong></p>
+                    <p>실시간 동기화가 필요하지 않은 경우, 배치 스케줄러를 통해 주기적으로 중복 데이터를 갱신한다. 집계 테이블, 통계 테이블에 주로 적용된다.</p>
+
+                    <p><strong>[방안 4] 물리적 제약조건(Constraint) 활용</strong></p>
+                    <p>CHECK, UNIQUE, NOT NULL 등 DBMS의 물리적 제약조건을 활용하여 데이터 무결성을 강제한다.</p>
+
+                    <p><strong>[방안 5] 데이터 정합성 모니터링</strong></p>
+                    <p>데이터 품질 관리(DQM, Data Quality Management) 체계와 연계하여 원본과 중복 데이터 간의 불일치를 주기적으로 탐지하고 보정한다.</p>
+
+                    <h4>3.3 무결성 유지 방안 종합 비교표</h4>
+                    <table>
+                        <thead><tr><th>방안</th><th>동기화 시점</th><th>장점</th><th>단점</th><th>적합 상황</th></tr></thead>
+                        <tbody>
+                            <tr><td>트리거</td><td>실시간(즉시)</td><td>누락 방지, DBMS 강제</td><td>성능 저하, 디버깅 난이</td><td>핵심 금융 데이터</td></tr>
+                            <tr><td>애플리케이션 로직</td><td>실시간(즉시)</td><td>비즈니스 로직 통합</td><td>개발자 실수 위험</td><td>일반 업무 시스템</td></tr>
+                            <tr><td>배치 처리</td><td>준실시간/주기적</td><td>성능 부하 분산</td><td>일시적 불일치 허용</td><td>집계/통계 데이터</td></tr>
+                            <tr><td>물리적 제약조건</td><td>실시간(즉시)</td><td>DBMS 레벨 강제, 간단</td><td>복잡한 규칙 표현 한계</td><td>단순 무결성 규칙</td></tr>
+                            <tr><td>DQM 모니터링</td><td>주기적</td><td>전사 데이터 품질 관리</td><td>사후 탐지</td><td>대규모 시스템</td></tr>
+                        </tbody>
+                    </table>
+
+                    <h4>3.4 실무 적용 사례</h4>
+                    <p><strong>국내 대형 보험사 차세대 프로젝트 사례:</strong> 2019년 S보험사는 2,000만 건 이상의 계약 데이터를 관리하는 차세대 시스템에서, 정규화된 12개 테이블의 조인 쿼리가 평균 15초의 응답 시간을 기록하였다. 반정규화를 통해 핵심 조회 테이블 4개로 축소하고, 중복 컬럼과 파생 컬럼을 추가하여 응답 시간을 0.5초로 개선하였다. 무결성 보장을 위해 핵심 계약 데이터에는 트리거 기반 동기화를, 통계 테이블에는 야간 배치 처리를 적용하였으며, DQM 시스템을 통해 월 1회 전수 정합성 검사를 수행하여 데이터 불일치율 0.001% 이하를 유지하고 있다.</p>
+
+                    <h3>제4장 통합 분석 — 소문제 간 연결</h3>
+                    <div class="insight-box"><span class="text-gray-800 font-medium">이 세 소문제는 <strong>이론(정규화) → 실무(반정규화) → 보완(무결성 유지)</strong>의 논리적 연결 구조를 갖는다. 데이터베이스 설계에서 "무결성과 성능의 최적 균형점"을 찾는 것이 핵심이며, 이는 프로젝트의 비즈니스 요구사항, 데이터 특성, 시스템 아키텍처에 따라 달라진다.</span></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== SECTION: 강의 스크립트 (멘토 전용) ==================== -->
+        <section id="script" class="hidden space-y-6">
+            <div class="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+                <div class="flex items-center gap-3 mb-6">
+                    <h2 class="text-2xl font-bold text-gray-900">제3부 — 강의 스크립트</h2>
+                    <span class="px-3 py-1 bg-amber-100 text-amber-800 text-xs font-bold rounded-full">🔒 멘토 전용</span>
+                </div>
+                <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
+                    <p class="text-amber-800 text-sm font-medium">⚠️ 이 탭은 멘토 전용 콘텐츠입니다. URL에 <code class="bg-amber-100 px-1.5 py-0.5 rounded text-xs">?mentor=true</code> 파라미터가 있을 때만 표시됩니다.</p>
+                </div>
+                <div class="textbook-content">
+                    <h3>멘토 총평 영상 (약 20분) — 오프라인 강의 화법</h3>
+
+                    <h4>🎬 [도입부 — 약 3분]</h4>
+                    <p>안녕하세요, 여러분. 오늘 다룰 문제는 데이터베이스의 영원한 화두, "정규화와 반정규화"예요. 2교시형 문제로 나왔는데요, 소문제가 3개입니다.</p>
+                    <p>소문제 1이 1NF부터 BCNF까지 정규화 단계를 설명하라는 거고, 소문제 2가 반정규화 기법, 소문제 3이 반정규화 할 때 무결성을 어떻게 지킬 건지예요.</p>
+                    <p>이 세 개가 왜 이 순서로 나오는지 먼저 파악해야 해요. 정규화는 "이론"이에요. DB 설계할 때 이상현상을 없애려면 이렇게 해야 한다는 거죠. 그런데 실무에서는 정규화만 하면 성능이 안 나와요. 그래서 성능을 위해 일부러 중복을 허용하는 게 반정규화, 즉 소문제 2예요. 근데 중복을 허용하면 당연히 데이터 불일치가 생기겠죠? 그 부작용을 어떻게 잡을 건지가 소문제 3이에요.</p>
+                    <p>그러니까 <strong>이론(정규화) → 실무(반정규화) → 보완(무결성 유지)</strong>이라는 흐름인 거예요. 서론에서 이 구조를 한 줄로 예고하면 채점관이 "아, 구조를 잡았구나" 하고 좋은 인상을 받거든요.</p>
+
+                    <h4>🎬 [핵심 설명 — 소문제 1: 정규화 (약 6분)]</h4>
+                    <p>자, 소문제 1부터 갑시다. 정규화 단계.</p>
+                    <p>정규화라는 게 뭐냐면, 관계형 DB에서 <strong>데이터 중복을 없애는 체계적인 과정</strong>이에요. E.F. Codd가 1970년에 처음 제안했죠. 핵심 원칙은 딱 하나예요. "하나의 사실은 하나의 장소에만 저장한다." 이게 안 지켜지면 이상현상이 발생해요.</p>
+                    <p>이상현상이 세 가지인데, <span class="highlight">"삽갱삭"</span>으로 외우세요. 삽입 이상, 갱신 이상, 삭제 이상.</p>
+                    <p>자, 이제 단계별로 갈게요. 정규화 단계는 <span class="highlight">"원완이결"</span>로 외우세요.</p>
+                    <p><strong>1NF — 원자값</strong>. 모든 속성값이 원자값이어야 해요. 쉽게 말해서 한 칸에 값이 하나만 들어가야 한다는 거예요.</p>
+                    <p><strong>2NF — 완전 함수 종속</strong>. 기본키 전체에 대해서 종속이어야 해요. 기본키의 일부분에만 종속되는 "부분 종속"이 있으면 안 돼요.</p>
+                    <p><strong>3NF — 이행 종속 제거</strong>. A→B→C라는 이행 종속이 있으면 안 돼요.</p>
+                    <p><strong>BCNF — 모든 결정자가 후보키</strong>. 3NF보다 한 단계 더 엄격해요.</p>
+                    <p>답안에 쓸 때 핵심은요, 각 단계마다 반드시 <strong>릴레이션 예시</strong>를 들어주세요. 그냥 정의만 쓰면 50점짜리 답안이에요.</p>
+                    <p>그리고 Armstrong의 공리도 한 줄 언급해주면 좋아요. 반사율, 확대율, 이행율이라는 세 가지 공리로 모든 함수적 종속 관계를 추론할 수 있어요.</p>
+
+                    <h4>🎬 [핵심 설명 — 소문제 2: 반정규화 (약 5분)]</h4>
+                    <p>소문제 2, 반정규화로 가봅시다.</p>
+                    <p>반정규화가 뭐냐면, 정규화로 열심히 쪼개놓은 테이블을 <strong>성능 때문에 다시 합치거나 중복을 허용하는 거</strong>예요.</p>
+                    <p>국내 대형 은행 사례에서 정규화된 8개 테이블 조인 쿼리가 12초가 걸렸는데, 반정규화 후 0.8초로 줄었다고 해요. 93% 성능 개선이에요.</p>
+                    <p>반정규화 기법을 <span class="highlight">"테컬관"</span>으로 분류해서 외우세요. 테이블 수준, 컬럼 수준, 관계 수준.</p>
+                    <p>테이블 수준에서는 <span class="highlight">"병분중"</span> — 테이블 병합, 테이블 분할, 중복 테이블 추가.</p>
+                    <p>중요한 건, 반정규화를 할 때 반드시 <strong>판단 기준</strong>을 먼저 확인해야 해요. 무조건 하는 게 아니거든요. 이 판단 기준을 먼저 쓰고 기법을 설명하면 답안의 논리성이 올라가요.</p>
+
+                    <h4>🎬 [핵심 설명 — 소문제 3: 무결성 유지 (약 4분)]</h4>
+                    <p>소문제 3, 가장 실무적인 부분이에요.</p>
+                    <p>5가지 방안을 <span class="highlight">"트애배물모"</span>로 외우세요. 트리거, 애플리케이션 로직, 배치 처리, 물리적 제약조건, 모니터링.</p>
+                    <p>첫 번째 트리거가 가장 확실해요. DB 수준에서 원본 바뀌면 자동으로 중복 데이터도 바꿔주니까요. 근데 트리거를 많이 걸면 성능이 떨어지고 디버깅이 어려워져요.</p>
+                    <p>실무 사례를 하나 말씀드릴게요. S보험사가 2,000만 건 계약 데이터를 반정규화했는데, 핵심 계약 데이터에는 트리거를, 통계에는 배치를, 전체적으로는 DQM 모니터링을 적용해서 불일치율 0.001% 이하를 유지하고 있어요. 이렇게 데이터 특성에 따라 방안을 <strong>혼합 적용</strong>하는 게 현실적인 전략이에요.</p>
+
+                    <h4>🎬 [답안 작성 팁 — 약 3분]</h4>
+                    <p>실전 팁을 정리할게요.</p>
+                    <p>첫 번째, 소문제 1에서 정규화 단계를 설명할 때, 정의만 쓰지 말고 반드시 릴레이션 예시를 들어주세요.</p>
+                    <p>두 번째, 분량 배분은 서론 10%, 소문제 1이 25%, 소문제 2가 30%, 소문제 3이 25%, 결론 10%예요.</p>
+                    <p>세 번째, 소문제 3에서 트리거 SQL을 간단히 써주면 구현 능력을 보여줄 수 있어요.</p>
+                    <p>결론에서는 "무결성과 성능은 트레이드오프 관계이며, 데이터 특성에 따라 정규화와 반정규화를 적절히 조합하고 무결성 유지 방안을 병행하는 것이 최적의 DB 설계 전략이다"로 마무리하면 됩니다.</p>
+
+                    <h4>🎬 [마무리 — 약 2분]</h4>
+                    <p>오늘 핵심을 정리합니다.</p>
+                    <p>정규화 단계 <span class="highlight">"원완이결"</span>, 이상현상 <span class="highlight">"삽갱삭"</span>, 반정규화 기법 <span class="highlight">"테컬관"</span>, 무결성 유지 <span class="highlight">"트애배물모"</span>. 이 네 개를 외우면 이 문제의 뼈대가 완성돼요.</p>
+                    <p>그리고 숫자를 기억하세요. 대형 은행의 "8테이블 조인 12초 → 반정규화 후 0.8초, 93% 개선", 보험사의 "2,000만 건, 불일치율 0.001% 이하".</p>
+                    <p>요즘은 OLTP 환경에서는 정규화를 유지하고, OLAP이나 데이터 웨어하우스 환경에서는 스타 스키마나 스노우플레이크 스키마처럼 처음부터 반정규화된 구조를 쓰는 게 일반적이에요. 결론에서 이런 현대적 관점을 한 줄 언급하면 좋은 인상을 줄 수 있어요.</p>
+                    <p>다음 강의에서 뵙겠습니다. 감사합니다.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== SECTION: 퀴즈 & 암기 ==================== -->
+        <section id="quiz" class="hidden space-y-6">
+            <div class="bg-white rounded-xl shadow-sm p-6 sm:p-8 border-t-4 border-indigo-600">
+                <h2 class="text-2xl font-bold text-gray-900 mb-4">암기 노트 &amp; AI 실전 퀴즈</h2>
+                <p class="text-gray-600 mb-6">정규화·반정규화·무결성 유지 답안 작성을 위한 핵심 요약과 AI 출제 문제를 풀어보세요.</p>
+
+                <div class="bg-indigo-50 rounded-xl p-6 border border-indigo-100 mb-8">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-bold text-indigo-900 text-lg flex items-center"><span class="mr-2">🧠</span> AI 실전 문제 생성</h3>
+                        <button onclick="generateQuiz()" id="btn-quiz-gen" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm transition-colors flex items-center gap-2"><span>✨ 새로운 문제 생성</span></button>
+                    </div>
+                    <div id="quiz-loading" class="hidden py-8 text-center">
+                        <div class="typing-indicator flex justify-center mb-2"><span></span><span></span><span></span></div>
+                        <p class="text-indigo-600 text-sm">AI가 문제를 출제하고 있습니다...</p>
+                    </div>
+                    <div id="quiz-container" class="hidden space-y-4">
+                        <div class="bg-white p-5 rounded-lg shadow-sm border border-indigo-100">
+                            <div class="flex items-start gap-2 mb-4">
+                                <span id="quiz-type-badge" class="bg-indigo-100 text-indigo-800 text-xs font-bold px-2 py-1 rounded whitespace-nowrap mt-1">객관식</span>
+                                <p id="quiz-question" class="font-bold text-gray-800 text-lg"></p>
+                            </div>
+                            <div id="quiz-options" class="space-y-2"></div>
+                            <div id="quiz-input-area" class="hidden mt-4">
+                                <div class="flex gap-2">
+                                    <input type="text" id="quiz-answer-input" placeholder="정답을 입력하세요" class="flex-grow border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                    <button onclick="checkShortAnswer()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-bold">제출</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="quiz-feedback" class="hidden bg-white p-5 rounded-lg border-l-4"></div>
+                    </div>
+                    <div id="quiz-placeholder" class="text-center py-8 text-gray-500 border-2 border-dashed border-indigo-200 rounded-lg">
+                        <p>'새로운 문제 생성' 버튼을 눌러 실력을 점검해보세요.</p>
+                    </div>
+                </div>
+
+                <!-- 암기 노트 -->
+                <div class="space-y-6">
+                    <div class="bg-gray-50 p-5 rounded-lg border border-gray-200">
+                        <h3 class="font-bold text-gray-900 mb-2 border-b pb-2">1단락: 개요 (Why &amp; What)</h3>
+                        <p class="text-sm text-gray-700 leading-relaxed">
+                            <span class="font-semibold text-indigo-700">키워드:</span> Codd 1970, BCNF 1974, Armstrong 공리, 함수적 종속, 이상현상, Trade-off<br>
+                            <span class="font-semibold text-indigo-700">정의:</span> 정규화는 함수적 종속성을 기반으로 릴레이션을 체계적으로 분해하여 이상현상을 제거하는 설계 기법. 반정규화는 성능 향상을 위해 의도적으로 중복·통합·분리하는 물리적 설계 기법.<br>
+                            <span class="font-semibold text-indigo-700">배경:</span> DB 설계의 무결성-성능 딜레마 → 이론(정규화) → 실무(반정규화) → 보완(무결성 유지) 흐름.
+                        </p>
+                    </div>
+                    <div class="bg-gray-50 p-5 rounded-lg border border-gray-200">
+                        <h3 class="font-bold text-gray-900 mb-2 border-b pb-2">2단락: 핵심 이론 (The Core)</h3>
+                        <p class="text-sm text-gray-700 leading-relaxed mb-3">
+                            <span class="font-semibold text-indigo-700">정규화 "원완이결":</span> 원자값(1NF) → 완전FD(2NF) → 이행FD제거(3NF) → 결정자=후보키(BCNF)
+                        </p>
+                        <div class="bg-white p-3 rounded border border-gray-300 text-sm">
+                            <div class="grid grid-cols-2 gap-2 text-xs">
+                                <div><strong>이상현상 "삽갱삭":</strong> 삽입이상, 갱신이상, 삭제이상</div>
+                                <div><strong>반정규화 "테컬관":</strong> 테이블(병분중) / 컬럼(중복·파생·PK) / 관계</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 p-5 rounded-lg border border-gray-200">
+                        <h3 class="font-bold text-gray-900 mb-2 border-b pb-2">3단락: 적용 및 제언 (Insight)</h3>
+                        <p class="text-sm text-gray-700 leading-relaxed">
+                            <span class="font-semibold text-indigo-700">무결성 "트애배물모":</span> 트리거(실시간) / 애플리케이션(실시간) / 배치(주기적) / 물리적제약(즉시) / DQM(주기적)<br>
+                            <span class="font-semibold text-indigo-700">핵심 수치:</span> 8테이블 조인 12초→0.8초 93%개선 / S보험사 2,000만건 불일치율 0.001%<br>
+                            <span class="font-semibold text-indigo-700">차별화:</span> 릴레이션 예시+FD표기 / 판단기준 선제시 / 트리거SQL / OLTP vs OLAP 전략 차이 언급.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- 제2부 전체 -->
+                <div class="mt-10 pt-8 border-t-2 border-indigo-200">
+                    <h2 class="text-xl font-bold text-indigo-900 mb-6 flex items-center gap-2">📋 제2부 — 서술형 답안 암기 요약</h2>
+                    <div class="textbook-content">
+                        <h3>1. 한 줄 정의</h3>
+                        <table>
+                            <thead><tr><th>토픽</th><th>한 줄 정의</th></tr></thead>
+                            <tbody>
+                                <tr><td><strong>정규화</strong></td><td>관계형 DB에서 함수적 종속성을 기반으로 릴레이션을 체계적으로 분해하여 이상현상을 제거하는 설계 기법 (Codd, 1970)</td></tr>
+                                <tr><td><strong>반정규화</strong></td><td>성능 향상을 위해 정규화된 릴레이션을 의도적으로 중복·통합·분리하는 물리적 설계 기법</td></tr>
+                            </tbody>
+                        </table>
+
+                        <h3>2. 핵심 키워드 맵</h3>
+                        <p><strong>정규화:</strong> 함수적 종속 / 원자값 / 부분FD / 이행FD / 결정자 / 후보키 / Armstrong 공리 / 이상현상 / Codd 1970</p>
+                        <p><strong>반정규화:</strong> 조인 비용 / 응답시간 / SLA / 테이블 병합·분할 / 중복 컬럼 / 파생 컬럼 / 인조식별자</p>
+                        <p><strong>무결성 유지:</strong> 트리거 / Application Logic / 배치 처리 / CHECK 제약조건 / DQM / 데이터 정합성</p>
+
+                        <h3>3. 두문자어 암기법</h3>
+                        <ul>
+                            <li><strong>정규화 단계:</strong> <span class="highlight">"원완이결"</span> (원자값-완전FD-이행FD제거-결정자=후보키)</li>
+                            <li><strong>이상현상 3종:</strong> <span class="highlight">"삽갱삭"</span> (삽입-갱신-삭제)</li>
+                            <li><strong>반정규화 기법 분류:</strong> <span class="highlight">"테컬관"</span> (테이블-컬럼-관계)</li>
+                            <li><strong>테이블 수준:</strong> <span class="highlight">"병분중"</span> (병합-분할-중복테이블추가)</li>
+                            <li><strong>무결성 유지 5방안:</strong> <span class="highlight">"트애배물모"</span> (트리거-애플리케이션-배치-물리적제약-모니터링)</li>
+                        </ul>
+
+                        <h3>4. 골격 답안 구조</h3>
+                        <table>
+                            <thead><tr><th>구분</th><th>핵심 내용</th><th>분량 비중</th></tr></thead>
+                            <tbody>
+                                <tr><td><strong>서론</strong></td><td>DB 설계의 무결성-성능 딜레마 → 3개 소문제 연결 구조 예고</td><td>10%</td></tr>
+                                <tr><td><strong>소문제 1</strong></td><td>이상현상 3종 + 1NF→2NF→3NF→BCNF 단계별 정의/예시</td><td>25%</td></tr>
+                                <tr><td><strong>소문제 2</strong></td><td>반정규화 정의 + 테이블/컬럼/관계 수준 기법 + 판단 기준</td><td>30%</td></tr>
+                                <tr><td><strong>소문제 3</strong></td><td>5가지 무결성 유지 방안(트애배물모) + 비교표 + 실무 사례</td><td>25%</td></tr>
+                                <tr><td><strong>결론</strong></td><td>이론→실무→보완 통합 + 무결성-성능 균형점</td><td>10%</td></tr>
+                            </tbody>
+                        </table>
+
+                        <h3>5. 필수 도식</h3>
+                        <p><strong>도식 1:</strong> 정규화 단계 요약표 — 4행 비교표 (1NF/2NF/3NF/BCNF별 조건, 제거대상, 키워드)</p>
+                        <p><strong>도식 2:</strong> 반정규화 기법 분류 체계 — 트리 구조 (테이블: 병합/분할/중복, 컬럼: 중복/파생/PK, 관계: 중복관계)</p>
+                        <p><strong>도식 3:</strong> 무결성 유지 방안 비교표 — 5행 비교표 (방안/동기화시점/장단점/적합상황)</p>
+
+                        <h3>6. 차별화 포인트</h3>
+                        <ul>
+                            <li>정규화 각 단계를 <strong>구체적 릴레이션 예시와 FD 표기</strong>로 설명하면 이론적 깊이를 보여줄 수 있다.</li>
+                            <li>반정규화 적용 시 <strong>판단 기준</strong>을 먼저 제시하고 기법을 설명하면 실무적 관점이 강화된다.</li>
+                            <li>무결성 유지에서 <strong>트리거 SQL 예시</strong>를 간단히 기술하면 구현 능력을 어필할 수 있다.</li>
+                            <li>결론에서 <strong>OLTP vs OLAP 환경별 정규화/반정규화 전략 차이</strong>를 언급하면 시야가 넓어진다.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+    <footer class="bg-white mt-12 py-8 border-t border-gray-200">
+        <div class="max-w-6xl mx-auto px-4 text-center">
+            <div class="flex flex-col md:flex-row justify-center items-center gap-2 md:gap-6 text-sm text-gray-600 mb-3 font-medium">
+                <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
+                    <span>박교익PE (132회 정보관리기술사, dr.code92@gmail.com)</span>
+                </div>
+            </div>
+            <p class="text-xs text-gray-400">Copyright &copy; KPC 정보관리기술사 ZIP-UP 심화반. All rights reserved.</p>
+        </div>
+    </footer>
+    <div id="chat-sidebar" class="fixed top-0 right-0 h-full w-full sm:w-96 bg-white shadow-2xl z-50 closed flex flex-col border-l border-gray-200">
+        <div class="bg-indigo-600 p-4 text-white flex justify-between items-center shadow-md">
+            <div class="flex items-center gap-2"><span class="text-xl">🤖</span><span class="font-bold">AI 튜터에게 질문하기</span></div>
+            <button onclick="toggleChat()" class="hover:bg-indigo-700 p-1 rounded transition-colors">✕</button>
+        </div>
+        <div id="chat-messages" class="flex-grow overflow-y-auto p-4 bg-gray-50 flex flex-col gap-3">
+            <div class="chat-msg ai">안녕하세요! 정규화, 반정규화, 무결성 유지 등 학습 중 궁금한 점이 있다면 언제든 물어보세요.</div>
+        </div>
+        <div class="p-4 bg-white border-t border-gray-200">
+            <div class="flex gap-2">
+                <input type="text" id="chat-input" placeholder="질문을 입력하세요..." class="flex-grow border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm" onkeypress="handleChatKey(event)">
+                <button onclick="sendChatMessage()" class="bg-indigo-600 hover:bg-indigo-700 text-white p-2 rounded-lg transition-colors">📨</button>
+            </div>
+        </div>
+    </div>
+    <button onclick="toggleChat()" class="fixed bottom-6 right-6 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full p-4 shadow-lg z-40 transition-transform hover:scale-110 flex items-center gap-2 group">
+        <span class="text-2xl">💬</span>
+        <span class="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 whitespace-nowrap text-sm font-bold">AI 튜터</span>
+    </button>
+    <div id="settings-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex justify-center items-center">
+        <div class="bg-white rounded-lg p-6 w-full max-w-md mx-4 shadow-xl">
+            <h3 class="text-lg font-bold mb-4">⚙️ API Key 설정</h3>
+            <p class="text-sm text-gray-600 mb-4">AI 기능을 사용하기 위해 Google Gemini API Key를 입력해주세요.<br><a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-indigo-600 hover:underline">키 발급받기 ↗</a></p>
+            <input type="password" id="api-key-input" placeholder="API Key 입력" class="w-full border border-gray-300 rounded-lg px-4 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <div class="flex justify-end gap-2">
+                <button onclick="toggleSettings()" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">취소</button>
+                <button onclick="saveApiKey()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">저장</button>
+            </div>
+        </div>
+    </div>
+<script>
+var isMentorMode=new URLSearchParams(window.location.search).get('mentor')==='true';if(isMentorMode){document.getElementById('nav-script').classList.remove('hidden');}
+var sections=isMentorMode?['overview','normalization','denormalization','integrity','textbook','script','quiz']:['overview','normalization','denormalization','integrity','textbook','quiz'];
+function navTo(id){document.querySelectorAll('.nav-item').forEach(function(el){el.classList.remove('active','text-indigo-600');});document.getElementById('nav-'+id).classList.add('active','text-indigo-600');sections.forEach(function(s){document.getElementById(s).classList.add('hidden');});document.getElementById(id).classList.remove('hidden');window.scrollTo({top:0,behavior:'smooth'});}
+function getApiKey(){var k=localStorage.getItem('gemini_api_key');if(!k){var u=new URLSearchParams(window.location.search);k=u.get('key');}return k;}
+function toggleSettings(){document.getElementById('settings-modal').classList.toggle('hidden');}
+function saveApiKey(){var k=document.getElementById('api-key-input').value.trim();if(k){localStorage.setItem('gemini_api_key',k);toggleSettings();alert('API Key가 저장되었습니다.');}else{alert('API Key를 입력해주세요.');}}
+function toggleChat(){var s=document.getElementById('chat-sidebar');s.classList.toggle('closed');s.classList.toggle('open');}
+function handleChatKey(e){if(e.key==='Enter')sendChatMessage();}
+function sendChatMessage(){var input=document.getElementById('chat-input');var msg=input.value.trim();if(!msg)return;var box=document.getElementById('chat-messages');box.innerHTML+='<div class="chat-msg user">'+msg+'</div>';input.value='';var key=getApiKey();if(!key){box.innerHTML+='<div class="chat-msg ai">⚠️ API Key가 설정되지 않았습니다. 상단의 🔑 API 버튼을 눌러 설정해주세요.</div>';toggleSettings();return;}box.innerHTML+='<div id="typing-ind" class="chat-msg ai"><div class="typing-indicator"><span></span><span></span><span></span></div></div>';box.scrollTop=box.scrollHeight;fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key='+key,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:"당신은 정보관리기술사 시험 멘토입니다. '정규화, 반정규화, 무결성 유지' 관련 질문에 전문적이고 명쾌하게 답변해주세요. 300자 이내로 핵심만 요약. 질문: "+msg}]}]})}).then(function(r){return r.json();}).then(function(d){var el=document.getElementById('typing-ind');if(el)el.remove();var t=d.candidates[0].content.parts[0].text;if(typeof marked!=='undefined'){box.innerHTML+='<div class="chat-msg ai">'+marked.parse(t)+'</div>';}else{box.innerHTML+='<div class="chat-msg ai">'+t+'</div>';}box.scrollTop=box.scrollHeight;}).catch(function(e){var el=document.getElementById('typing-ind');if(el)el.remove();box.innerHTML+='<div class="chat-msg ai">⚠️ 오류: '+e.message+'</div>';});}
+var currentQuizData=null;var quizTypeHistory=[];
+var quizTopics=[{category:"정규화 기초",keywords:"1NF, 원자값, 반복그룹, 2NF, 완전함수종속, 부분FD"},{category:"고급 정규화",keywords:"3NF, 이행종속, BCNF, 결정자, 후보키, Armstrong 공리"},{category:"이상현상",keywords:"삽입이상, 갱신이상, 삭제이상, 데이터 중복, 함수적 종속"},{category:"반정규화 기법",keywords:"테이블 병합, 수평분할, 수직분할, 중복컬럼, 파생컬럼, 인조식별자"},{category:"반정규화 판단",keywords:"조인빈도, SLA, 대용량, OLAP, 성능최적화, 조회대비변경비율"},{category:"무결성 유지",keywords:"트리거, 애플리케이션로직, 배치처리, CHECK제약, DQM, 데이터정합성"}];
+function generateQuiz(){var key=getApiKey();if(!key){alert('API Key를 먼저 설정해주세요.');toggleSettings();return;}document.getElementById('quiz-loading').classList.remove('hidden');document.getElementById('quiz-container').classList.add('hidden');document.getElementById('quiz-placeholder').classList.add('hidden');document.getElementById('quiz-feedback').classList.add('hidden');var isMC;var recent=quizTypeHistory.slice(-2);if(recent.length>=2&&recent[0]===recent[1]){isMC=!recent[1];}else{isMC=Math.random()>0.5;}quizTypeHistory.push(isMC);var sel=quizTopics[Math.floor(Math.random()*quizTopics.length)];var prompt;if(isMC){prompt="다음 카테고리에 대한 객관식 퀴즈 1문제를 만드세요.\n카테고리: "+sel.category+"\n관련 키워드: "+sel.keywords+"\n규칙: 반드시 위 카테고리와 키워드에 직접 관련된 문제를 출제하세요.\nJSON형식: {\"type\":\"mc\",\"question\":\"문제\",\"options\":[\"A\",\"B\",\"C\",\"D\"],\"correctIndex\":0,\"explanation\":\"해설\"}";}else{prompt="다음 카테고리에 대한 단답형 퀴즈 1문제를 만드세요.\n카테고리: "+sel.category+"\n관련 키워드: "+sel.keywords+"\n규칙: 반드시 위 카테고리와 키워드에 직접 관련된 문제를 출제하세요.\nJSON형식: {\"type\":\"short\",\"question\":\"문제\",\"correctAnswer\":\"정답\",\"explanation\":\"해설\"}";}fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key='+key,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{responseMimeType:"application/json"}})}).then(function(r){return r.json();}).then(function(d){document.getElementById('quiz-loading').classList.add('hidden');var t=d.candidates[0].content.parts[0].text;t=t.replace(/```json\s*/gi,"").replace(/```\s*/g,"").trim();var depth=0,start=-1,end=-1;for(var i=0;i<t.length;i++){if(t[i]==='{'){if(depth===0)start=i;depth++;}else if(t[i]==='}'){depth--;if(depth===0&&start!==-1){end=i;break;}}}if(start===-1||end===-1)throw new Error("No JSON found");t=t.substring(start,end+1);t=t.replace(/[\x00-\x1F\x7F]/g,function(c){return c==='\n'||c==='\r'||c==='\t'?' ':'';});currentQuizData=JSON.parse(t);renderQuiz();}).catch(function(e){document.getElementById('quiz-loading').classList.add('hidden');document.getElementById('quiz-placeholder').classList.remove('hidden');alert('퀴즈 생성 오류: '+e.message);});}
+function renderQuiz(){if(!currentQuizData)return;var c=document.getElementById('quiz-container');c.classList.remove('hidden');document.getElementById('quiz-feedback').classList.add('hidden');var badge=document.getElementById('quiz-type-badge');document.getElementById('quiz-question').textContent=currentQuizData.question;if(currentQuizData.type==='mc'){badge.textContent='객관식';badge.className='bg-indigo-100 text-indigo-800 text-xs font-bold px-2 py-1 rounded whitespace-nowrap mt-1';var opts=document.getElementById('quiz-options');opts.innerHTML='';opts.classList.remove('hidden');document.getElementById('quiz-input-area').classList.add('hidden');currentQuizData.options.forEach(function(o,i){opts.innerHTML+='<button onclick="checkMultipleChoice('+i+')" class="w-full text-left p-3 rounded-lg border border-gray-200 hover:border-indigo-400 hover:bg-indigo-50 transition-colors text-sm font-medium">'+String.fromCharCode(65+i)+'. '+o+'</button>';});}else{badge.textContent='단답형';badge.className='bg-green-100 text-green-800 text-xs font-bold px-2 py-1 rounded whitespace-nowrap mt-1';document.getElementById('quiz-options').classList.add('hidden');document.getElementById('quiz-options').innerHTML='';document.getElementById('quiz-input-area').classList.remove('hidden');document.getElementById('quiz-answer-input').value='';}}
+function checkMultipleChoice(idx){var fb=document.getElementById('quiz-feedback');fb.classList.remove('hidden');if(idx===currentQuizData.correctIndex){fb.className='bg-green-50 p-5 rounded-lg border-l-4 border-green-500';fb.innerHTML='<p class="font-bold text-green-800 mb-1">✅ 정답!</p><p class="text-sm text-green-700">'+currentQuizData.explanation+'</p>';}else{fb.className='bg-red-50 p-5 rounded-lg border-l-4 border-red-500';fb.innerHTML='<p class="font-bold text-red-800 mb-1">❌ 오답</p><p class="text-sm text-red-700 mb-1">정답: '+String.fromCharCode(65+currentQuizData.correctIndex)+'. '+currentQuizData.options[currentQuizData.correctIndex]+'</p><p class="text-sm text-red-700">'+currentQuizData.explanation+'</p>';}}
+function checkShortAnswer(){var ans=document.getElementById('quiz-answer-input').value.trim();if(!ans){alert('답을 입력해주세요.');return;}var key=getApiKey();if(!key){localGrade(ans);return;}var btn=document.querySelector('#quiz-input-area button');btn.textContent='채점 중...';btn.disabled=true;var gp="당신은 정보관리기술사 시험 채점관입니다. 아래 문제에 대해 사용자의 답안이 정답으로 인정될 수 있는지 판정하세요.\n\n문제: "+currentQuizData.question+"\n모범 정답: "+currentQuizData.correctAnswer+"\n사용자 답안: "+ans+"\n\n판정 기준:\n- 핵심 의미가 동일하면 정답\n- 약어/풀네임 모두 인정\n- 영어/한글 혼용 인정\n- 띄어쓰기/조사 차이는 무시\n- 의미가 명확히 다르면 오답\n\nOutput JSON: {\"correct\":true/false,\"reason\":\"판정 이유\"}";fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key='+key,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:gp}]}],generationConfig:{responseMimeType:"application/json"}})}).then(function(r){return r.json();}).then(function(d){btn.textContent='제출';btn.disabled=false;var t=d.candidates[0].content.parts[0].text;t=t.replace(/```json\s*/gi,"").replace(/```\s*/g,"").trim();var depth2=0,s2=-1,e2=-1;for(var i=0;i<t.length;i++){if(t[i]==='{'){if(depth2===0)s2=i;depth2++;}else if(t[i]==='}'){depth2--;if(depth2===0&&s2!==-1){e2=i;break;}}}t=t.substring(s2,e2+1);t=t.replace(/[\x00-\x1F\x7F]/g,function(c){return c==='\n'||c==='\r'||c==='\t'?' ':'';});var r2=JSON.parse(t);showFeedback(r2.correct,r2.reason);}).catch(function(){btn.textContent='제출';btn.disabled=false;localGrade(ans);});}
+function localGrade(ans){var ca=currentQuizData.correctAnswer.replace(/\s/g,'').toLowerCase();var ua=ans.replace(/\s/g,'').toLowerCase();var ok=ca===ua||ca.includes(ua)||ua.includes(ca);showFeedback(ok,'로컬 채점 결과');}
+function showFeedback(correct,reason){var fb=document.getElementById('quiz-feedback');fb.classList.remove('hidden');if(correct){fb.className='bg-green-50 p-5 rounded-lg border-l-4 border-green-500';fb.innerHTML='<p class="font-bold text-green-800 mb-1">✅ 정답!</p><p class="text-sm text-green-700 mb-1">'+reason+'</p><p class="text-sm text-green-700">모범 정답: '+currentQuizData.correctAnswer+'</p><p class="text-sm text-green-700">'+currentQuizData.explanation+'</p>';}else{fb.className='bg-red-50 p-5 rounded-lg border-l-4 border-red-500';fb.innerHTML='<p class="font-bold text-red-800 mb-1">❌ 오답</p><p class="text-sm text-red-700 mb-1">'+reason+'</p><p class="text-sm text-red-700">모범 정답: '+currentQuizData.correctAnswer+'</p><p class="text-sm text-red-700">'+currentQuizData.explanation+'</p>';}}
+var normDetails={
+'1nf':{title:'제1정규형(1NF)',colorClass:'border-blue-500 bg-blue-50',content:'<h4 class="font-bold text-blue-800 mb-2">정의: 모든 속성값이 원자값(Atomic Value)</h4><p class="text-sm text-gray-700 mb-3">다치 속성이나 반복 그룹이 존재하지 않아야 한다.</p><div class="bg-white rounded-lg p-4 border"><pre class="text-xs"><code>[비정규형]\n학생(학번, 이름, {수강과목1, 수강과목2, ...})\n\n[1NF 적용 후]\n학생(학번, 이름)\n수강(학번, 과목코드)\n→ 반복 그룹을 별도 릴레이션으로 분리</code></pre></div><p class="text-xs text-gray-500 mt-2">제거: 반복 그룹으로 인한 구조적 삽입/삭제 이상</p>'},
+'2nf':{title:'제2정규형(2NF)',colorClass:'border-green-500 bg-green-50',content:'<h4 class="font-bold text-green-800 mb-2">정의: 완전 함수적 종속(Full FD)</h4><p class="text-sm text-gray-700 mb-3">모든 비주요 속성이 기본키 전체에 완전 종속. 부분 FD 제거.</p><div class="bg-white rounded-lg p-4 border"><pre class="text-xs"><code>[1NF] 수강(학번, 과목코드, 학생이름, 성적, 과목명)\n{학번}→학생이름 (부분FD ✗), {과목코드}→과목명 (부분FD ✗)\n\n[2NF] 학생(학번, 학생이름)\n      과목(과목코드, 과목명)\n      수강(학번, 과목코드, 성적)</code></pre></div><p class="text-xs text-gray-500 mt-2">제거: 부분 종속으로 인한 갱신 이상</p>'},
+'3nf':{title:'제3정규형(3NF)',colorClass:'border-purple-500 bg-purple-50',content:'<h4 class="font-bold text-purple-800 mb-2">정의: 이행적 함수 종속 제거</h4><p class="text-sm text-gray-700 mb-3">비주요 속성이 기본키에 이행적으로 종속되지 않아야 한다.</p><div class="bg-white rounded-lg p-4 border"><pre class="text-xs"><code>[2NF] 학생(학번, 학생이름, 학과코드, 학과명, 학과전화)\n학번→학과코드→학과명 (이행 종속 ✗)\n\n[3NF] 학생(학번, 학생이름, 학과코드)\n      학과(학과코드, 학과명, 학과전화)</code></pre></div><p class="text-xs text-gray-500 mt-2">제거: 이행 종속으로 인한 삭제 이상</p>'},
+'bcnf':{title:'BCNF(Boyce-Codd NF)',colorClass:'border-amber-500 bg-amber-50',content:'<h4 class="font-bold text-amber-800 mb-2">정의: 모든 결정자가 후보키</h4><p class="text-sm text-gray-700 mb-3">3NF보다 엄격. 후보키가 아닌 결정자가 존재하면 BCNF 위반.</p><div class="bg-white rounded-lg p-4 border"><pre class="text-xs"><code>[3NF] 수강지도(학번, 과목코드, 교수명)\n후보키: {학번, 과목코드}\n교수명→과목코드 (비후보키 결정자 ✗)\n\n[BCNF] 교수과목(교수명, 과목코드)\n       학생지도(학번, 교수명)</code></pre></div><p class="text-xs text-gray-500 mt-2">제거: 후보키 이외 결정자로 인한 갱신 이상</p>'}
+};
+function updateNormDetail(key){document.querySelectorAll('.tech-block').forEach(function(el){el.classList.remove('selected');});document.getElementById('block-'+key).classList.add('selected');var d=normDetails[key];document.getElementById('norm-detail-content').innerHTML='<div class="p-5 rounded-lg border-l-4 '+d.colorClass+' animate-fade-in"><h3 class="text-lg font-bold text-gray-900 mb-3">'+d.title+'</h3>'+d.content+'</div>';}
+function toggleStrategy(el){var d=el.querySelector('.strategy-detail');var s=el.querySelector('.strategy-summary');if(d.classList.contains('hidden')){document.querySelectorAll('.strategy-detail').forEach(function(x){x.classList.add('hidden');});document.querySelectorAll('.strategy-summary').forEach(function(x){x.classList.remove('hidden');});d.classList.remove('hidden');s.classList.add('hidden');}else{d.classList.add('hidden');s.classList.remove('hidden');}}
+window.addEventListener('load',function(){var k=getApiKey();if(k){document.getElementById('api-key-input').value=k;}});
+</script>
+</body>
+</html>

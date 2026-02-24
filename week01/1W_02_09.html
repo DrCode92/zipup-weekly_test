@@ -1,0 +1,1248 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>획득가치관리(EVM), 성과지표 분석, 프로젝트 상태 진단</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+body{font-family:'Noto Sans KR',sans-serif}
+.tab-btn{padding:0.5rem 1rem;font-size:0.85rem;font-weight:500;border-radius:0.5rem;white-space:nowrap;transition:all 0.2s}
+.tab-btn.active{background:#4f46e5;color:#fff;box-shadow:0 2px 8px rgba(79,70,229,0.3)}
+.tab-btn:not(.active){color:#6b7280}
+.tab-btn:not(.active):hover{background:#e0e7ff;color:#4338ca}
+.tab-btn.mentor-tab{color:#b45309}
+.tab-btn.mentor-tab.active{background:#d97706;color:#fff;box-shadow:0 2px 8px rgba(217,119,6,0.3)}
+.def-box{background:linear-gradient(135deg,#ede9fe 0%,#e0e7ff 100%);border-left:4px solid #6366f1;padding:1.5rem;border-radius:0.75rem;margin:1rem 0}
+.info-card{border-radius:0.75rem;padding:1.25rem;margin-bottom:1rem;border-left:4px solid}
+.info-card.indigo{background:#eef2ff;border-color:#6366f1}
+.info-card.green{background:#ecfdf5;border-color:#10b981}
+.info-card.purple{background:#faf5ff;border-color:#8b5cf6}
+.info-card.amber{background:#fffbeb;border-color:#f59e0b}
+.info-card.teal{background:#f0fdfa;border-color:#14b8a6}
+.info-card.red{background:#fef2f2;border-color:#ef4444}
+.tech-block{background:#fff;border:1px solid #e5e7eb;border-radius:0.75rem;margin-bottom:0.75rem;overflow:hidden;cursor:pointer}
+.tech-block .tech-header{padding:1rem 1.25rem;display:flex;justify-content:space-between;align-items:center}
+.tech-block .tech-header:hover{background:#f9fafb}
+.tech-block .tech-body{display:none;padding:0 1.25rem 1.25rem;border-top:1px solid #f3f4f6}
+.tech-block.open .tech-body{display:block}
+.tech-block .chevron{transition:transform 0.2s}
+.tech-block.open .chevron{transform:rotate(180deg)}
+.insight-box{background:linear-gradient(135deg,#faf5ff 0%,#eef2ff 100%);border-left:4px solid #8b5cf6;padding:1.25rem;border-radius:0.75rem;margin:1rem 0}
+.strategy-card{background:#fff;border:1px solid #e5e7eb;border-radius:0.75rem;margin-bottom:0.75rem;overflow:hidden;cursor:pointer}
+.strategy-card .str-header{padding:1rem 1.25rem;display:flex;justify-content:space-between;align-items:center}
+.strategy-card .str-header:hover{background:#f9fafb}
+.strategy-card .str-body{display:none;padding:0 1.25rem 1.25rem;border-top:1px solid #f3f4f6}
+.strategy-card.open .str-body{display:block}
+.strategy-card .chevron{transition:transform 0.2s}
+.strategy-card.open .chevron{transform:rotate(180deg)}
+.textbook-content h3{font-size:1.2rem;font-weight:700;color:#1e1b4b;margin:2rem 0 1rem;padding-bottom:0.5rem;border-bottom:2px solid #e0e7ff}
+.textbook-content h4{font-size:1.05rem;font-weight:600;color:#312e81;margin:1.5rem 0 0.75rem}
+.textbook-content p{margin:0.5rem 0;line-height:1.8;color:#374151}
+.textbook-content ul,.textbook-content ol{margin:0.5rem 0 0.5rem 1.5rem;color:#374151}
+.textbook-content li{margin:0.3rem 0;line-height:1.7}
+.textbook-content table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:0.9rem}
+.textbook-content th{background:#eef2ff;color:#312e81;padding:0.75rem;text-align:left;border:1px solid #c7d2fe;font-weight:600}
+.textbook-content td{padding:0.75rem;border:1px solid #e5e7eb;color:#374151}
+.textbook-content tr:nth-child(even){background:#f9fafb}
+.typing-indicator span{display:inline-block;width:8px;height:8px;border-radius:50%;background:#6366f1;margin:0 2px;animation:bounce 1.4s infinite ease-in-out both}
+.typing-indicator span:nth-child(1){animation-delay:-0.32s}
+.typing-indicator span:nth-child(2){animation-delay:-0.16s}
+@keyframes bounce{0%,80%,100%{transform:scale(0)}40%{transform:scale(1)}}
+.chat-sidebar{position:fixed;top:0;right:-420px;width:400px;height:100%;background:#fff;box-shadow:-5px 0 25px rgba(0,0,0,0.15);transition:right 0.3s ease;z-index:1000;display:flex;flex-direction:column}
+.chat-sidebar.open{right:0}
+.highlight{background:linear-gradient(120deg,#fde68a 0%,#fbbf24 100%);padding:0.1em 0.3em;border-radius:0.25em;font-weight:600}
+</style>
+</head><body class="bg-gray-50 font-sans">
+<header class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
+  <div class="max-w-6xl mx-auto px-4">
+    <div class="flex items-center justify-between py-3">
+      <div>
+        <p class="text-xs text-indigo-600 font-semibold tracking-wide">KPC 정보관리기술사 ZIP-UP 심화반</p>
+        <h1 class="text-xl font-black text-gray-900 mt-0.5">획득가치관리(EVM), 성과지표 분석, 프로젝트 상태 진단</h1>
+      </div>
+      <span class="bg-indigo-100 text-indigo-800 text-xs font-bold px-3 py-1 rounded-full">2026</span>
+    </div>
+    <div class="flex items-center gap-2 pb-3 overflow-x-auto" id="tab-nav">
+      <button class="tab-btn active" onclick="navTo('overview')">개요 및 개념</button>
+      <button class="tab-btn" onclick="navTo('variables')">3대 변수</button>
+      <button class="tab-btn" onclick="navTo('indicators')">성과지표</button>
+      <button class="tab-btn" onclick="navTo('diagnosis')">프로젝트 진단</button>
+      <button class="tab-btn" onclick="navTo('textbook')">원문 학습</button>
+      <button class="tab-btn mentor-tab" onclick="navTo('script')" id="tab-script" style="display:none;">🎬 강의 스크립트</button>
+      <button class="tab-btn" onclick="navTo('quiz')">퀴즈 &amp; 암기</button>
+      <button onclick="toggleSettings()" class="ml-auto bg-gray-100 hover:bg-gray-200 text-gray-600 px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap">🔑 API 설정</button>
+    </div>
+  </div>
+</header>
+<main class="max-w-6xl mx-auto px-4 py-8"><div id="overview">
+  <div class="def-box">
+    <p class="font-bold text-indigo-900 text-lg mb-2">📌 핵심 정의</p>
+    <p class="text-indigo-800 leading-relaxed"><strong>획득가치관리(EVM)</strong>란, 프로젝트의 범위(Scope), 일정(Schedule), 비용(Cost)을 통합적으로 측정·관리하는 정량적 성과 관리 기법이다. PV(계획가치), EV(획득가치), AC(실제비용) 3대 변수를 기반으로 SV/CV/SPI/CPI 성과지표를 산출하여 프로젝트 상태를 정량 진단한다.</p>
+  </div>
+
+  <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 mt-6">
+    <h3 class="font-bold text-gray-900 text-lg mb-3">💡 개념 해설</h3>
+    <p class="text-gray-700 leading-relaxed mb-3">전통적 프로젝트 관리에서는 "얼마를 썼는가(지출)"와 "일정이 어디인가(진척)"를 별도로 관리했습니다. 그러나 이 방식은 <strong>"투입한 비용 대비 실제로 얼마만큼의 가치를 획득했는가"</strong>를 알 수 없습니다.</p>
+    <p class="text-gray-700 leading-relaxed">예를 들어, 예산 10억 원 프로젝트에서 6억 원을 지출하고 일정 50% 시점이면 정상으로 보이지만, 실제 완료 작업이 40%에 불과하다면 비용 초과와 일정 지연이 동시에 발생하고 있는 것입니다. EVM은 이러한 <strong>복합적 상태를 정량적으로 진단</strong>할 수 있게 해줍니다.</p>
+  </div>
+
+  <!-- S-커브 차트 -->
+  <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 mt-6">
+    <h3 class="font-bold text-gray-900 text-lg mb-3">📈 EVM S-커브</h3>
+    <div style="max-width:600px;margin:0 auto">
+      <canvas id="sCurveChart"></canvas>
+    </div>
+    <div class="grid grid-cols-3 gap-3 mt-4 text-center text-sm">
+      <div class="bg-indigo-50 rounded-lg p-2"><span class="font-bold text-indigo-700">PV 곡선</span><br><span class="text-xs text-indigo-600">계획된 지출 (기준선)</span></div>
+      <div class="bg-green-50 rounded-lg p-2"><span class="font-bold text-green-700">EV 곡선</span><br><span class="text-xs text-green-600">완료 작업의 가치</span></div>
+      <div class="bg-red-50 rounded-lg p-2"><span class="font-bold text-red-700">AC 곡선</span><br><span class="text-xs text-red-600">실제 지출</span></div>
+    </div>
+  </div>
+
+  <!-- 삼단계 구조 -->
+  <div class="mt-6">
+    <h3 class="font-bold text-gray-900 text-lg mb-4">🏗️ 변수 정의 → 공식 도출 → 진단·대응</h3>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="bg-white rounded-xl p-5 shadow-sm border-2 border-indigo-200 text-center">
+        <div class="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-3"><span class="text-2xl">📊</span></div>
+        <p class="font-bold text-indigo-800 mb-1">소문제 1: 3대 변수</p>
+        <p class="text-sm text-gray-600">"EVM의 기본 변수는?"</p>
+        <p class="text-xs text-indigo-600 mt-2 font-semibold">PV · EV · AC</p>
+      </div>
+      <div class="relative bg-white rounded-xl p-5 shadow-sm border-2 border-green-200 text-center">
+        <div class="hidden md:block absolute left-0 top-1/2 -translate-x-1/2 -translate-y-1/2 text-2xl text-gray-400">→</div>
+        <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3"><span class="text-2xl">🔢</span></div>
+        <p class="font-bold text-green-800 mb-1">소문제 2: 성과지표</p>
+        <p class="text-sm text-gray-600">"변수로 무엇을 측정?"</p>
+        <p class="text-xs text-green-600 mt-2 font-semibold">SV · CV · SPI · CPI</p>
+      </div>
+      <div class="relative bg-white rounded-xl p-5 shadow-sm border-2 border-purple-200 text-center">
+        <div class="hidden md:block absolute left-0 top-1/2 -translate-x-1/2 -translate-y-1/2 text-2xl text-gray-400">→</div>
+        <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3"><span class="text-2xl">🔍</span></div>
+        <p class="font-bold text-purple-800 mb-1">소문제 3: 진단·대응</p>
+        <p class="text-sm text-gray-600">"측정 결과를 어떻게 활용?"</p>
+        <p class="text-xs text-purple-600 mt-2 font-semibold">EAC 예측 · PM 전략</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div class="info-card indigo">
+      <p class="font-bold text-indigo-800 mb-1">📚 EVM의 역사</p>
+      <p class="text-sm text-indigo-700">1967년 미 국방부 C/SCSC → 1998년 ANSI/EIA-748 → 2018년 ISO 21508<br>PMBOK 비용 관리의 핵심 기법</p>
+    </div>
+    <div class="info-card amber">
+      <p class="font-bold text-amber-800 mb-1">📊 문제 구조 (2교시형)</p>
+      <p class="text-sm text-amber-700">소문제 1(25%): EVM 3대 변수<br>소문제 2(30%): 성과지표 공식 체계<br>소문제 3(25%): SPI>1 CPI<1 진단·대응</p>
+    </div>
+  </div>
+</div><div id="variables" class="hidden">
+  <h2 class="text-2xl font-black text-gray-900 mb-6">📊 EVM의 3대 핵심 변수 (PV, EV, AC)</h2>
+
+  <!-- 3대 변수 카드 -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <div class="bg-white rounded-xl p-5 shadow-sm border-l-4 border-indigo-500">
+      <div class="flex items-center gap-2 mb-3">
+        <span class="bg-indigo-100 text-indigo-800 text-lg font-black px-3 py-1 rounded">PV</span>
+        <h4 class="font-bold text-indigo-900">Planned Value</h4>
+      </div>
+      <p class="text-sm text-gray-700 font-semibold mb-1">계획가치</p>
+      <p class="text-sm text-gray-600 mb-2">특정 시점까지 <strong>계획상 완료되어야 할 작업</strong>의 예산 가치</p>
+      <div class="bg-indigo-50 rounded-lg p-3 text-xs">
+        <p class="font-semibold text-indigo-800 mb-1">💭 "이 시점에 얼마를 쓸 계획이었나?"</p>
+        <p class="text-indigo-700">산정: WBS + 일정 기준선(Baseline)</p>
+      </div>
+    </div>
+    <div class="bg-white rounded-xl p-5 shadow-sm border-l-4 border-green-500">
+      <div class="flex items-center gap-2 mb-3">
+        <span class="bg-green-100 text-green-800 text-lg font-black px-3 py-1 rounded">EV</span>
+        <h4 class="font-bold text-green-900">Earned Value</h4>
+      </div>
+      <p class="text-sm text-gray-700 font-semibold mb-1">획득가치</p>
+      <p class="text-sm text-gray-600 mb-2">특정 시점까지 <strong>실제로 완료된 작업</strong>의 예산 가치</p>
+      <div class="bg-green-50 rounded-lg p-3 text-xs">
+        <p class="font-semibold text-green-800 mb-1">💭 "실제로 완료한 작업의 가치는?"</p>
+        <p class="text-green-700">산정: 완료된 작업 × 해당 작업의 계획 예산</p>
+      </div>
+    </div>
+    <div class="bg-white rounded-xl p-5 shadow-sm border-l-4 border-red-500">
+      <div class="flex items-center gap-2 mb-3">
+        <span class="bg-red-100 text-red-800 text-lg font-black px-3 py-1 rounded">AC</span>
+        <h4 class="font-bold text-red-900">Actual Cost</h4>
+      </div>
+      <p class="text-sm text-gray-700 font-semibold mb-1">실제비용</p>
+      <p class="text-sm text-gray-600 mb-2">특정 시점까지 <strong>실제로 지출한 비용</strong></p>
+      <div class="bg-red-50 rounded-lg p-3 text-xs">
+        <p class="font-semibold text-red-800 mb-1">💭 "실제로 얼마를 썼나?"</p>
+        <p class="text-red-700">산정: 실제 투입 비용 합계</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 핵심 이해 -->
+  <div class="insight-box mb-6">
+    <p class="font-bold text-purple-800 mb-1">🔑 핵심 이해</p>
+    <p class="text-sm text-purple-700">PV는 "계획", EV는 "실적", AC는 "지출". <strong>PV와 EV 비교 → 일정 성과</strong>, <strong>EV와 AC 비교 → 비용 성과</strong></p>
+  </div>
+
+  <!-- 산정 예시 -->
+  <h3 class="font-bold text-gray-900 text-lg mb-3">📝 산정 예시</h3>
+  <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100 mb-6">
+    <p class="text-sm text-gray-700 mb-3"><strong>예시 프로젝트</strong>: 총 예산 10억 원, 기간 10개월, 현재 5개월차</p>
+    <table class="w-full border-collapse text-sm">
+      <thead>
+        <tr>
+          <th class="bg-indigo-50 text-indigo-900 p-3 text-left border">구분</th>
+          <th class="bg-indigo-50 text-indigo-900 p-3 text-left border">값</th>
+          <th class="bg-indigo-50 text-indigo-900 p-3 text-left border">해석</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td class="p-3 border font-semibold text-indigo-700">PV (5개월차)</td><td class="p-3 border">5억 원</td><td class="p-3 border">5개월차까지 5억 원어치 작업 완료 계획</td></tr>
+        <tr class="bg-gray-50"><td class="p-3 border font-semibold text-green-700">EV (5개월차)</td><td class="p-3 border">6억 원</td><td class="p-3 border">실제로 6억 원어치 작업 완료 (일정 앞서감)</td></tr>
+        <tr><td class="p-3 border font-semibold text-red-700">AC (5개월차)</td><td class="p-3 border">7억 원</td><td class="p-3 border">6억 원어치 작업에 7억 원 지출 (비용 초과)</td></tr>
+      </tbody>
+    </table>
+    <div class="mt-3 bg-yellow-50 rounded-lg p-3 text-sm text-yellow-800">
+      <p class="font-semibold">💡 이 프로젝트는 일정은 앞서지만(EV>PV), 비용은 초과(AC>EV) → 소문제 3의 SPI>1, CPI&lt;1 상황</p>
+    </div>
+  </div>
+
+  <!-- BAC 설명 -->
+  <div class="info-card teal">
+    <p class="font-bold text-teal-800 mb-1">📌 BAC (Budget at Completion)</p>
+    <p class="text-sm text-teal-700">프로젝트 전체 예산 = PV 곡선의 최종값. EAC 계산의 기준이 되며, S-커브에서 PV 곡선의 끝점으로 표시된다.</p>
+  </div>
+</div><div id="indicators" class="hidden">
+  <h2 class="text-2xl font-black text-gray-900 mb-6">🔢 성과지표 공식 체계</h2>
+
+  <!-- EV가 주인공 -->
+  <div class="insight-box mb-6">
+    <p class="font-bold text-purple-800 mb-1">🔑 핵심 암기법: "EV가 항상 주인공"</p>
+    <p class="text-sm text-purple-700">빼기(SV/CV): EV가 항상 피감수 → <strong>양수면 좋다</strong><br>나누기(SPI/CPI): EV가 항상 분자 → <strong>1보다 크면 좋다</strong></p>
+  </div>
+
+  <!-- 차이 지표 -->
+  <h3 class="font-bold text-gray-900 text-lg mb-3">📐 차이 지표 (Variance Indicators)</h3>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+    <div class="bg-white rounded-xl p-5 shadow-sm border-2 border-blue-200">
+      <div class="flex items-center gap-2 mb-3">
+        <span class="bg-blue-600 text-white text-sm font-black px-3 py-1 rounded">SV</span>
+        <span class="font-bold text-gray-800">일정차이 (Schedule Variance)</span>
+      </div>
+      <div class="bg-blue-50 rounded-lg p-4 text-center mb-3">
+        <p class="text-2xl font-black text-blue-800">SV = EV - PV</p>
+      </div>
+      <table class="w-full border-collapse text-xs">
+        <tr><td class="p-2 border bg-green-50 font-semibold text-green-700">SV > 0</td><td class="p-2 border">일정보다 앞서 진행</td></tr>
+        <tr><td class="p-2 border font-semibold">SV = 0</td><td class="p-2 border">일정 계획대로</td></tr>
+        <tr><td class="p-2 border bg-red-50 font-semibold text-red-700">SV &lt; 0</td><td class="p-2 border">일정 지연</td></tr>
+      </table>
+    </div>
+    <div class="bg-white rounded-xl p-5 shadow-sm border-2 border-emerald-200">
+      <div class="flex items-center gap-2 mb-3">
+        <span class="bg-emerald-600 text-white text-sm font-black px-3 py-1 rounded">CV</span>
+        <span class="font-bold text-gray-800">비용차이 (Cost Variance)</span>
+      </div>
+      <div class="bg-emerald-50 rounded-lg p-4 text-center mb-3">
+        <p class="text-2xl font-black text-emerald-800">CV = EV - AC</p>
+      </div>
+      <table class="w-full border-collapse text-xs">
+        <tr><td class="p-2 border bg-green-50 font-semibold text-green-700">CV > 0</td><td class="p-2 border">예산 절감</td></tr>
+        <tr><td class="p-2 border font-semibold">CV = 0</td><td class="p-2 border">예산 계획대로</td></tr>
+        <tr><td class="p-2 border bg-red-50 font-semibold text-red-700">CV &lt; 0</td><td class="p-2 border">비용 초과</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- 효율 지표 -->
+  <h3 class="font-bold text-gray-900 text-lg mb-3">⚡ 효율 지표 (Performance Indices)</h3>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+    <div class="bg-white rounded-xl p-5 shadow-sm border-2 border-indigo-200">
+      <div class="flex items-center gap-2 mb-3">
+        <span class="bg-indigo-600 text-white text-sm font-black px-3 py-1 rounded">SPI</span>
+        <span class="font-bold text-gray-800">일정성과지수</span>
+      </div>
+      <div class="bg-indigo-50 rounded-lg p-4 text-center mb-3">
+        <p class="text-2xl font-black text-indigo-800">SPI = EV / PV</p>
+      </div>
+      <table class="w-full border-collapse text-xs">
+        <tr><td class="p-2 border bg-green-50 font-semibold text-green-700">SPI > 1.0</td><td class="p-2 border">일정보다 빠르게 진행</td></tr>
+        <tr><td class="p-2 border font-semibold">SPI = 1.0</td><td class="p-2 border">일정 계획대로</td></tr>
+        <tr><td class="p-2 border bg-red-50 font-semibold text-red-700">SPI &lt; 1.0</td><td class="p-2 border">일정 지연</td></tr>
+      </table>
+    </div>
+    <div class="bg-white rounded-xl p-5 shadow-sm border-2 border-purple-200">
+      <div class="flex items-center gap-2 mb-3">
+        <span class="bg-purple-600 text-white text-sm font-black px-3 py-1 rounded">CPI</span>
+        <span class="font-bold text-gray-800">비용성과지수</span>
+      </div>
+      <div class="bg-purple-50 rounded-lg p-4 text-center mb-3">
+        <p class="text-2xl font-black text-purple-800">CPI = EV / AC</p>
+      </div>
+      <table class="w-full border-collapse text-xs">
+        <tr><td class="p-2 border bg-green-50 font-semibold text-green-700">CPI > 1.0</td><td class="p-2 border">예산 효율적 (1원당 1원 이상 가치)</td></tr>
+        <tr><td class="p-2 border font-semibold">CPI = 1.0</td><td class="p-2 border">예산 계획대로</td></tr>
+        <tr><td class="p-2 border bg-red-50 font-semibold text-red-700">CPI &lt; 1.0</td><td class="p-2 border">비용 비효율</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- 4대 성과지표 통합 -->
+  <h3 class="font-bold text-gray-900 text-lg mb-3">📋 4대 성과지표 통합 정리</h3>
+  <div class="overflow-x-auto mb-6">
+    <table class="w-full border-collapse text-sm">
+      <thead>
+        <tr>
+          <th class="bg-indigo-50 text-indigo-900 p-3 text-left border">지표</th>
+          <th class="bg-indigo-50 text-indigo-900 p-3 text-left border">공식</th>
+          <th class="bg-indigo-50 text-indigo-900 p-3 text-left border">기준값</th>
+          <th class="bg-indigo-50 text-indigo-900 p-3 text-left border">양호 조건</th>
+          <th class="bg-indigo-50 text-indigo-900 p-3 text-left border">측정 대상</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td class="p-3 border font-bold">SV</td><td class="p-3 border font-mono">EV - PV</td><td class="p-3 border">0</td><td class="p-3 border text-green-700 font-semibold">SV > 0</td><td class="p-3 border">일정 차이 (절대값)</td></tr>
+        <tr class="bg-gray-50"><td class="p-3 border font-bold">CV</td><td class="p-3 border font-mono">EV - AC</td><td class="p-3 border">0</td><td class="p-3 border text-green-700 font-semibold">CV > 0</td><td class="p-3 border">비용 차이 (절대값)</td></tr>
+        <tr><td class="p-3 border font-bold">SPI</td><td class="p-3 border font-mono">EV / PV</td><td class="p-3 border">1.0</td><td class="p-3 border text-green-700 font-semibold">SPI > 1.0</td><td class="p-3 border">일정 효율 (비율)</td></tr>
+        <tr class="bg-gray-50"><td class="p-3 border font-bold">CPI</td><td class="p-3 border font-mono">EV / AC</td><td class="p-3 border">1.0</td><td class="p-3 border text-green-700 font-semibold">CPI > 1.0</td><td class="p-3 border">비용 효율 (비율)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 예측 지표 -->
+  <h3 class="font-bold text-gray-900 text-lg mb-3">🔮 예측 지표 (EAC / ETC / VAC)</h3>
+  <div class="overflow-x-auto mb-6">
+    <table class="w-full border-collapse text-sm">
+      <thead><tr><th class="bg-amber-50 text-amber-900 p-3 text-left border">상황</th><th class="bg-amber-50 text-amber-900 p-3 text-left border">EAC 공식</th><th class="bg-amber-50 text-amber-900 p-3 text-left border">가정</th></tr></thead>
+      <tbody>
+        <tr><td class="p-3 border font-semibold">현재 추세 지속</td><td class="p-3 border font-mono font-bold text-amber-800">EAC = BAC / CPI</td><td class="p-3 border">현재 비용 효율 유지</td></tr>
+        <tr class="bg-gray-50"><td class="p-3 border font-semibold">향후 정상 복귀</td><td class="p-3 border font-mono font-bold text-amber-800">EAC = AC + (BAC - EV)</td><td class="p-3 border">남은 작업 계획대로</td></tr>
+        <tr><td class="p-3 border font-semibold">SPI·CPI 동시 반영</td><td class="p-3 border font-mono font-bold text-amber-800">EAC = AC + (BAC-EV)/(CPI×SPI)</td><td class="p-3 border">일정·비용 비효율 모두 반영</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div class="info-card green">
+      <p class="font-bold text-green-800">ETC = EAC - AC</p>
+      <p class="text-sm text-green-700">잔여 작업 비용 (앞으로 얼마가 더 필요한가)</p>
+    </div>
+    <div class="info-card purple">
+      <p class="font-bold text-purple-800">VAC = BAC - EAC</p>
+      <p class="text-sm text-purple-700">완료 시 차이 (양수: 절감, 음수: 초과)</p>
+    </div>
+  </div>
+</div><div id="diagnosis" class="hidden">
+  <h2 class="text-2xl font-black text-gray-900 mb-6">🔍 SPI>1, CPI&lt;1 프로젝트 진단 및 대응</h2>
+
+  <!-- 상황 분석 -->
+  <div class="def-box mb-6">
+    <p class="font-bold text-indigo-900 mb-2">📊 시나리오: SPI=1.2, CPI=0.8</p>
+    <div class="grid grid-cols-2 gap-4 mt-2">
+      <div class="bg-white rounded-lg p-3 text-center">
+        <p class="text-3xl font-black text-green-600">SPI = 1.2</p>
+        <p class="text-sm text-green-700">일정 120% 진척 → <strong>20% 앞서감</strong></p>
+      </div>
+      <div class="bg-white rounded-lg p-3 text-center">
+        <p class="text-3xl font-black text-red-600">CPI = 0.8</p>
+        <p class="text-sm text-red-700">비용 125% 지출 → <strong>25% 초과</strong></p>
+      </div>
+    </div>
+    <p class="text-indigo-800 mt-3 font-semibold">"일정은 빠르지만 비용이 초과" — 돈을 많이 써서 빨리 가고 있는 상황</p>
+  </div>
+
+  <!-- SPI/CPI 4분면 매트릭스 -->
+  <h3 class="font-bold text-gray-900 text-lg mb-3">🎯 SPI/CPI 4분면 매트릭스</h3>
+  <div class="max-w-lg mx-auto mb-6">
+    <div class="grid grid-cols-2 gap-1">
+      <div class="bg-green-100 rounded-tl-xl p-4 text-center border border-green-200">
+        <p class="font-bold text-green-800 text-sm">SPI>1, CPI>1</p>
+        <p class="text-xs text-green-700 mt-1">✅ 일정 앞섬 + 예산 절감</p>
+        <p class="text-xs text-green-600">이상적 상태</p>
+      </div>
+      <div class="bg-yellow-100 rounded-tr-xl p-4 text-center border border-yellow-200 ring-2 ring-red-400">
+        <p class="font-bold text-yellow-800 text-sm">SPI>1, CPI&lt;1</p>
+        <p class="text-xs text-yellow-700 mt-1">⚠️ 일정 앞섬 + 비용 초과</p>
+        <p class="text-xs text-red-600 font-bold">← 현재 상태 (1.2, 0.8)</p>
+      </div>
+      <div class="bg-orange-100 rounded-bl-xl p-4 text-center border border-orange-200">
+        <p class="font-bold text-orange-800 text-sm">SPI&lt;1, CPI>1</p>
+        <p class="text-xs text-orange-700 mt-1">⏰ 일정 지연 + 예산 절감</p>
+        <p class="text-xs text-orange-600">자원 투입 부족</p>
+      </div>
+      <div class="bg-red-100 rounded-br-xl p-4 text-center border border-red-200">
+        <p class="font-bold text-red-800 text-sm">SPI&lt;1, CPI&lt;1</p>
+        <p class="text-xs text-red-700 mt-1">🚨 일정 지연 + 비용 초과</p>
+        <p class="text-xs text-red-600">위기 상태</p>
+      </div>
+    </div>
+    <div class="text-center text-xs text-gray-500 mt-2">가로: SPI (좌: &lt;1, 우: >1) | 세로: CPI (상: >1, 하: &lt;1)</div>
+  </div>
+
+  <!-- 원인 분석 -->
+  <h3 class="font-bold text-gray-900 text-lg mb-3">🔎 원인 분석</h3>
+  <div class="overflow-x-auto mb-6">
+    <table class="w-full border-collapse text-sm">
+      <thead>
+        <tr>
+          <th class="bg-amber-50 text-amber-900 p-3 text-left border">원인 범주</th>
+          <th class="bg-amber-50 text-amber-900 p-3 text-left border">상세 원인</th>
+          <th class="bg-amber-50 text-amber-900 p-3 text-left border">SPI</th>
+          <th class="bg-amber-50 text-amber-900 p-3 text-left border">CPI</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td class="p-3 border font-semibold">자원 과투입 (Crashing)</td><td class="p-3 border">추가 인력/야근 투입</td><td class="p-3 border text-green-600 font-bold">↑</td><td class="p-3 border text-red-600 font-bold">↓</td></tr>
+        <tr class="bg-gray-50"><td class="p-3 border font-semibold">병렬 수행 (Fast Tracking)</td><td class="p-3 border">순차 작업 병렬화 → 재작업 발생</td><td class="p-3 border text-green-600 font-bold">↑</td><td class="p-3 border text-red-600 font-bold">↓</td></tr>
+        <tr><td class="p-3 border font-semibold">고급 인력 투입</td><td class="p-3 border">저급 인력 계획 → 고급 인력 실투입</td><td class="p-3 border text-green-600 font-bold">↑</td><td class="p-3 border text-red-600 font-bold">↓</td></tr>
+        <tr class="bg-gray-50"><td class="p-3 border font-semibold">외주 비용 초과</td><td class="p-3 border">단가 상승 또는 추가 범위</td><td class="p-3 border">-</td><td class="p-3 border text-red-600 font-bold">↓</td></tr>
+        <tr><td class="p-3 border font-semibold">범위 변경 (Scope Creep)</td><td class="p-3 border">비공식적 범위 증가</td><td class="p-3 border text-green-600 font-bold">↑</td><td class="p-3 border text-red-600 font-bold">↓</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- EAC 예측 -->
+  <h3 class="font-bold text-gray-900 text-lg mb-3">🔮 EAC 예측 (BAC=10억 원)</h3>
+  <div class="overflow-x-auto mb-6">
+    <table class="w-full border-collapse text-sm">
+      <thead>
+        <tr>
+          <th class="bg-red-50 text-red-900 p-3 text-left border">시나리오</th>
+          <th class="bg-red-50 text-red-900 p-3 text-left border">공식</th>
+          <th class="bg-red-50 text-red-900 p-3 text-left border">계산</th>
+          <th class="bg-red-50 text-red-900 p-3 text-left border">결과</th>
+          <th class="bg-red-50 text-red-900 p-3 text-left border">초과</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td class="p-3 border font-semibold">현재 추세 지속</td><td class="p-3 border font-mono">BAC/CPI</td><td class="p-3 border">10억/0.8</td><td class="p-3 border font-bold text-red-700">12.5억</td><td class="p-3 border text-red-600">+2.5억 (25%)</td></tr>
+        <tr class="bg-gray-50"><td class="p-3 border font-semibold">향후 정상 복귀</td><td class="p-3 border font-mono">AC+(BAC-EV)</td><td class="p-3 border">7.5억+(10억-6억)</td><td class="p-3 border font-bold text-orange-700">11.5억</td><td class="p-3 border text-orange-600">+1.5억 (15%)</td></tr>
+        <tr><td class="p-3 border font-semibold">SPI·CPI 반영</td><td class="p-3 border font-mono">AC+(BAC-EV)/(CPI×SPI)</td><td class="p-3 border">7.5억+4억/(0.96)</td><td class="p-3 border font-bold text-amber-700">11.67억</td><td class="p-3 border text-amber-600">+1.67억 (16.7%)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- PM 대응 전략 -->
+  <h3 class="font-bold text-gray-900 text-lg mb-3">🛠️ PM 대응 전략</h3>
+  <div class="space-y-3">
+    <div class="strategy-card">
+      <div class="str-header">
+        <div class="flex items-center gap-3">
+          <span class="bg-blue-100 text-blue-800 text-xs font-bold px-2 py-1 rounded">전략 1</span>
+          <span class="font-bold text-gray-800">비용 효율 개선 (CPI 향상)</span>
+        </div>
+        <span class="chevron text-gray-400">▼</span>
+      </div>
+      <div class="str-body">
+        <table class="w-full border-collapse text-sm mt-3">
+          <thead><tr><th class="bg-blue-50 p-2 text-left border">대응 방안</th><th class="bg-blue-50 p-2 text-left border">상세</th><th class="bg-blue-50 p-2 text-left border">기대 효과</th></tr></thead>
+          <tbody>
+            <tr><td class="p-2 border font-semibold">자원 재배치</td><td class="p-2 border">과투입 자원 감축, 적정 수준 재배치</td><td class="p-2 border">CPI 향상, 인건비 절감</td></tr>
+            <tr><td class="p-2 border font-semibold">원가 절감</td><td class="p-2 border">비핵심 외주 전환, 대체 자재 사용</td><td class="p-2 border">직접비 절감</td></tr>
+            <tr><td class="p-2 border font-semibold">범위 재조정</td><td class="p-2 border">고객 협의 비핵심 기능 축소/제거</td><td class="p-2 border">EAC 감소</td></tr>
+            <tr><td class="p-2 border font-semibold">프로세스 개선</td><td class="p-2 border">재작업 감소, 품질 관리 강화</td><td class="p-2 border">비효율 제거</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="strategy-card">
+      <div class="str-header">
+        <div class="flex items-center gap-3">
+          <span class="bg-green-100 text-green-800 text-xs font-bold px-2 py-1 rounded">전략 2</span>
+          <span class="font-bold text-gray-800">일정 여유 활용 (SPI>1 활용)</span>
+        </div>
+        <span class="chevron text-gray-400">▼</span>
+      </div>
+      <div class="str-body">
+        <table class="w-full border-collapse text-sm mt-3">
+          <thead><tr><th class="bg-green-50 p-2 text-left border">활용 방안</th><th class="bg-green-50 p-2 text-left border">상세</th><th class="bg-green-50 p-2 text-left border">효과</th></tr></thead>
+          <tbody>
+            <tr><td class="p-2 border font-semibold">일정 재조정</td><td class="p-2 border">Crashing 중단, 원래 페이스 복구</td><td class="p-2 border">CPI 개선</td></tr>
+            <tr><td class="p-2 border font-semibold">자원 여유 확보</td><td class="p-2 border">여유 인력 타 프로젝트 재배치</td><td class="p-2 border">조직 전체 비용 최적화</td></tr>
+            <tr><td class="p-2 border font-semibold">품질 보강</td><td class="p-2 border">일정 여유로 테스트/검수 강화</td><td class="p-2 border">향후 재작업 방지</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="strategy-card">
+      <div class="str-header">
+        <div class="flex items-center gap-3">
+          <span class="bg-purple-100 text-purple-800 text-xs font-bold px-2 py-1 rounded">전략 3</span>
+          <span class="font-bold text-gray-800">이해관계자 커뮤니케이션</span>
+        </div>
+        <span class="chevron text-gray-400">▼</span>
+      </div>
+      <div class="str-body">
+        <table class="w-full border-collapse text-sm mt-3">
+          <thead><tr><th class="bg-purple-50 p-2 text-left border">보고 대상</th><th class="bg-purple-50 p-2 text-left border">보고 내용</th><th class="bg-purple-50 p-2 text-left border">의사결정 요청</th></tr></thead>
+          <tbody>
+            <tr><td class="p-2 border font-semibold">스폰서</td><td class="p-2 border">EAC 3가지 시나리오</td><td class="p-2 border">추가 예산 또는 범위 축소</td></tr>
+            <tr><td class="p-2 border font-semibold">고객(발주자)</td><td class="p-2 border">일정+비용 현황</td><td class="p-2 border">범위 변경 협의</td></tr>
+            <tr><td class="p-2 border font-semibold">팀원</td><td class="p-2 border">비용 효율화 방향</td><td class="p-2 border">자원 재배치 협조</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div><div id="textbook" class="hidden">
+  <h2 class="text-2xl font-black text-gray-900 mb-6">📖 원문 학습 — 제1부 상세 해설</h2>
+  <div class="textbook-content">
+
+    <div class="insight-box mb-4">
+      <p class="font-bold text-purple-800 mb-1">📋 2교시형 문제 구조 분석</p>
+      <p class="text-sm text-purple-700">소문제 간에 <strong>기초 개념 → 공식 체계 → 실무 적용</strong>의 논리적 연결이 존재한다.</p>
+      <p class="text-sm text-purple-700">• 소문제 1: EVM의 3대 핵심 변수(PV, EV, AC)의 개념 정의</p>
+      <p class="text-sm text-purple-700">• 소문제 2: 성과지표(SV, CV, SPI, CPI) 공식 도출 및 해석</p>
+      <p class="text-sm text-purple-700">• 소문제 3: SPI>1, CPI&lt;1 상황의 진단 및 PM 대응 전략</p>
+    </div>
+
+    <h3>제1장 EVM의 3대 핵심 변수(PV, EV, AC) (소문제 1)</h3>
+
+    <h4>1.1 EVM의 개요와 배경</h4>
+    <div class="def-box">
+      <p class="text-indigo-800"><strong>획득가치관리(EVM: Earned Value Management)</strong>란, 프로젝트의 범위(Scope), 일정(Schedule), 비용(Cost)을 통합적으로 측정·관리하는 정량적 성과 관리 기법이다.</p>
+    </div>
+    <p>EVM의 기원은 1960년대 미국 국방부(DoD)의 PERT/COST 시스템으로 거슬러 올라간다. 1967년 미 국방부가 비용/일정 관리 시스템 기준(C/SCSC)을 도입한 것이 EVM의 공식적 시작이다. 이후 1998년 ANSI/EIA-748 표준으로 발전하였으며, PMI의 PMBOK Guide에서는 프로젝트 비용 관리(Cost Management)의 핵심 기법으로 다루고 있다.</p>
+    <p><strong>EVM이 해결하는 문제</strong>: 전통적인 프로젝트 관리에서는 "현재 얼마를 썼는가(지출)"와 "현재 일정이 어디인가(진척)"를 별도로 관리하였다. 그러나 이 방식은 "투입한 비용 대비 실제로 얼마만큼의 가치를 획득했는가"를 알 수 없다. EVM은 이러한 복합적 상태를 정량적으로 진단할 수 있게 해준다.</p>
+
+    <h4>1.2 EVM의 3대 핵심 변수</h4>
+    <table>
+      <thead><tr><th>변수</th><th>영문 명칭</th><th>정의</th><th>질문</th><th>산정 기준</th></tr></thead>
+      <tbody>
+        <tr><td><strong>PV</strong></td><td>Planned Value (계획가치)</td><td>특정 시점까지 계획상 완료되어야 할 작업의 예산 가치</td><td>"이 시점에 얼마를 쓸 계획이었나?"</td><td>WBS + 일정 기준선</td></tr>
+        <tr><td><strong>EV</strong></td><td>Earned Value (획득가치)</td><td>특정 시점까지 실제로 완료된 작업의 예산 가치</td><td>"실제로 완료한 작업의 가치는?"</td><td>완료 작업 × 계획 예산</td></tr>
+        <tr><td><strong>AC</strong></td><td>Actual Cost (실제비용)</td><td>특정 시점까지 실제로 지출한 비용</td><td>"실제로 얼마를 썼나?"</td><td>실제 투입 비용 합계</td></tr>
+      </tbody>
+    </table>
+    <p><strong>핵심 이해</strong>: PV는 "계획", EV는 "실적", AC는 "지출"이다. PV와 EV를 비교하면 일정 성과를 알 수 있고, EV와 AC를 비교하면 비용 성과를 알 수 있다.</p>
+
+    <h4>1.3 EVM S-커브와 3대 변수의 시각화</h4>
+    <div class="bg-slate-50 rounded-lg border p-4 text-center my-3">
+      <p class="text-sm text-gray-600">PV 곡선: 프로젝트 시작부터 끝까지 계획된 지출 곡선 (기준선)</p>
+      <p class="text-sm text-gray-600">EV 곡선: 실제 완료 작업의 가치 곡선</p>
+      <p class="text-sm text-gray-600">AC 곡선: 실제 지출 곡선</p>
+      <p class="text-sm text-gray-600 font-semibold">BAC(Budget at Completion): 프로젝트 전체 예산 = PV 곡선의 최종값</p>
+    </div>
+
+    <h4>1.4 EVM 변수 산정 예시</h4>
+    <p><strong>예시 프로젝트</strong>: 총 예산 10억 원, 기간 10개월, 현재 5개월차</p>
+    <table>
+      <thead><tr><th>구분</th><th>값</th><th>해석</th></tr></thead>
+      <tbody>
+        <tr><td><strong>PV(5개월차)</strong></td><td>5억 원</td><td>5개월차까지 5억 원어치 작업 완료 계획</td></tr>
+        <tr><td><strong>EV(5개월차)</strong></td><td>6억 원</td><td>실제로 6억 원어치 작업 완료 (일정 앞서감)</td></tr>
+        <tr><td><strong>AC(5개월차)</strong></td><td>7억 원</td><td>6억 원어치 작업에 7억 원 지출 (비용 초과)</td></tr>
+      </tbody>
+    </table>
+
+    <h3>제2장 성과지표(SV, CV, SPI, CPI) 공식 체계 (소문제 2)</h3>
+
+    <h4>2.1 차이 지표(Variance Indicators)</h4>
+    <p><strong>일정차이(SV: Schedule Variance)</strong>: SV = EV - PV</p>
+    <table>
+      <thead><tr><th>SV 값</th><th>해석</th></tr></thead>
+      <tbody>
+        <tr><td>SV > 0</td><td>일정보다 앞서 진행</td></tr>
+        <tr><td>SV = 0</td><td>일정 계획대로 진행</td></tr>
+        <tr><td>SV &lt; 0</td><td>일정 지연</td></tr>
+      </tbody>
+    </table>
+    <p><strong>비용차이(CV: Cost Variance)</strong>: CV = EV - AC</p>
+    <table>
+      <thead><tr><th>CV 값</th><th>해석</th></tr></thead>
+      <tbody>
+        <tr><td>CV > 0</td><td>예산 절감</td></tr>
+        <tr><td>CV = 0</td><td>예산 계획대로</td></tr>
+        <tr><td>CV &lt; 0</td><td>비용 초과</td></tr>
+      </tbody>
+    </table>
+
+    <h4>2.2 효율 지표(Performance Indices)</h4>
+    <p><strong>일정성과지수(SPI)</strong>: SPI = EV / PV (>1.0 일정 앞섬, =1.0 계획대로, &lt;1.0 지연)</p>
+    <p><strong>비용성과지수(CPI)</strong>: CPI = EV / AC (>1.0 효율적, =1.0 계획대로, &lt;1.0 비효율)</p>
+
+    <h4>2.3 4대 성과지표 통합 정리</h4>
+    <table>
+      <thead><tr><th>지표</th><th>공식</th><th>기준값</th><th>양호 조건</th><th>측정 대상</th></tr></thead>
+      <tbody>
+        <tr><td><strong>SV</strong></td><td>EV - PV</td><td>0</td><td>SV > 0</td><td>일정 차이 (절대값)</td></tr>
+        <tr><td><strong>CV</strong></td><td>EV - AC</td><td>0</td><td>CV > 0</td><td>비용 차이 (절대값)</td></tr>
+        <tr><td><strong>SPI</strong></td><td>EV / PV</td><td>1.0</td><td>SPI > 1.0</td><td>일정 효율 (비율)</td></tr>
+        <tr><td><strong>CPI</strong></td><td>EV / AC</td><td>1.0</td><td>CPI > 1.0</td><td>비용 효율 (비율)</td></tr>
+      </tbody>
+    </table>
+
+    <h4>2.4 예측 지표(Forecasting Indicators)</h4>
+    <p><strong>완료 시 예상 비용(EAC: Estimate at Completion)</strong></p>
+    <table>
+      <thead><tr><th>상황</th><th>EAC 공식</th><th>가정</th></tr></thead>
+      <tbody>
+        <tr><td>현재 추세 지속</td><td>EAC = BAC / CPI</td><td>현재의 비용 효율이 유지됨</td></tr>
+        <tr><td>향후 정상 복귀</td><td>EAC = AC + (BAC - EV)</td><td>남은 작업은 계획대로 수행</td></tr>
+        <tr><td>SPI·CPI 동시 반영</td><td>EAC = AC + (BAC - EV) / (CPI × SPI)</td><td>일정·비용 비효율 모두 반영</td></tr>
+      </tbody>
+    </table>
+    <p><strong>ETC</strong> = EAC - AC (잔여 작업 비용), <strong>VAC</strong> = BAC - EAC (완료 시 차이)</p>
+
+    <h4>2.5 EVM 지표의 국제 표준 근거</h4>
+    <table>
+      <thead><tr><th>표준</th><th>EVM 관련 내용</th></tr></thead>
+      <tbody>
+        <tr><td><strong>PMBOK 7th (PMI)</strong></td><td>성과 영역 중 "측정(Measurement)" — EVM을 핵심 기법으로 제시</td></tr>
+        <tr><td><strong>ISO 21508:2018</strong></td><td>획득가치관리 국제 표준 — EVM 용어, 프로세스, 보고 체계 정의</td></tr>
+        <tr><td><strong>ANSI/EIA-748</strong></td><td>미국 EVM 시스템 기준 — 32개 가이드라인</td></tr>
+        <tr><td><strong>NDIA EVMS Intent Guide</strong></td><td>ANSI/EIA-748의 실무 적용 가이드</td></tr>
+      </tbody>
+    </table>
+    <!-- 제3장 SPI>1, CPI<1 상황 진단 및 PM 대응 전략 -->
+    <h3 class="text-xl font-bold text-gray-800 mt-10 mb-4 pb-2 border-b-2 border-indigo-200">제3장 SPI&gt;1, CPI&lt;1 상황 진단 및 PM 대응 전략 (소문제 3)</h3>
+
+    <h4 class="text-lg font-semibold text-gray-700 mt-6 mb-3">3.1 SPI=1.2, CPI=0.8 상황 분석</h4>
+    <p class="text-gray-700 leading-relaxed mb-3"><strong>시나리오</strong>: 프로젝트 중간 시점에서 SPI=1.2, CPI=0.8으로 측정되었다.</p>
+    <table class="w-full border-collapse border border-gray-300 text-sm mb-4">
+      <thead><tr class="bg-gray-100">
+        <th class="border border-gray-300 px-3 py-2 text-left">지표</th>
+        <th class="border border-gray-300 px-3 py-2 text-left">측정값</th>
+        <th class="border border-gray-300 px-3 py-2 text-left">해석</th>
+      </tr></thead>
+      <tbody>
+        <tr><td class="border border-gray-300 px-3 py-2"><strong>SPI = 1.2</strong></td><td class="border border-gray-300 px-3 py-2">EV/PV = 1.2</td><td class="border border-gray-300 px-3 py-2">계획 대비 <strong>120%</strong> 일정 진척 → 일정 <strong>20% 앞서감</strong></td></tr>
+        <tr><td class="border border-gray-300 px-3 py-2"><strong>CPI = 0.8</strong></td><td class="border border-gray-300 px-3 py-2">EV/AC = 0.8</td><td class="border border-gray-300 px-3 py-2">획득가치 대비 <strong>125%</strong> 비용 지출 → 비용 <strong>25% 초과</strong></td></tr>
+      </tbody>
+    </table>
+    <div class="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-r-lg mb-6">
+      <p class="text-gray-700"><strong>진단</strong>: "<strong>일정은 빠르지만 비용이 초과</strong>"된 상황이다. 이는 프로젝트가 <strong>Crashing(자원 집중 투입)</strong> 또는 <strong>Fast Tracking(병렬 수행)</strong> 등 일정 단축 기법을 적용했거나, <strong>비효율적 자원 운영</strong>이 발생하고 있음을 시사한다.</p>
+    </div>
+
+    <h4 class="text-lg font-semibold text-gray-700 mt-6 mb-3">3.2 가능한 원인 분석</h4>
+    <table class="w-full border-collapse border border-gray-300 text-sm mb-6">
+      <thead><tr class="bg-gray-100">
+        <th class="border border-gray-300 px-3 py-2 text-left">원인 범주</th>
+        <th class="border border-gray-300 px-3 py-2 text-left">상세 원인</th>
+        <th class="border border-gray-300 px-3 py-2 text-center">SPI 영향</th>
+        <th class="border border-gray-300 px-3 py-2 text-center">CPI 영향</th>
+      </tr></thead>
+      <tbody>
+        <tr><td class="border border-gray-300 px-3 py-2"><strong>자원 과투입(Crashing)</strong></td><td class="border border-gray-300 px-3 py-2">일정 단축을 위해 추가 인력/야근 투입</td><td class="border border-gray-300 px-3 py-2 text-center text-green-600">↑ (일정 앞당김)</td><td class="border border-gray-300 px-3 py-2 text-center text-red-600">↓ (추가 비용 발생)</td></tr>
+        <tr><td class="border border-gray-300 px-3 py-2"><strong>병렬 수행(Fast Tracking)</strong></td><td class="border border-gray-300 px-3 py-2">순차 작업을 병렬로 수행하여 재작업 발생</td><td class="border border-gray-300 px-3 py-2 text-center text-green-600">↑ (일정 앞당김)</td><td class="border border-gray-300 px-3 py-2 text-center text-red-600">↓ (재작업 비용)</td></tr>
+        <tr><td class="border border-gray-300 px-3 py-2"><strong>고급 인력 투입</strong></td><td class="border border-gray-300 px-3 py-2">저급 인력 계획 → 고급 인력 실투입</td><td class="border border-gray-300 px-3 py-2 text-center text-green-600">↑ (생산성 향상)</td><td class="border border-gray-300 px-3 py-2 text-center text-red-600">↓ (단가 상승)</td></tr>
+        <tr><td class="border border-gray-300 px-3 py-2"><strong>외주 비용 초과</strong></td><td class="border border-gray-300 px-3 py-2">외주 단가 상승 또는 추가 범위 발생</td><td class="border border-gray-300 px-3 py-2 text-center">-</td><td class="border border-gray-300 px-3 py-2 text-center text-red-600">↓ (비용 초과)</td></tr>
+        <tr><td class="border border-gray-300 px-3 py-2"><strong>범위 변경(Scope Creep)</strong></td><td class="border border-gray-300 px-3 py-2">비공식적 범위 증가</td><td class="border border-gray-300 px-3 py-2 text-center text-green-600">↑ (추가 작업 완료)</td><td class="border border-gray-300 px-3 py-2 text-center text-red-600">↓ (추가 비용)</td></tr>
+      </tbody>
+    </table>
+
+    <h4 class="text-lg font-semibold text-gray-700 mt-6 mb-3">3.3 수치 기반 EAC 예측</h4>
+    <p class="text-gray-700 leading-relaxed mb-3"><strong>BAC(전체 예산) = 10억 원, 현재 5개월차(총 10개월)</strong></p>
+    <table class="w-full border-collapse border border-gray-300 text-sm mb-4">
+      <thead><tr class="bg-gray-100">
+        <th class="border border-gray-300 px-3 py-2 text-left">시나리오</th>
+        <th class="border border-gray-300 px-3 py-2 text-left">EAC 공식</th>
+        <th class="border border-gray-300 px-3 py-2 text-left">계산</th>
+        <th class="border border-gray-300 px-3 py-2 text-left">결과</th>
+        <th class="border border-gray-300 px-3 py-2 text-left">예산 초과</th>
+      </tr></thead>
+      <tbody>
+        <tr><td class="border border-gray-300 px-3 py-2">현재 추세 지속</td><td class="border border-gray-300 px-3 py-2">BAC / CPI</td><td class="border border-gray-300 px-3 py-2">10억 / 0.8</td><td class="border border-gray-300 px-3 py-2 font-bold">12.5억 원</td><td class="border border-gray-300 px-3 py-2 text-red-600">+2.5억 (25%)</td></tr>
+        <tr><td class="border border-gray-300 px-3 py-2">향후 정상 복귀</td><td class="border border-gray-300 px-3 py-2">AC + (BAC - EV)</td><td class="border border-gray-300 px-3 py-2">7.5억 + (10억 - 6억)</td><td class="border border-gray-300 px-3 py-2 font-bold">11.5억 원</td><td class="border border-gray-300 px-3 py-2 text-red-600">+1.5억 (15%)</td></tr>
+        <tr><td class="border border-gray-300 px-3 py-2">SPI·CPI 반영</td><td class="border border-gray-300 px-3 py-2">AC + (BAC - EV)/(CPI×SPI)</td><td class="border border-gray-300 px-3 py-2">7.5억 + 4억/(0.8×1.2)</td><td class="border border-gray-300 px-3 py-2 font-bold">11.67억 원</td><td class="border border-gray-300 px-3 py-2 text-red-600">+1.67억 (16.7%)</td></tr>
+      </tbody>
+    </table>
+    <div class="bg-indigo-50 border-l-4 border-indigo-400 p-4 rounded-r-lg mb-6">
+      <p class="text-gray-700"><strong>해석</strong>: 어떤 시나리오든 <strong>최소 1.5억~2.5억 원의 예산 초과</strong>가 예상된다. 현재 추세가 지속되면 최대 25%의 예산 초과가 발생한다.</p>
+    </div>
+
+    <h4 class="text-lg font-semibold text-gray-700 mt-6 mb-3">3.4 PM의 대응 전략</h4>
+    <p class="text-gray-700 leading-relaxed mb-3"><strong>[전략 1] 비용 효율 개선 (CPI 향상 전략)</strong></p>
+    <table class="w-full border-collapse border border-gray-300 text-sm mb-4">
+      <thead><tr class="bg-gray-100">
+        <th class="border border-gray-300 px-3 py-2 text-left">대응 방안</th>
+        <th class="border border-gray-300 px-3 py-2 text-left">상세 내용</th>
+        <th class="border border-gray-300 px-3 py-2 text-left">기대 효과</th>
+      </tr></thead>
+      <tbody>
+        <tr><td class="border border-gray-300 px-3 py-2"><strong>자원 재배치(Resource Leveling)</strong></td><td class="border border-gray-300 px-3 py-2">과투입 자원을 감축하고 적정 수준으로 재배치</td><td class="border border-gray-300 px-3 py-2">CPI 향상, 인건비 절감</td></tr>
+        <tr><td class="border border-gray-300 px-3 py-2"><strong>원가 절감(Cost Reduction)</strong></td><td class="border border-gray-300 px-3 py-2">비핵심 활동의 외주 전환, 대체 자재 사용</td><td class="border border-gray-300 px-3 py-2">직접비 절감</td></tr>
+        <tr><td class="border border-gray-300 px-3 py-2"><strong>범위 재조정(Scope Re-baseline)</strong></td><td class="border border-gray-300 px-3 py-2">고객과 협의하여 비핵심 기능 축소/제거</td><td class="border border-gray-300 px-3 py-2">EAC 감소</td></tr>
+        <tr><td class="border border-gray-300 px-3 py-2"><strong>프로세스 개선</strong></td><td class="border border-gray-300 px-3 py-2">재작업(Rework) 감소, 품질 관리 강화</td><td class="border border-gray-300 px-3 py-2">비효율 제거</td></tr>
+      </tbody>
+    </table>
+
+    <p class="text-gray-700 leading-relaxed mb-3"><strong>[전략 2] 일정 여유 활용 (SPI&gt;1 활용)</strong></p>
+    <p class="text-gray-700 leading-relaxed mb-3">SPI가 1.2로 일정이 앞서고 있으므로, 이 여유를 활용할 수 있다.</p>
+    <table class="w-full border-collapse border border-gray-300 text-sm mb-4">
+      <thead><tr class="bg-gray-100">
+        <th class="border border-gray-300 px-3 py-2 text-left">활용 방안</th>
+        <th class="border border-gray-300 px-3 py-2 text-left">상세 내용</th>
+        <th class="border border-gray-300 px-3 py-2 text-left">효과</th>
+      </tr></thead>
+      <tbody>
+        <tr><td class="border border-gray-300 px-3 py-2"><strong>일정 재조정</strong></td><td class="border border-gray-300 px-3 py-2">앞당긴 일정을 원래대로 복구하여 Crashing 중단</td><td class="border border-gray-300 px-3 py-2">CPI 개선</td></tr>
+        <tr><td class="border border-gray-300 px-3 py-2"><strong>자원 여유 확보</strong></td><td class="border border-gray-300 px-3 py-2">여유 인력을 다른 프로젝트에 재배치</td><td class="border border-gray-300 px-3 py-2">조직 전체 비용 최적화</td></tr>
+        <tr><td class="border border-gray-300 px-3 py-2"><strong>품질 보강</strong></td><td class="border border-gray-300 px-3 py-2">일정 여유를 활용하여 테스트/검수 강화</td><td class="border border-gray-300 px-3 py-2">향후 재작업 방지</td></tr>
+      </tbody>
+    </table>
+
+    <p class="text-gray-700 leading-relaxed mb-3"><strong>[전략 3] 이해관계자 커뮤니케이션</strong></p>
+    <table class="w-full border-collapse border border-gray-300 text-sm mb-6">
+      <thead><tr class="bg-gray-100">
+        <th class="border border-gray-300 px-3 py-2 text-left">보고 대상</th>
+        <th class="border border-gray-300 px-3 py-2 text-left">보고 내용</th>
+        <th class="border border-gray-300 px-3 py-2 text-left">의사결정 요청</th>
+      </tr></thead>
+      <tbody>
+        <tr><td class="border border-gray-300 px-3 py-2">프로젝트 스폰서</td><td class="border border-gray-300 px-3 py-2">EAC 예측치 3가지 시나리오</td><td class="border border-gray-300 px-3 py-2">추가 예산 승인 또는 범위 축소</td></tr>
+        <tr><td class="border border-gray-300 px-3 py-2">고객(발주자)</td><td class="border border-gray-300 px-3 py-2">일정 앞당김 + 비용 초과 현황</td><td class="border border-gray-300 px-3 py-2">범위 변경 협의</td></tr>
+        <tr><td class="border border-gray-300 px-3 py-2">팀원</td><td class="border border-gray-300 px-3 py-2">비용 효율화 방향 공유</td><td class="border border-gray-300 px-3 py-2">자원 재배치 협조</td></tr>
+      </tbody>
+    </table>
+
+    <h4 class="text-lg font-semibold text-gray-700 mt-6 mb-3">3.5 연관 이론 연결</h4>
+    <p class="text-gray-700 leading-relaxed mb-3"><strong>PMBOK의 통합 변경 관리(Integrated Change Control)</strong>: EVM 분석 결과 비용 초과가 예측되면, 이를 공식적인 변경 요청(Change Request)으로 처리해야 한다. 변경 통제 위원회(CCB)에서 범위 축소, 예산 증액, 일정 재조정 등의 대안을 심의·결정한다.</p>
+    <p class="text-gray-700 leading-relaxed mb-3"><strong>위험 관리(Risk Management)</strong>: CPI&lt;1 상황은 비용 위험이 현실화된 것이다. 이를 위험 등록부(Risk Register)에 업데이트하고, 잔여 위험에 대한 대응 계획을 수립해야 한다. Monte Carlo 시뮬레이션을 활용하여 EAC의 확률적 분포를 분석할 수도 있다.</p>
+    <p class="text-gray-700 leading-relaxed mb-6"><strong>Agile EVM</strong>: 전통적 EVM을 애자일 환경에 적응시킨 방법론이다. 스프린트 단위로 PV/EV/AC를 측정하며, 스토리 포인트 기반으로 EV를 산정한다. 대규모 애자일 프레임워크(SAFe)에서 PI(Program Increment) 수준의 EVM을 적용하고 있다.</p>
+
+    <!-- 소문제 간 통합 분석 -->
+    <h3 class="text-xl font-bold text-gray-800 mt-10 mb-4 pb-2 border-b-2 border-indigo-200">소문제 간 통합 분석</h3>
+    <table class="w-full border-collapse border border-gray-300 text-sm mb-4">
+      <thead><tr class="bg-gray-100">
+        <th class="border border-gray-300 px-3 py-2 text-left">관점</th>
+        <th class="border border-gray-300 px-3 py-2 text-left">소문제 1</th>
+        <th class="border border-gray-300 px-3 py-2 text-left">소문제 2</th>
+        <th class="border border-gray-300 px-3 py-2 text-left">소문제 3</th>
+      </tr></thead>
+      <tbody>
+        <tr><td class="border border-gray-300 px-3 py-2"><strong>층위</strong></td><td class="border border-gray-300 px-3 py-2">기초 개념</td><td class="border border-gray-300 px-3 py-2">공식 체계</td><td class="border border-gray-300 px-3 py-2">실무 적용</td></tr>
+        <tr><td class="border border-gray-300 px-3 py-2"><strong>핵심 질문</strong></td><td class="border border-gray-300 px-3 py-2">EVM의 3대 변수란?</td><td class="border border-gray-300 px-3 py-2">변수로 무엇을 측정?</td><td class="border border-gray-300 px-3 py-2">측정 결과를 어떻게 활용?</td></tr>
+        <tr><td class="border border-gray-300 px-3 py-2"><strong>핵심 개념</strong></td><td class="border border-gray-300 px-3 py-2">PV, EV, AC</td><td class="border border-gray-300 px-3 py-2">SV, CV, SPI, CPI</td><td class="border border-gray-300 px-3 py-2">EAC 예측, 대응 전략</td></tr>
+        <tr><td class="border border-gray-300 px-3 py-2"><strong>연결 고리</strong></td><td class="border border-gray-300 px-3 py-2">변수 정의 →</td><td class="border border-gray-300 px-3 py-2">공식으로 조합 →</td><td class="border border-gray-300 px-3 py-2">진단·대응에 활용</td></tr>
+      </tbody>
+    </table>
+    <p class="text-gray-700 leading-relaxed mb-4">결론적으로, EVM은 프로젝트의 <strong>3대 변수(PV, EV, AC)</strong>를 기반으로 <strong>4대 성과지표(SV, CV, SPI, CPI)</strong>를 도출하고, 이를 통해 프로젝트 상태를 <strong>정량적으로 진단</strong>하며 <strong>예측 기반 의사결정</strong>을 가능하게 하는 통합 관리 프레임워크이다.</p>
+
+  </div><!-- /textbook inner close -->
+</div><!-- /textbook section close -->
+
+<div id="script" class="hidden">
+  <div class="bg-amber-50 border border-amber-200 rounded-xl p-6 mb-6">
+    <div class="flex items-center gap-2 mb-2"><span class="text-2xl">🎬</span><h2 class="text-xl font-bold text-amber-800">강의 스크립트</h2><span class="bg-amber-200 text-amber-800 text-xs px-2 py-1 rounded-full">멘토 전용</span></div>
+    <p class="text-amber-700 text-sm">ZIP-UP 멘토링 프로그램 — 20분 강의용</p>
+  </div>
+  <div class="bg-white rounded-xl shadow-sm border p-6 leading-relaxed text-gray-700 space-y-4">
+    <p>안녕하세요, 여러분. 오늘은 소프트웨어공학에서 빠질 수 없는 토픽, <span class="highlight">EVM(획득가치관리)</span>을 다뤄볼 건데요. EVM은 기술사 시험에서 정말 자주 나오는 단골 토픽이에요. 왜냐하면 공식이 명확하고, 수치 계산이 가능하고, 실무에서도 많이 쓰이거든요. 출제위원 입장에서 문제 만들기도 좋고, 채점 기준도 명확하니까 시험에 안 내기가 어려운 토픽이에요.</p>
+    <p>사실 EVM은 1960년대 미국 국방부에서 시작된 오래된 기법인데요, <span class="highlight">PMBOK</span>에서 비용 관리의 핵심 기법으로 다루고 있고, <span class="highlight">ISO 21508</span>이라는 국제 표준까지 있어요. 국내 대형 SI 프로젝트에서도 PMO가 EVM으로 프로젝트 건전성을 모니터링하거든요. 이론과 실무 모두에서 중요한 토픽이라는 거죠.</p>
+    <p>특히 2교시형으로 나오면 소문제 3개가 딱 맞아떨어지거든요. 변수 정의, 공식 도출, 그리고 실무 적용 시나리오. 이 삼단계가 자연스러운 흐름을 만들어줘요.</p>
+    <p>소문제 구조부터 잡아볼게요. 소문제 1은 "EVM의 3대 변수가 뭐냐"라는 기본 개념이에요. 소문제 2는 "이 변수들로 뭘 계산할 수 있느냐"라는 공식 체계고요. 소문제 3은 "측정 결과가 SPI=1.2, CPI=0.8이면 어떻게 진단하고 대응하느냐"라는 실무 적용입니다. 정리하면 <span class="highlight">"변수 정의 → 공식 도출 → 진단·대응"</span>의 삼단 구조예요. 서론에서 이 흐름을 미리 보여주면 채점관이 "아, 이 수험생은 문제 전체 구조를 파악했구나" 하고 느낄 거예요.</p>
+    <p>소문제 1, EVM의 3대 변수부터 갈게요. <span class="highlight">PV, EV, AC</span> — 이 세 개만 알면 EVM의 80%는 끝이에요. 실제로 국내 대기업 IT 프로젝트에서 PMO(프로젝트관리오피스)가 매월 EVM 리포트를 작성하거든요. 삼성SDS, LG CNS 같은 대형 SI 업체들이 수백억 원 규모 프로젝트에서 EVM으로 비용·일정 건전성을 모니터링하고 있어요.</p>
+    <p>먼저 쉽게 비유를 들어볼게요. 여러분이 10일 동안 책 한 권을 읽기로 했다고 해봐요. 5일째에요. PV는 "5일차까지 절반인 150페이지를 읽을 계획이었어"라는 거예요. 계획이죠. EV는 "실제로 180페이지를 읽었어"라는 거예요. 실적이죠. 그런데 AC는 "계획에 없던 스터디 카페 비용까지 써서 총 7만 원을 썼어"라는 거예요. 실제 비용이에요. 이 세 변수만 알면 "일정보다 앞서가고 있지만(EV&gt;PV), 비용은 계획보다 많이 쓰고 있다(AC&gt;EV)"는 걸 바로 알 수 있잖아요.</p>
+    <p>답안에서는 이 세 변수를 표로 깔끔하게 정리하세요. 변수명, 영문 명칭, 정의, 산정 기준 — 이 네 열이면 충분해요. 그리고 각 변수의 산정 기준을 한 줄씩 설명해주면 좋아요. PV는 <span class="highlight">WBS(작업분해구조)</span>와 일정 기준선(Schedule Baseline)에서 나오고, EV는 실제 완료된 작업 패키지에 해당 작업의 계획 예산을 곱해서 산출하고, AC는 회계 시스템에서 실제 집행된 금액을 가져오는 거예요.</p>
+    <p>그리고 반드시 <span class="highlight">S-커브 도식</span>을 그려야 해요. 가로축이 시간, 세로축이 비용인 그래프에 PV, EV, AC 세 곡선을 그리면 돼요. S자 모양으로 초반에는 완만하다가 중반에 급해지고 후반에 다시 완만해지는 전형적인 커브인데, 이 도식 하나가 EVM의 핵심을 다 보여줍니다. 반드시 그리세요.</p>
+    <p>그리고 <span class="highlight">BAC(Budget at Completion)</span>도 꼭 표시하세요. 전체 예산이에요. PV 곡선의 마지막 값이 BAC인 거죠. 나중에 EAC 계산할 때 BAC가 필수니까 여기서 미리 정의해두는 게 중요해요.</p>
+    <p>소문제 2, 성과지표입니다. 이 부분이 30%로 가장 비중이 큰데요, 외울 게 많아 보이지만 핵심은 하나예요. <span class="highlight">"EV가 항상 주인공"</span>이라는 거예요.</p>
+    <p>SV는 EV-PV, CV는 EV-AC. 빼기 공식에서 EV가 항상 앞에 와요. 양수면 좋은 거예요. SPI는 EV/PV, CPI는 EV/AC. 나누기 공식에서도 EV가 항상 분자예요. 1보다 크면 좋은 거예요. 이 패턴만 기억하면 공식 네 개를 절대 안 틀려요.</p>
+    <p>여기서 많이들 헷갈려하시는 게 있는데요, SV의 단위가 "시간"이 아니라 "금액"이라는 점이에요. Schedule Variance라고 해서 일정 차이를 "며칠 앞섰다/늦었다"로 표현하는 게 아니라, "금액 기준으로 얼마만큼의 작업 가치 차이가 나느냐"로 표현하는 거예요.</p>
+    <p><span class="highlight">EAC(완료 시 예상 비용)</span> 공식도 꼭 써야 해요. 세 가지 시나리오가 있는데, 첫 번째는 "현재 추세가 계속된다"는 가정으로 BAC/CPI, 두 번째는 "앞으로는 정상적으로 수행한다"는 가정으로 AC+(BAC-EV), 세 번째는 "일정과 비용 비효율이 모두 계속된다"는 가정으로 AC+(BAC-EV)/(CPI×SPI)예요. 이 세 가지를 다 쓰면 확실한 차별화 포인트입니다.</p>
+    <p>소문제 3이 가장 재미있는 부분인데요, <span class="highlight">SPI=1.2, CPI=0.8</span>이라는 구체적 수치가 주어지잖아요. 이걸 해석하면 "일정은 20% 앞서가고 있지만, 비용은 25% 초과"인 상황이에요. 한 마디로 "돈을 많이 써서 빨리 가고 있다"는 거죠.</p>
+    <p>가장 흔한 원인이 <span class="highlight">Crashing</span>이에요. 일정을 단축하려고 야근을 시키고 추가 인력을 투입한 거죠. <span class="highlight">Fast Tracking</span>도 비슷해요. 순서대로 해야 할 작업을 병렬로 동시에 하니까 빨라지긴 하는데, 재작업이 발생해서 비용이 늘어나요. 이런 원인을 5가지 정도 표로 정리하면 완벽합니다.</p>
+    <p>그 다음은 EAC 예측인데요, BAC를 10억 원으로 가정하고 세 가지 시나리오별로 계산해보세요. 현재 추세 지속이면 10억/0.8 = 12.5억 원, 향후 정상이면 AC + 잔여 = 약 11.5억 원. 구체적 수치를 보여주면 채점관이 "이 수험생은 공식만 아는 게 아니라 실제로 적용할 줄도 안다"고 평가할 거예요.</p>
+    <p>대응 전략은 크게 두 갈래로 나눌 수 있어요. 핵심은 "SPI가 여유 있으니까 이걸 활용해서 CPI를 끌어올리자"는 전략이에요. 첫 번째는 비용 효율 개선, 즉 CPI를 올리는 거고, 두 번째는 일정 여유 활용, 즉 SPI가 1.2로 여유가 있으니까 Crashing을 중단하고 정상 페이스로 돌아가는 거예요.</p>
+    <p>결론에서는 세 소문제를 통합해서 "EVM은 3대 변수로 프로젝트 상태를 측정하고, 4대 성과지표로 정량 진단하며, 이를 기반으로 예측과 대응을 수행하는 통합 관리 프레임워크"라고 정리하세요. 미래 전망으로 <span class="highlight">Agile EVM</span>을 한 줄 넣으면 완성이에요. 스프린트 단위로 PV/EV/AC를 측정하는 건데, SAFe에서 이미 적용하고 있다는 점을 언급하면 현대적 감각을 보여줄 수 있어요.</p>
+    <p>필수 도식 세 가지를 다시 확인하세요. <span class="highlight">S-커브</span>, <span class="highlight">성과지표 공식 표</span>, <span class="highlight">SPI/CPI 4분면 매트릭스</span>. 이 세 개만 그리면 됩니다. 여러분, 이 토픽은 공식만 확실히 외우면 자신 있게 쓸 수 있는 토픽이에요. 오늘도 수고 많으셨습니다. 다음 시간에 뵙겠습니다!</p>
+  </div>
+</div>
+
+<div id="quiz" class="hidden">
+
+  <!-- AI 실전 퀴즈 영역 -->
+  <div class="bg-indigo-50 rounded-xl p-6 border border-indigo-100 mb-8">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="font-bold text-indigo-900 text-lg flex items-center"><span class="mr-2">🧠</span> AI 실전 문제 생성</h3>
+      <button onclick="generateQuiz()" id="btn-quiz-gen" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm transition-colors flex items-center gap-2"><span>✨ 새로운 문제 생성</span></button>
+    </div>
+    <div id="quiz-loading" class="hidden py-8 text-center">
+      <div class="typing-indicator flex justify-center mb-2"><span></span><span></span><span></span></div>
+      <p class="text-indigo-600 text-sm">AI가 문제를 출제하고 있습니다...</p>
+    </div>
+    <div id="quiz-container" class="hidden space-y-4">
+      <div class="bg-white p-5 rounded-lg shadow-sm border border-indigo-100">
+        <div class="flex items-start gap-2 mb-4">
+          <span id="quiz-type-badge" class="bg-indigo-100 text-indigo-800 text-xs font-bold px-2 py-1 rounded whitespace-nowrap mt-1">객관식</span>
+          <p id="quiz-question" class="font-bold text-gray-800 text-lg"></p>
+        </div>
+        <div id="quiz-options" class="space-y-2"></div>
+        <div id="quiz-input-area" class="hidden mt-4">
+          <div class="flex gap-2">
+            <input type="text" id="quiz-answer-input" placeholder="정답을 입력하세요" class="flex-grow border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <button onclick="checkShortAnswer()" id="btn-short-submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-bold">제출</button>
+          </div>
+        </div>
+      </div>
+      <div id="quiz-feedback" class="hidden bg-white p-5 rounded-lg border-l-4"></div>
+    </div>
+    <div id="quiz-placeholder" class="text-center py-8 text-gray-500 border-2 border-dashed border-indigo-200 rounded-lg">
+      <p>'새로운 문제 생성' 버튼을 눌러 실력을 점검해보세요.</p>
+    </div>
+  </div>
+
+  <!-- 암기 노트 ① 두문자어 -->
+  <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center"><span class="mr-2">📝</span> 암기 노트 ① 두문자어</h3>
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+    <div class="bg-purple-50 border border-purple-200 rounded-xl p-5">
+      <div class="text-center mb-2"><span class="bg-purple-600 text-white text-lg font-black px-3 py-1 rounded-lg">파에아</span></div>
+      <p class="text-sm text-purple-800 font-bold text-center mb-2">EVM 3대 변수</p>
+      <ul class="text-sm text-purple-700 space-y-1">
+        <li><strong>파</strong>: Planned Value — 계획가치 ("파란색 계획선")</li>
+        <li><strong>에</strong>: Earned Value — 획득가치 ("에너지를 써서 얻은 성과")</li>
+        <li><strong>아</strong>: Actual Cost — 실제비용 ("아, 이렇게 많이 썼나")</li>
+      </ul>
+    </div>
+    <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-5">
+      <div class="text-center mb-2"><span class="bg-indigo-600 text-white text-lg font-black px-3 py-1 rounded-lg">EV가 주인공</span></div>
+      <p class="text-sm text-indigo-800 font-bold text-center mb-2">4대 성과지표 핵심</p>
+      <ul class="text-sm text-indigo-700 space-y-1">
+        <li>SV/CV: <strong>EV에서 뺄셈</strong> (EV-PV, EV-AC) → 양수가 좋다</li>
+        <li>SPI/CPI: <strong>EV로 나눗셈</strong> (EV/PV, EV/AC) → 1보다 크면 좋다</li>
+        <li>공통: EV가 항상 분자/피감수</li>
+      </ul>
+    </div>
+    <div class="bg-green-50 border border-green-200 rounded-xl p-5">
+      <div class="text-center mb-2"><span class="bg-green-600 text-white text-lg font-black px-3 py-1 rounded-lg">비에배</span></div>
+      <p class="text-sm text-green-800 font-bold text-center mb-2">EAC 3가지 공식</p>
+      <ul class="text-sm text-green-700 space-y-1">
+        <li><strong>비</strong>: BAC/CPI — 현재 추세 지속</li>
+        <li><strong>에</strong>: AC+(BAC-EV) — 향후 정상 복귀</li>
+        <li><strong>배</strong>: AC+(BAC-EV)/(CPI×SPI) — SPI·CPI 반영</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 암기 노트 ② 골격 답안 -->
+  <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center"><span class="mr-2">📝</span> 암기 노트 ② 골격 답안 구조</h3>
+  <div class="bg-white rounded-xl shadow-sm border p-5 mb-8">
+    <table class="w-full text-sm">
+      <thead><tr class="bg-gray-50">
+        <th class="px-3 py-2 text-left font-bold text-gray-700 border-b">구간</th>
+        <th class="px-3 py-2 text-left font-bold text-gray-700 border-b">비중</th>
+        <th class="px-3 py-2 text-left font-bold text-gray-700 border-b">핵심 내용</th>
+      </tr></thead>
+      <tbody>
+        <tr class="border-b"><td class="px-3 py-2 font-bold">서론</td><td class="px-3 py-2">10%</td><td class="px-3 py-2">프로젝트 3대 제약(범위·일정·비용) 통합 관리 필요성 + EVM 개요</td></tr>
+        <tr class="border-b"><td class="px-3 py-2 font-bold">소문제 1</td><td class="px-3 py-2">25%</td><td class="px-3 py-2">PV/EV/AC 정의 + S-커브 도식 + 산정 기준과 예시</td></tr>
+        <tr class="border-b"><td class="px-3 py-2 font-bold">소문제 2</td><td class="px-3 py-2">30%</td><td class="px-3 py-2">SV/CV/SPI/CPI 공식 + 해석 표 + EAC/ETC/VAC 예측 공식 (3가지 시나리오) + 국제 표준</td></tr>
+        <tr class="border-b"><td class="px-3 py-2 font-bold">소문제 3</td><td class="px-3 py-2">25%</td><td class="px-3 py-2">수치 기반 분석 (BAC=10억) + 원인 분석 5개 + EAC 3시나리오 + PM 대응 전략</td></tr>
+        <tr><td class="px-3 py-2 font-bold">결론</td><td class="px-3 py-2">10%</td><td class="px-3 py-2">EVM 현대적 확장 (Agile EVM) + 데이터 기반 의사결정 강조</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 암기 노트 ③ 필수 도식 + 차별화 포인트 -->
+  <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center"><span class="mr-2">📝</span> 암기 노트 ③ 필수 도식 & 차별화 포인트</h3>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+    <div class="bg-amber-50 border border-amber-200 rounded-xl p-5">
+      <h4 class="font-bold text-amber-800 mb-2">📊 필수 도식 3가지</h4>
+      <ol class="text-sm text-amber-700 space-y-2 list-decimal list-inside">
+        <li><strong>EVM S-커브</strong> — PV/EV/AC 3개 곡선 + BAC 표시 (가장 중요)</li>
+        <li><strong>4대 성과지표 공식 및 해석 표</strong> — 공식 + 기준값 + 양호 조건</li>
+        <li><strong>SPI/CPI 4분면 매트릭스</strong> — 4가지 프로젝트 상태 시각화</li>
+      </ol>
+    </div>
+    <div class="bg-teal-50 border border-teal-200 rounded-xl p-5">
+      <h4 class="font-bold text-teal-800 mb-2">🏆 차별화 포인트</h4>
+      <ul class="text-sm text-teal-700 space-y-2">
+        <li>• EVM의 역사 (1967년 C/SCSC → ANSI/EIA-748 → ISO 21508)</li>
+        <li>• EAC 3가지 시나리오별 수치 계산 (BAC=10억 기준)</li>
+        <li>• CPI&lt;1 원인 분석 5가지 (Crashing, Fast Tracking, 고급 인력, 외주, Scope Creep)</li>
+        <li>• Agile EVM 개념 (스프린트/스토리포인트 기반 EV 산정)</li>
+        <li>• PMBOK 통합 변경 관리와의 연결</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 제2부 전체 -->
+  <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center"><span class="mr-2">📖</span> 제2부 암기 요약 자료 (전체)</h3>
+  <div class="textbook-content bg-white rounded-xl shadow-sm border p-6 space-y-4 text-gray-700 leading-relaxed">
+    <div class="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-lg p-4 mb-4">
+      <p class="font-bold text-indigo-800">한 줄 정의</p>
+      <p class="text-sm mt-1">EVM은 PV(계획가치), EV(획득가치), AC(실제비용) 3대 변수를 기반으로 SV/CV/SPI/CPI 성과지표를 산출하여 프로젝트의 일정·비용 성과를 정량적으로 측정·예측하는 통합 관리 기법이다.</p>
+    </div>
+
+    <h4 class="font-bold text-gray-800 mt-4">핵심 키워드 맵</h4>
+    <!-- EVM 3대 변수 키워드 맵 -->
+    <div class="bg-gray-50 rounded-lg p-4 mb-4">
+      <div class="mb-3">
+        <p class="font-bold text-indigo-700 mb-2">[EVM 3대 변수]</p>
+        <div class="ml-4 space-y-1 text-sm">
+          <p>├─ <strong>PV</strong>(Planned Value): 계획가치, 기준선 기반</p>
+          <p>├─ <strong>EV</strong>(Earned Value): 획득가치, 실제 완료 작업의 계획 예산</p>
+          <p>└─ <strong>AC</strong>(Actual Cost): 실제비용, 실제 지출 금액</p>
+        </div>
+      </div>
+      <div class="mb-3">
+        <p class="font-bold text-green-700 mb-2">[4대 성과지표]</p>
+        <div class="ml-4 space-y-1 text-sm">
+          <p>├─ SV = EV - PV (일정차이, 기준 0)</p>
+          <p>├─ CV = EV - AC (비용차이, 기준 0)</p>
+          <p>├─ SPI = EV / PV (일정효율, 기준 1.0)</p>
+          <p>└─ CPI = EV / AC (비용효율, 기준 1.0)</p>
+        </div>
+      </div>
+      <div>
+        <p class="font-bold text-purple-700 mb-2">[예측 지표]</p>
+        <div class="ml-4 space-y-1 text-sm">
+          <p>├─ EAC = BAC / CPI (현재 추세)</p>
+          <p>├─ EAC = AC + (BAC - EV) (향후 정상)</p>
+          <p>├─ ETC = EAC - AC</p>
+          <p>└─ VAC = BAC - EAC</p>
+        </div>
+      </div>
+    </div>
+
+    <h4 class="font-bold text-gray-800 mt-4">두문자어 암기법</h4>
+    <div class="space-y-3 mb-4">
+      <div class="bg-purple-50 rounded-lg p-3">
+        <p class="font-bold text-purple-800">EVM 3대 변수: "파에아" (PV-EV-AC)</p>
+        <ul class="text-sm text-purple-700 mt-1 space-y-1">
+          <li><strong>파</strong>: Planned Value — 계획가치 ("파란색 계획선")</li>
+          <li><strong>에</strong>: Earned Value — 획득가치 ("에너지를 써서 얻은 성과")</li>
+          <li><strong>아</strong>: Actual Cost — 실제비용 ("아, 이렇게 많이 썼나")</li>
+        </ul>
+      </div>
+      <div class="bg-indigo-50 rounded-lg p-3">
+        <p class="font-bold text-indigo-800">4대 성과지표: 핵심은 "EV가 주인공"</p>
+        <ul class="text-sm text-indigo-700 mt-1 space-y-1">
+          <li>SV/CV: EV에서 뺄셈 (EV-PV, EV-AC) → 양수가 좋다</li>
+          <li>SPI/CPI: EV로 나눗셈 (EV/PV, EV/AC) → 1보다 크면 좋다</li>
+          <li>공통: EV가 항상 분자/피감수 → "EV가 주인공"</li>
+        </ul>
+      </div>
+      <div class="bg-green-50 rounded-lg p-3">
+        <p class="font-bold text-green-800">EAC 3가지 공식: "비에배" (BAC/CPI, AC+잔여, AC+잔여/CPI×SPI)</p>
+      </div>
+    </div>
+
+    <h4 class="font-bold text-gray-800 mt-4">골격 답안 구조</h4>
+    <div class="space-y-2 text-sm mb-4">
+      <p><strong>[서론 — 10%]</strong> 프로젝트 3대 제약(범위·일정·비용) 통합 관리 필요성 + EVM 개요</p>
+      <p><strong>[소문제 1 — 25%]</strong> EVM 3대 변수: PV/EV/AC 정의 + S-커브 도식 + 각 변수의 산정 기준과 예시</p>
+      <p><strong>[소문제 2 — 30%]</strong> 성과지표 공식 체계: SV/CV/SPI/CPI 공식 + 해석 표 + EAC/ETC/VAC 예측 공식 (3가지 시나리오) + 국제 표준 근거 (PMBOK, ISO 21508)</p>
+      <p><strong>[소문제 3 — 25%]</strong> SPI&gt;1, CPI&lt;1 진단 및 대응: 구체적 수치 기반 분석 (BAC=10억 가정) + 원인 분석표 (5개 원인) + EAC 3가지 시나리오 계산 + PM 대응 전략 (비용 효율 개선 + 일정 여유 활용)</p>
+      <p><strong>[결론 — 10%]</strong> EVM의 현대적 확장 (Agile EVM) + 데이터 기반 의사결정 강조</p>
+    </div>
+
+    <h4 class="font-bold text-gray-800 mt-4">필수 도식</h4>
+    <ol class="text-sm space-y-1 list-decimal list-inside mb-4">
+      <li><strong>EVM S-커브</strong> — PV/EV/AC 3개 곡선 + BAC 표시 (가장 중요)</li>
+      <li><strong>4대 성과지표 공식 및 해석 표</strong> — 공식 + 기준값 + 양호 조건</li>
+      <li><strong>SPI/CPI 4분면 매트릭스</strong> — 4가지 프로젝트 상태 시각화</li>
+    </ol>
+
+    <h4 class="font-bold text-gray-800 mt-4">차별화 포인트</h4>
+    <ul class="text-sm space-y-1 mb-4">
+      <li>• EVM의 역사 (1967년 C/SCSC → ANSI/EIA-748 → ISO 21508)</li>
+      <li>• EAC 3가지 시나리오별 수치 계산 (BAC=10억 기준)</li>
+      <li>• CPI&lt;1 원인 분석 5가지 (Crashing, Fast Tracking, 고급 인력, 외주, Scope Creep)</li>
+      <li>• Agile EVM 개념 (스프린트/스토리포인트 기반 EV 산정)</li>
+      <li>• PMBOK 통합 변경 관리와의 연결</li>
+    </ul>
+  </div>
+
+</div>
+
+<!-- AI 튜터 채팅 사이드바 -->
+<div class="chat-sidebar" id="chatSidebar">
+  <div class="flex items-center justify-between p-4 border-b bg-indigo-600 text-white">
+    <h3 class="font-bold">🤖 AI 튜터</h3>
+    <button onclick="toggleChat()" class="text-white hover:text-indigo-200 text-xl">&times;</button>
+  </div>
+  <div id="chatMessages" class="flex-grow overflow-y-auto p-4 space-y-3">
+    <div class="bg-indigo-50 rounded-lg p-3 text-sm text-indigo-800">안녕하세요! EVM, 성과지표 분석, 프로젝트 진단에 대해 궁금한 점을 질문해주세요.</div>
+  </div>
+  <div class="p-4 border-t">
+    <div class="flex gap-2">
+      <input type="text" id="chatInput" placeholder="질문을 입력하세요..." class="flex-grow border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" onkeydown="if(event.key==='Enter')sendChat()">
+      <button onclick="sendChat()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-bold">전송</button>
+    </div>
+  </div>
+</div>
+<button onclick="toggleChat()" class="fixed bottom-6 right-6 bg-indigo-600 hover:bg-indigo-700 text-white w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-2xl z-50 transition-transform hover:scale-110">💬</button>
+
+<!-- API 설정 모달 -->
+<div id="settingsModal" class="fixed inset-0 bg-black bg-opacity-50 z-[2000] hidden flex items-center justify-center">
+  <div class="bg-white rounded-2xl p-6 w-full max-w-md mx-4 shadow-2xl">
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="text-lg font-bold text-gray-900">🔑 API 설정</h3>
+      <button onclick="toggleSettings()" class="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
+    </div>
+    <div class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Gemini API Key</label>
+        <input type="password" id="apiKeyInput" placeholder="AIzaSy..." class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+      </div>
+      <div class="flex gap-2">
+        <button onclick="saveApiKey()" class="flex-grow bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg text-sm font-bold">저장</button>
+        <button onclick="toggleSettings()" class="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50">취소</button>
+      </div>
+      <p class="text-xs text-gray-400">키는 브라우저 로컬 스토리지에만 저장됩니다.</p>
+    </div>
+  </div>
+</div></main>
+<footer class="bg-white border-t border-gray-200 mt-12 py-6">
+  <div class="max-w-6xl mx-auto px-4 text-center">
+    <p class="text-sm text-gray-500">박교익PE (132회 정보관리기술사, dr.code92@gmail.com)</p>
+    <p class="text-xs text-gray-400 mt-1">Copyright &copy; KPC 정보관리기술사 ZIP-UP 심화반. All rights reserved.</p>
+  </div>
+</footer>
+<script>
+    // ── 탭 네비게이션 ──
+    var isMentorMode = new URLSearchParams(window.location.search).get('mentor') === 'true';
+    if (isMentorMode) { var st = document.getElementById('tab-script'); if(st) st.style.display = ''; }
+    var sections = ['overview','variables','indicators','diagnosis','textbook','quiz'];
+    if (isMentorMode) sections.splice(5, 0, 'script');
+
+    function navTo(id) {
+        sections.forEach(function(s) { var el = document.getElementById(s); if(el) el.classList.add('hidden'); });
+        var target = document.getElementById(id);
+        if (target) target.classList.remove('hidden');
+        document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+        document.querySelectorAll('.tab-btn').forEach(function(b) { if(b.getAttribute('onclick') && b.getAttribute('onclick').includes("'" + id + "'")) b.classList.add('active'); });
+        window.scrollTo({top:0, behavior:'smooth'});
+    }
+
+    // ── 클릭 확장 ──
+    document.addEventListener('click', function(e) {
+        var header = e.target.closest('.tech-header') || e.target.closest('.str-header');
+        if (header) { var block = header.parentElement; block.classList.toggle('open'); }
+    });
+
+    // ── API Key ──
+    function getApiKey() {
+        return localStorage.getItem('geminiKey') || localStorage.getItem('gemini_api_key') || new URLSearchParams(window.location.search).get('key') || '';
+    }
+    function toggleSettings() {
+        var m = document.getElementById('settingsModal'); m.classList.toggle('hidden');
+        if (!m.classList.contains('hidden')) { document.getElementById('apiKeyInput').value = getApiKey(); }
+    }
+    function saveApiKey() {
+        var k = document.getElementById('apiKeyInput').value.trim();
+        if(k) { localStorage.setItem('geminiKey', k); localStorage.setItem('gemini_api_key', k); }
+        toggleSettings();
+    }
+
+    // ── AI 튜터 채팅 ──
+    function toggleChat() { document.getElementById('chatSidebar').classList.toggle('open'); }
+    async function sendChat() {
+        var key = getApiKey();
+        if(!key){alert('API Key를 먼저 설정해주세요.');toggleSettings();return;}
+        var input = document.getElementById('chatInput');
+        var msg = input.value.trim(); if(!msg) return;
+        input.value = '';
+        var container = document.getElementById('chatMessages');
+        container.innerHTML += '<div class="bg-gray-100 rounded-lg p-3 text-sm text-gray-800 ml-8">' + msg + '</div>';
+        container.innerHTML += '<div id="chat-loading" class="bg-indigo-50 rounded-lg p-3 text-sm text-indigo-600"><div class="typing-indicator"><span></span><span></span><span></span></div></div>';
+        container.scrollTop = container.scrollHeight;
+        try {
+            var sysPrompt = "당신은 정보관리기술사 시험 멘토입니다. '획득가치관리(EVM), 성과지표 분석, 프로젝트 상태 진단' 관련 질문에 전문적이고 명쾌하게 답변해주세요. 300자 이내로 핵심만 요약.";
+            var r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key='+key,{
+                method:'POST',headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({contents:[{parts:[{text:sysPrompt+"\n\nUser: "+msg}]}]})
+            });
+            var d = await r.json();
+            var reply = d.candidates[0].content.parts[0].text;
+            var el = document.getElementById('chat-loading');
+            if(el) el.outerHTML = '<div class="bg-indigo-50 rounded-lg p-3 text-sm text-indigo-800">' + marked.parse(reply) + '</div>';
+        } catch(e) {
+            var el2 = document.getElementById('chat-loading');
+            if(el2) el2.outerHTML = '<div class="bg-red-50 rounded-lg p-3 text-sm text-red-600">오류: '+e.message+'</div>';
+        }
+        container.scrollTop = container.scrollHeight;
+    }
+
+    // ── Chart.js: S-커브 + 4분면 매트릭스 ──
+    document.addEventListener('DOMContentLoaded', function() {
+        // S-Curve Chart
+        var ctx1 = document.getElementById('sCurveChart');
+        if (ctx1) {
+            new Chart(ctx1.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'],
+                    datasets: [
+                        { label: 'PV (계획가치)', data: [0,0.5,1.2,2.5,4,5,6.5,7.8,8.8,9.5,10], borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,0.1)', borderWidth: 2, fill: false, tension: 0.4 },
+                        { label: 'EV (획득가치)', data: [0,0.4,1.0,2.2,3.8,6,null,null,null,null,null], borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.1)', borderWidth: 2, fill: false, tension: 0.4 },
+                        { label: 'AC (실제비용)', data: [0,0.6,1.5,3.0,5.0,7,null,null,null,null,null], borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.1)', borderWidth: 2, fill: false, tension: 0.4 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { title: { display: true, text: 'EVM S-커브 (단위: 억 원)', font: { size: 14, weight: 'bold' } }, legend: { position: 'bottom' },
+                        annotation: { annotations: { line1: { type: 'line', xMin: 5, xMax: 5, borderColor: '#9ca3af', borderWidth: 1, borderDash: [5,5], label: { display: true, content: '현재시점(5개월)', position: 'start' } } } }
+                    },
+                    scales: { x: { title: { display: true, text: '시간 (개월)' } }, y: { title: { display: true, text: '비용 (억 원)' }, beginAtZero: true } }
+                }
+            });
+        }
+    });
+
+    // ── 퀴즈 ──
+    var geminiKey = (typeof getApiKey === 'function') ? (getApiKey() || '') : (localStorage.getItem('geminiKey') || localStorage.getItem('gemini_api_key') || '');
+    var quizTypeHistory = [];
+    var currentQuizData = null;
+    var quizTopics = [
+        { category: "EVM 개요와 배경", keywords: "획득가치관리, PMBOK, ISO 21508, ANSI/EIA-748, C/SCSC" },
+        { category: "EVM 3대 변수", keywords: "PV, EV, AC, Planned Value, Earned Value, Actual Cost, BAC" },
+        { category: "차이 지표", keywords: "SV, CV, Schedule Variance, Cost Variance, EV-PV, EV-AC" },
+        { category: "효율 지표", keywords: "SPI, CPI, Schedule Performance Index, Cost Performance Index" },
+        { category: "예측 지표", keywords: "EAC, ETC, VAC, BAC/CPI, 완료 시 예상 비용" },
+        { category: "S-커브와 시각화", keywords: "S-Curve, PV곡선, EV곡선, AC곡선, BAC, 기준선" },
+        { category: "프로젝트 진단", keywords: "SPI>1, CPI<1, Crashing, Fast Tracking, 자원 과투입" },
+        { category: "PM 대응 전략", keywords: "자원 재배치, 원가 절감, 범위 재조정, 이해관계자 보고, Agile EVM" }
+    ];
+
+    async function generateQuiz() {
+        geminiKey = (typeof getApiKey === 'function') ? (getApiKey() || '') : (localStorage.getItem('geminiKey') || localStorage.getItem('gemini_api_key') || '');
+        if (!geminiKey) { alert('API Key를 먼저 설정해주세요.'); toggleSettings(); return; }
+        var btn = document.getElementById('btn-quiz-gen');
+        btn.disabled = true; btn.innerHTML = '<span>생성 중...</span>';
+        document.getElementById('quiz-placeholder').classList.add('hidden');
+        document.getElementById('quiz-container').classList.add('hidden');
+        document.getElementById('quiz-loading').classList.remove('hidden');
+        var isMC;
+        var recent = quizTypeHistory.slice(-2);
+        if (recent.length >= 2 && recent[0] === recent[1]) { isMC = !recent[1]; }
+        else { isMC = Math.random() > 0.5; }
+        quizTypeHistory.push(isMC);
+        var selected = quizTopics[Math.floor(Math.random() * quizTopics.length)];
+        var quizType = isMC ? '객관식 (4지선다)' : '단답형';
+        var format = isMC
+            ? '{"question":"문제","options":["A","B","C","D"],"correctIndex":0,"explanation":"해설"}'
+            : '{"question":"문제","correctAnswer":"정답","explanation":"해설"}';
+        var prompt = "다음 카테고리에 대한 " + quizType + " 퀴즈 1문제를 만드세요.\n"
+            + "카테고리: " + selected.category + "\n"
+            + "관련 키워드: " + selected.keywords + "\n"
+            + "규칙: 반드시 위 카테고리와 키워드에 직접 관련된 문제를 출제하세요.\n"
+            + "JSON 형식으로 응답: " + format;
+        try {
+            var r = await fetch(
+                'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=' + geminiKey,
+                { method:'POST', headers:{'Content-Type':'application/json'},
+                  body: JSON.stringify({ contents:[{parts:[{text:prompt}]}], generationConfig:{responseMimeType:"application/json"} })
+                }
+            );
+            var d = await r.json();
+            var t = d.candidates[0].content.parts[0].text;
+            t = t.replace(/```json\s*/gi,"").replace(/```\s*/g,"").trim();
+            var depth=0, start=-1, end=-1;
+            for (var i=0;i<t.length;i++) {
+                if (t[i]==='{') { if(depth===0) start=i; depth++; }
+                else if (t[i]==='}') { depth--; if(depth===0 && start!==-1) { end=i; break; } }
+            }
+            if (start===-1||end===-1) throw new Error("No JSON found");
+            t = t.substring(start, end+1);
+            t = t.replace(/[\x00-\x1F\x7F]/g, function(c) { return c==='\n'||c==='\r'||c==='\t' ? ' ' : ''; });
+            currentQuizData = JSON.parse(t);
+            renderQuiz(isMC);
+        } catch(e) {
+            document.getElementById('quiz-loading').classList.add('hidden');
+            document.getElementById('quiz-placeholder').classList.remove('hidden');
+            document.getElementById('quiz-placeholder').innerHTML = '<p class="text-red-500">퀴즈 생성 오류: ' + e.message + '</p>';
+        }
+        btn.disabled = false; btn.innerHTML = '<span>✨ 새로운 문제 생성</span>';
+    }
+
+    function renderQuiz(isMC) {
+        document.getElementById('quiz-loading').classList.add('hidden');
+        document.getElementById('quiz-feedback').classList.add('hidden');
+        document.getElementById('quiz-container').classList.remove('hidden');
+        document.getElementById('quiz-type-badge').textContent = isMC ? '객관식' : '단답형';
+        document.getElementById('quiz-question').textContent = currentQuizData.question;
+        var optDiv = document.getElementById('quiz-options');
+        var inputDiv = document.getElementById('quiz-input-area');
+        if (isMC) {
+            optDiv.classList.remove('hidden'); inputDiv.classList.add('hidden');
+            var h = ''; var letters = ['A','B','C','D'];
+            currentQuizData.options.forEach(function(opt, i) {
+                h += '<button onclick="checkMultipleChoice(' + i + ', this)" class="w-full text-left p-4 rounded-lg border border-gray-200 hover:bg-indigo-50 hover:border-indigo-300 transition-all mb-2 flex items-center group">'
+                    + '<span class="w-8 h-8 rounded-full bg-gray-100 group-hover:bg-indigo-100 flex items-center justify-center text-sm font-bold text-gray-500 group-hover:text-indigo-600 mr-3 flex-shrink-0">' + letters[i] + '</span>'
+                    + '<span class="text-sm text-gray-700">' + opt + '</span></button>';
+            });
+            optDiv.innerHTML = h;
+        } else {
+            optDiv.classList.add('hidden'); inputDiv.classList.remove('hidden');
+            document.getElementById('quiz-answer-input').value = '';
+            document.getElementById('quiz-answer-input').focus();
+        }
+    }
+
+    function checkMultipleChoice(idx, btnEl) {
+        var correct = idx === currentQuizData.correctIndex;
+        document.querySelectorAll('#quiz-options button').forEach(function(b, i) {
+            b.disabled = true;
+            if (i === currentQuizData.correctIndex) { b.classList.add('bg-green-50','border-green-400'); b.querySelector('span:first-child').classList.add('bg-green-100','text-green-700'); }
+            else if (i === idx && !correct) { b.classList.add('bg-red-50','border-red-400'); b.querySelector('span:first-child').classList.add('bg-red-100','text-red-700'); }
+        });
+        showQuizFeedback(correct, currentQuizData.options[currentQuizData.correctIndex], currentQuizData.explanation);
+    }
+
+    async function checkShortAnswer() {
+        geminiKey = (typeof getApiKey === 'function') ? (getApiKey() || '') : (localStorage.getItem('geminiKey') || localStorage.getItem('gemini_api_key') || '');
+        var ans = document.getElementById('quiz-answer-input').value.trim();
+        if (!ans) { alert('답을 입력해주세요.'); return; }
+        var btn = document.getElementById('btn-short-submit');
+        btn.disabled = true; btn.textContent = '채점 중...';
+        try {
+            var gradingPrompt = "당신은 정보관리기술사 시험 채점관입니다. 아래 문제에 대해 사용자의 답안이 정답으로 인정될 수 있는지 판정하세요.\n\n"
+                + "문제: " + currentQuizData.question + "\n"
+                + "모범 정답: " + currentQuizData.correctAnswer + "\n"
+                + "사용자 답안: " + ans + "\n\n"
+                + "판정 기준:\n- 핵심 의미가 동일하면 정답\n- 약어/풀네임 모두 인정\n- 영어/한글 혼용 인정\n- 띄어쓰기/조사 차이는 무시\n- 의미가 명확히 다르면 오답\n\n"
+                + "Output JSON: {\"correct\":true/false,\"reason\":\"판정 이유\"}";
+            var r = await fetch(
+                'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=' + geminiKey,
+                { method:'POST', headers:{'Content-Type':'application/json'},
+                  body: JSON.stringify({ contents:[{parts:[{text:gradingPrompt}]}], generationConfig:{responseMimeType:"application/json"} })
+                }
+            );
+            var d = await r.json();
+            var gt = d.candidates[0].content.parts[0].text;
+            gt = gt.replace(/```json\s*/gi,"").replace(/```\s*/g,"").trim();
+            var gd=0,gs=-1,ge=-1;
+            for(var i=0;i<gt.length;i++){if(gt[i]==='{'){if(gd===0)gs=i;gd++;}else if(gt[i]==='}'){gd--;if(gd===0&&gs!==-1){ge=i;break;}}}
+            if(gs===-1||ge===-1) throw new Error("No JSON");
+            gt=gt.substring(gs,ge+1);
+            gt=gt.replace(/[\x00-\x1F\x7F]/g,function(c){return c==='\n'||c==='\r'||c==='\t'?' ':'';});
+            var result = JSON.parse(gt);
+            showQuizFeedback(result.correct, currentQuizData.correctAnswer, currentQuizData.explanation + (result.reason ? ' (AI: ' + result.reason + ')' : ''));
+        } catch(e) {
+            var normalize = function(s){return s.replace(/\s/g,'').toLowerCase();};
+            var correct = normalize(currentQuizData.correctAnswer).includes(normalize(ans)) || normalize(ans).includes(normalize(currentQuizData.correctAnswer));
+            showQuizFeedback(correct, currentQuizData.correctAnswer, currentQuizData.explanation + ' (로컬 채점)');
+        }
+        btn.disabled = false; btn.textContent = '제출';
+    }
+
+    function showQuizFeedback(correct, answer, explanation) {
+        var fb = document.getElementById('quiz-feedback');
+        fb.classList.remove('hidden','border-green-500','bg-green-50','border-red-500','bg-red-50');
+        if (correct) {
+            fb.classList.add('border-green-500','bg-green-50');
+            fb.innerHTML = '<p class="font-bold text-green-700 mb-1">✅ 정답입니다!</p><p class="text-sm text-green-600">' + explanation + '</p>';
+        } else {
+            fb.classList.add('border-red-500','bg-red-50');
+            fb.innerHTML = '<p class="font-bold text-red-700 mb-1">❌ 오답입니다.</p><p class="text-sm text-red-700 mb-1">정답: ' + answer + '</p><p class="text-sm text-red-600">' + explanation + '</p>';
+        }
+    }
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && document.getElementById('quiz-answer-input') === document.activeElement) { checkShortAnswer(); }
+    });
+
+    // ── URL 파라미터로 API Key 설정 ──
+    (function(){
+        var urlKey = new URLSearchParams(window.location.search).get('key');
+        if(urlKey){ localStorage.setItem('geminiKey', urlKey); localStorage.setItem('gemini_api_key', urlKey); }
+    })();
+</script>
+</body></html>

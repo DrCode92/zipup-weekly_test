@@ -1,0 +1,1100 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>동시성 제어, 2PL 직렬 가능성 보장, 교착상태 해결</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+        body { font-family: 'Noto Sans KR', sans-serif; background-color: #f5f5f4; color: #1f2937; }
+        .chart-container { position: relative; width: 100%; max-width: 600px; margin-left: auto; margin-right: auto; height: 350px; max-height: 400px; }
+        .nav-item.active { border-bottom: 2px solid #4f46e5; color: #4f46e5; font-weight: 700; }
+        .tech-block { transition: all 0.3s ease; cursor: pointer; }
+        .tech-block:hover { transform: translateY(-2px); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        .tech-block.selected { ring: 2px; ring-color: #4f46e5; background-color: #eef2ff; border-color: #4f46e5; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        #chat-sidebar { transition: transform 0.3s ease-in-out; }
+        #chat-sidebar.closed { transform: translateX(100%); }
+        #chat-sidebar.open { transform: translateX(0); }
+        .typing-indicator span { display: inline-block; width: 6px; height: 6px; background-color: #4f46e5; border-radius: 50%; animation: typing 1.4s infinite ease-in-out both; margin: 0 2px; }
+        .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+        .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes typing { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+        .prose h1,.prose h2,.prose h3 { font-weight: bold; margin-top: 1em; margin-bottom: 0.5em; color: #312e81; font-size: 1.1em; }
+        .prose ul { list-style-type: disc; padding-left: 1.5em; margin-bottom: 1em; }
+        .prose strong { color: #4338ca; }
+        .prose p { margin-bottom: 0.8em; }
+        .chat-msg { border-radius: 12px; padding: 10px 14px; margin-bottom: 10px; max-width: 85%; font-size: 0.95rem; }
+        .chat-msg.user { background-color: #4f46e5; color: white; align-self: flex-end; margin-left: auto; }
+        .chat-msg.ai { background-color: #f3f4f6; color: #1f2937; align-self: flex-start; border: 1px solid #e5e7eb; }
+        .textbook-content h3 { font-size: 1.25rem; font-weight: 700; color: #1e3a8a; margin-top: 1.5rem; margin-bottom: 0.75rem; border-left: 4px solid #4f46e5; padding-left: 0.75rem; }
+        .textbook-content h4 { font-size: 1.1rem; font-weight: 600; color: #374151; margin-top: 1rem; margin-bottom: 0.5rem; }
+        .textbook-content p { margin-bottom: 1rem; line-height: 1.8; color: #4b5563; }
+        .textbook-content ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 1rem; color: #4b5563; }
+        .textbook-content li { margin-bottom: 0.5rem; line-height: 1.7; }
+        .textbook-content table { width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; font-size: 0.95rem; }
+        .textbook-content th,.textbook-content td { border: 1px solid #e5e7eb; padding: 0.75rem; text-align: left; }
+        .textbook-content th { background-color: #f9fafb; font-weight: 600; color: #1f2937; }
+        .textbook-content .highlight { background-color: #eef2ff; color: #4338ca; font-weight: 600; padding: 0 4px; border-radius: 4px; }
+        .textbook-content pre { background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem; overflow-x: auto; margin-bottom: 1rem; font-size: 0.85rem; line-height: 1.6; }
+        .textbook-content code { font-family: 'Courier New', monospace; }
+        .def-box { background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%); border-left: 4px solid #4f46e5; border-radius: 8px; padding: 1.25rem; margin-bottom: 1rem; }
+        .def-box p { color: #312e81; font-weight: 500; margin: 0; line-height: 1.8; }
+        .insight-box { background-color: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 1rem; margin: 1rem 0; }
+        .insight-box::before { content: '💡'; margin-right: 0.5rem; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
+    </style>
+</head><body class="bg-stone-100 min-h-screen flex flex-col overflow-x-hidden">
+    <header class="bg-white shadow-sm sticky top-0 z-40">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center pt-3 pb-1">
+                <div class="flex flex-col justify-center min-w-0">
+                    <span class="text-[10px] sm:text-xs text-indigo-600 font-bold uppercase tracking-wider leading-tight">KPC 정보관리기술사 ZIP-UP 심화반</span>
+                    <div class="flex items-center gap-2">
+                        <span class="text-lg sm:text-xl font-bold text-gray-900 tracking-tight truncate">동시성 제어, 2PL 직렬 가능성 보장, 교착상태 해결</span>
+                        <span class="text-[10px] sm:text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-bold flex-shrink-0">2026</span>
+                    </div>
+                </div>
+            </div>
+            <nav class="flex space-x-1 sm:space-x-4 overflow-x-auto no-scrollbar pb-1 items-center">
+                <button onclick="navTo('overview')" id="nav-overview" class="nav-item active px-1 pt-1 pb-2 text-xs sm:text-sm font-medium text-gray-900 whitespace-nowrap">개요 및 개념</button>
+                <button onclick="navTo('problems')" id="nav-problems" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium text-gray-500 hover:text-gray-700 whitespace-nowrap">3대 문제점</button>
+                <button onclick="navTo('twopl')" id="nav-twopl" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium text-gray-500 hover:text-gray-700 whitespace-nowrap">2PL &amp; 직렬 가능성</button>
+                <button onclick="navTo('deadlock')" id="nav-deadlock" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium text-gray-500 hover:text-gray-700 whitespace-nowrap">교착상태</button>
+                <button onclick="navTo('textbook')" id="nav-textbook" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium text-gray-500 hover:text-gray-700 whitespace-nowrap">원문 학습</button>
+                <button onclick="navTo('script')" id="nav-script" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium text-amber-600 hover:text-amber-800 whitespace-nowrap hidden">🎬 강의 스크립트</button>
+                <button onclick="navTo('quiz')" id="nav-quiz" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium text-indigo-600 hover:text-indigo-800 whitespace-nowrap">퀴즈 &amp; 암기</button>
+                <span class="w-px h-4 bg-gray-300 flex-shrink-0"></span>
+                <button onclick="toggleSettings()" class="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium text-indigo-600 hover:bg-indigo-50 border border-indigo-200 hover:border-indigo-400 transition-all whitespace-nowrap flex-shrink-0" title="API Key 설정">&#128273; API</button>
+            </nav>
+        </div>
+    </header>
+    <main class="flex-grow max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12 pb-24">
+    <div id="overview" class="space-y-8">
+        <div class="def-box">
+            <p><strong>동시성 제어(Concurrency Control)</strong>란, 다중 사용자 데이터베이스 환경에서 둘 이상의 트랜잭션이 동시에 같은 데이터에 접근할 때 데이터의 일관성(Consistency)과 무결성(Integrity)을 보장하기 위한 메커니즘으로, ACID의 격리성(Isolation)을 실현하는 핵심 기술이다.</p>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border p-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-3">개념 해설</h3>
+            <p class="text-gray-600 leading-relaxed mb-4">다중 사용자 환경에서 트랜잭션들이 동시에 같은 데이터를 조작하면 <strong class="text-red-600">갱신 손실, Dirty Read, 모순성</strong> 같은 심각한 데이터 불일치가 발생합니다. 이를 해결하기 위해 <strong class="text-indigo-700">로킹(Locking)</strong>과 <strong class="text-indigo-700">2PL(Two-Phase Locking)</strong>이 도입되었으며, 2PL은 직렬 가능성을 수학적으로 보장합니다.</p>
+            <p class="text-gray-600 leading-relaxed">그러나 로킹 자체가 <strong class="text-amber-700">교착상태(Deadlock)</strong>라는 부작용을 초래하므로, Coffman 4조건에 기반한 예방·회피·탐지·복구 전략이 함께 필요합니다.</p>
+        </div>
+
+        <!-- 문제 → 해결 → 부작용 흐름 -->
+        <div class="bg-white rounded-xl shadow-sm border p-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">문제 구조: 문제 → 해결 → 부작용 해결</h3>
+            <div class="flex flex-col md:flex-row items-center justify-center gap-3">
+                <div class="bg-red-100 border-2 border-red-400 rounded-lg px-6 py-4 text-center min-w-[180px]">
+                    <div class="text-xs text-red-500 font-bold mb-1">소문제 1 — 문제</div>
+                    <div class="font-bold text-red-900">3대 문제점</div>
+                    <div class="text-xs text-red-600 mt-1">갱신손실 · Dirty Read · 모순성</div>
+                </div>
+                <div class="text-2xl text-gray-400 rotate-90 md:rotate-0">→</div>
+                <div class="bg-indigo-100 border-2 border-indigo-400 rounded-lg px-6 py-4 text-center min-w-[180px]">
+                    <div class="text-xs text-indigo-500 font-bold mb-1">소문제 2 — 해결</div>
+                    <div class="font-bold text-indigo-900">2PL 프로토콜</div>
+                    <div class="text-xs text-indigo-600 mt-1">확장/축소 · Lock Point · 직렬가능성</div>
+                </div>
+                <div class="text-2xl text-gray-400 rotate-90 md:rotate-0">→</div>
+                <div class="bg-amber-100 border-2 border-amber-400 rounded-lg px-6 py-4 text-center min-w-[180px]">
+                    <div class="text-xs text-amber-500 font-bold mb-1">소문제 3 — 부작용</div>
+                    <div class="font-bold text-amber-900">교착상태 해결</div>
+                    <div class="text-xs text-amber-600 mt-1">Coffman 4조건 · 예회탐복</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 배경 카드 -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-red-50 border border-red-200 rounded-xl p-5">
+                <div class="text-2xl mb-2">⚠️</div>
+                <h4 class="font-bold text-red-900 mb-2">동시성 3대 문제 "갱현모"</h4>
+                <p class="text-sm text-red-700">갱신 손실(W-W 충돌), 현황파악 오류(Dirty Read), 모순성(Non-repeatable Read). 금융/전자상거래에서 치명적 데이터 불일치 초래.</p>
+            </div>
+            <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-5">
+                <div class="text-2xl mb-2">🔒</div>
+                <h4 class="font-bold text-indigo-900 mb-2">2PL 직렬 가능성</h4>
+                <p class="text-sm text-indigo-700">확장 단계(Lock만)→축소 단계(Unlock만) 분리로 Lock Point 기준 위상 정렬 가능. Eswaran(1976) 수학적 증명.</p>
+            </div>
+            <div class="bg-amber-50 border border-amber-200 rounded-xl p-5">
+                <div class="text-2xl mb-2">🔄</div>
+                <h4 class="font-bold text-amber-900 mb-2">교착상태 "상점비순"</h4>
+                <p class="text-sm text-amber-700">Coffman 4조건 모두 충족 시 발생. 예방(Conservative 2PL), 회피(Wait-Die/Wound-Wait), 탐지(대기그래프)+복구.</p>
+            </div>
+        </div>
+    </div>
+    <div id="problems" class="hidden space-y-8">
+        <h2 class="text-2xl font-bold text-gray-900">동시성 제어 미수행 시 3대 문제점</h2>
+        <p class="text-gray-600">동시성 제어가 없으면 발생하는 3가지 핵심 문제를 시나리오와 함께 학습합니다.</p>
+
+        <div class="space-y-4">
+            <!-- 갱신 손실 -->
+            <div class="tech-block bg-white rounded-xl border border-gray-200 p-5 shadow-sm" onclick="toggleBlock(this)">
+                <div class="flex items-center gap-3">
+                    <span class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-lg font-bold text-red-600">1</span>
+                    <div><h4 class="font-bold text-gray-900">갱신 손실 (Lost Update)</h4><p class="text-sm text-gray-500">동시 Write-Write 충돌 → 한 쪽 갱신 소실</p></div>
+                    <span class="ml-auto text-gray-400 text-sm">▼</span>
+                </div>
+                <div class="detail-content hidden mt-4 pt-4 border-t border-gray-100 animate-fade-in">
+                    <p class="text-gray-600 mb-3">두 트랜잭션이 동일 데이터를 동시에 갱신할 때, <strong class="text-red-600">한 트랜잭션의 갱신 결과가 덮어써져 소실</strong>되는 현상.</p>
+                    <h5 class="font-semibold text-gray-800 mb-2">시나리오: 계좌 잔액 100만원, T1(10만 입금) + T2(20만 출금)</h5>
+                    <table class="w-full text-sm border-collapse mb-3">
+                        <thead><tr class="bg-red-50"><th class="border border-gray-200 px-2 py-2">시간</th><th class="border border-gray-200 px-2 py-2">T1 (입금 10만)</th><th class="border border-gray-200 px-2 py-2">T2 (출금 20만)</th><th class="border border-gray-200 px-2 py-2">DB 값</th></tr></thead>
+                        <tbody>
+                            <tr><td class="border border-gray-200 px-2 py-2 text-center">t1</td><td class="border border-gray-200 px-2 py-2">Read(잔액) = 100만</td><td class="border border-gray-200 px-2 py-2"></td><td class="border border-gray-200 px-2 py-2 text-center">100만</td></tr>
+                            <tr><td class="border border-gray-200 px-2 py-2 text-center">t2</td><td class="border border-gray-200 px-2 py-2"></td><td class="border border-gray-200 px-2 py-2">Read(잔액) = 100만</td><td class="border border-gray-200 px-2 py-2 text-center">100만</td></tr>
+                            <tr><td class="border border-gray-200 px-2 py-2 text-center">t3</td><td class="border border-gray-200 px-2 py-2">잔액 = 100+10 = 110만</td><td class="border border-gray-200 px-2 py-2"></td><td class="border border-gray-200 px-2 py-2 text-center">100만</td></tr>
+                            <tr><td class="border border-gray-200 px-2 py-2 text-center">t4</td><td class="border border-gray-200 px-2 py-2 font-bold text-blue-600">Write(110만)</td><td class="border border-gray-200 px-2 py-2"></td><td class="border border-gray-200 px-2 py-2 text-center font-bold">110만</td></tr>
+                            <tr><td class="border border-gray-200 px-2 py-2 text-center">t5</td><td class="border border-gray-200 px-2 py-2"></td><td class="border border-gray-200 px-2 py-2">잔액 = 100-20 = 80만</td><td class="border border-gray-200 px-2 py-2 text-center">110만</td></tr>
+                            <tr class="bg-red-50"><td class="border border-gray-200 px-2 py-2 text-center">t6</td><td class="border border-gray-200 px-2 py-2"></td><td class="border border-gray-200 px-2 py-2 font-bold text-red-600">Write(80만) ← 덮어쓰기!</td><td class="border border-gray-200 px-2 py-2 text-center font-bold text-red-600">80만</td></tr>
+                        </tbody>
+                    </table>
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700"><strong>결과:</strong> T1의 입금 소실. 정상=90만원이어야 하나 80만원. 10만원 증발!</div>
+                </div>
+            </div>
+
+            <!-- Dirty Read -->
+            <div class="tech-block bg-white rounded-xl border border-gray-200 p-5 shadow-sm" onclick="toggleBlock(this)">
+                <div class="flex items-center gap-3">
+                    <span class="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-lg font-bold text-orange-600">2</span>
+                    <div><h4 class="font-bold text-gray-900">현황 파악 오류 (Dirty Read)</h4><p class="text-sm text-gray-500">커밋되지 않은 데이터 읽기 → Rollback 시 잘못된 처리</p></div>
+                    <span class="ml-auto text-gray-400 text-sm">▼</span>
+                </div>
+                <div class="detail-content hidden mt-4 pt-4 border-t border-gray-100 animate-fade-in">
+                    <p class="text-gray-600 mb-3"><strong>Uncommitted 데이터</strong>를 읽은 후 원래 트랜잭션이 Rollback되면, 존재한 적 없는 값을 기반으로 처리한 결과가 됩니다.</p>
+                    <table class="w-full text-sm border-collapse mb-3">
+                        <thead><tr class="bg-orange-50"><th class="border border-gray-200 px-2 py-2">시간</th><th class="border border-gray-200 px-2 py-2">T1</th><th class="border border-gray-200 px-2 py-2">T2</th><th class="border border-gray-200 px-2 py-2">DB 값</th></tr></thead>
+                        <tbody>
+                            <tr><td class="border border-gray-200 px-2 py-2 text-center">t1</td><td class="border border-gray-200 px-2 py-2">Write(재고 = 80)</td><td class="border border-gray-200 px-2 py-2"></td><td class="border border-gray-200 px-2 py-2 text-center">80</td></tr>
+                            <tr class="bg-orange-50"><td class="border border-gray-200 px-2 py-2 text-center">t2</td><td class="border border-gray-200 px-2 py-2"></td><td class="border border-gray-200 px-2 py-2 font-bold text-orange-600">Read(재고) = 80 ← Dirty!</td><td class="border border-gray-200 px-2 py-2 text-center">80</td></tr>
+                            <tr><td class="border border-gray-200 px-2 py-2 text-center">t3</td><td class="border border-gray-200 px-2 py-2 font-bold text-red-600">Rollback (80→100 복원)</td><td class="border border-gray-200 px-2 py-2"></td><td class="border border-gray-200 px-2 py-2 text-center">100</td></tr>
+                            <tr><td class="border border-gray-200 px-2 py-2 text-center">t4</td><td class="border border-gray-200 px-2 py-2"></td><td class="border border-gray-200 px-2 py-2 text-red-600">80 기준 주문 처리 → 오류</td><td class="border border-gray-200 px-2 py-2 text-center">100</td></tr>
+                        </tbody>
+                    </table>
+                    <div class="bg-orange-50 border border-orange-200 rounded-lg p-3 text-sm text-orange-700"><strong>결과:</strong> T2는 존재한 적 없는 값(80)으로 의사결정 → 데이터 불일치</div>
+                </div>
+            </div>
+
+            <!-- 모순성 -->
+            <div class="tech-block bg-white rounded-xl border border-gray-200 p-5 shadow-sm" onclick="toggleBlock(this)">
+                <div class="flex items-center gap-3">
+                    <span class="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-lg font-bold text-purple-600">3</span>
+                    <div><h4 class="font-bold text-gray-900">모순성 (Non-repeatable Read)</h4><p class="text-sm text-gray-500">같은 데이터를 두 번 읽었을 때 값이 달라지는 현상</p></div>
+                    <span class="ml-auto text-gray-400 text-sm">▼</span>
+                </div>
+                <div class="detail-content hidden mt-4 pt-4 border-t border-gray-100 animate-fade-in">
+                    <p class="text-gray-600 mb-3">한 트랜잭션 내에서 <strong>동일 데이터를 두 번 읽었을 때 값이 달라지는</strong> 현상. 중간에 다른 트랜잭션이 변경+커밋했기 때문.</p>
+                    <table class="w-full text-sm border-collapse mb-3">
+                        <thead><tr class="bg-purple-50"><th class="border border-gray-200 px-2 py-2">시간</th><th class="border border-gray-200 px-2 py-2">T1 (합계 조회)</th><th class="border border-gray-200 px-2 py-2">T2 (이체)</th><th class="border border-gray-200 px-2 py-2">A잔액</th><th class="border border-gray-200 px-2 py-2">B잔액</th></tr></thead>
+                        <tbody>
+                            <tr><td class="border border-gray-200 px-2 py-2 text-center">t1</td><td class="border border-gray-200 px-2 py-2">Read(A) = 100</td><td class="border border-gray-200 px-2 py-2"></td><td class="border border-gray-200 px-2 py-2 text-center">100</td><td class="border border-gray-200 px-2 py-2 text-center">200</td></tr>
+                            <tr><td class="border border-gray-200 px-2 py-2 text-center">t2</td><td class="border border-gray-200 px-2 py-2"></td><td class="border border-gray-200 px-2 py-2">A = A-50 → Write(50)</td><td class="border border-gray-200 px-2 py-2 text-center font-bold">50</td><td class="border border-gray-200 px-2 py-2 text-center">200</td></tr>
+                            <tr><td class="border border-gray-200 px-2 py-2 text-center">t3</td><td class="border border-gray-200 px-2 py-2"></td><td class="border border-gray-200 px-2 py-2">B = B+50 → Write(250)</td><td class="border border-gray-200 px-2 py-2 text-center">50</td><td class="border border-gray-200 px-2 py-2 text-center font-bold">250</td></tr>
+                            <tr class="bg-purple-50"><td class="border border-gray-200 px-2 py-2 text-center">t4</td><td class="border border-gray-200 px-2 py-2 font-bold text-purple-600">Read(B) = 250</td><td class="border border-gray-200 px-2 py-2"></td><td class="border border-gray-200 px-2 py-2 text-center">50</td><td class="border border-gray-200 px-2 py-2 text-center">250</td></tr>
+                        </tbody>
+                    </table>
+                    <div class="bg-purple-50 border border-purple-200 rounded-lg p-3 text-sm text-purple-700"><strong>결과:</strong> T1 합계 = 100+250 = 350 (실제 합계=300). 동일 트랜잭션 내 데이터 모순!</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 비교표 -->
+        <div class="bg-white rounded-xl shadow-sm border p-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">3대 문제점 비교</h3>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm border-collapse">
+                    <thead><tr class="bg-indigo-50"><th class="border border-gray-200 px-3 py-2 text-left">문제점</th><th class="border border-gray-200 px-3 py-2">원인</th><th class="border border-gray-200 px-3 py-2">피해 유형</th><th class="border border-gray-200 px-3 py-2">관련 격리 수준</th></tr></thead>
+                    <tbody>
+                        <tr><td class="border border-gray-200 px-3 py-2 font-medium">갱신 손실</td><td class="border border-gray-200 px-3 py-2 text-center">동시 W-W 충돌</td><td class="border border-gray-200 px-3 py-2 text-center">데이터 소실</td><td class="border border-gray-200 px-3 py-2 text-center">모든 수준에서 방지</td></tr>
+                        <tr><td class="border border-gray-200 px-3 py-2 font-medium">Dirty Read</td><td class="border border-gray-200 px-3 py-2 text-center">Uncommitted Read</td><td class="border border-gray-200 px-3 py-2 text-center">잘못된 데이터 처리</td><td class="border border-gray-200 px-3 py-2 text-center">Read Committed 이상</td></tr>
+                        <tr><td class="border border-gray-200 px-3 py-2 font-medium">모순성</td><td class="border border-gray-200 px-3 py-2 text-center">중간 외부 W-Commit</td><td class="border border-gray-200 px-3 py-2 text-center">쿼리 결과 불일치</td><td class="border border-gray-200 px-3 py-2 text-center">Repeatable Read 이상</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div id="twopl" class="hidden space-y-8">
+        <h2 class="text-2xl font-bold text-gray-900">2PL &amp; 직렬 가능성</h2>
+        <p class="text-gray-600">로킹 기법과 2단계 로킹 프로토콜(2PL)이 직렬 가능성(Serializability)을 보장하는 원리를 학습합니다.</p>
+
+        <!-- 락 호환성 -->
+        <div class="bg-white rounded-xl shadow-sm border p-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">락(Lock) 유형과 호환성 매트릭스</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div class="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                    <h4 class="font-bold text-blue-900 mb-2">🔓 S-Lock (공유 락)</h4>
+                    <p class="text-sm text-blue-700">읽기 전용 락. 여러 트랜잭션이 동시에 S-Lock 가능. X-Lock과 비호환.</p>
+                </div>
+                <div class="bg-red-50 border border-red-200 rounded-xl p-4">
+                    <h4 class="font-bold text-red-900 mb-2">🔒 X-Lock (배타 락)</h4>
+                    <p class="text-sm text-red-700">쓰기 락. 독점적 접근 보장. S-Lock, X-Lock 모두 비호환.</p>
+                </div>
+            </div>
+            <table class="w-full text-sm border-collapse">
+                <thead><tr class="bg-gray-100"><th class="border border-gray-200 px-4 py-2"></th><th class="border border-gray-200 px-4 py-2 text-center">S-Lock 요청</th><th class="border border-gray-200 px-4 py-2 text-center">X-Lock 요청</th></tr></thead>
+                <tbody>
+                    <tr><td class="border border-gray-200 px-4 py-2 font-bold">S-Lock 보유</td><td class="border border-gray-200 px-4 py-2 text-center text-green-600 font-bold">✅ 호환</td><td class="border border-gray-200 px-4 py-2 text-center text-red-600 font-bold">❌ 대기</td></tr>
+                    <tr><td class="border border-gray-200 px-4 py-2 font-bold">X-Lock 보유</td><td class="border border-gray-200 px-4 py-2 text-center text-red-600 font-bold">❌ 대기</td><td class="border border-gray-200 px-4 py-2 text-center text-red-600 font-bold">❌ 대기</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 2PL 다이어그램 -->
+        <div class="bg-white rounded-xl shadow-sm border p-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">2PL(Two-Phase Locking) 프로토콜</h3>
+            <div class="flex flex-col md:flex-row gap-4 mb-4">
+                <div class="flex-1 bg-indigo-50 border-2 border-indigo-300 rounded-xl p-5">
+                    <div class="text-center mb-2"><span class="bg-indigo-600 text-white px-3 py-1 rounded-full text-sm font-bold">확장 단계 (Growing)</span></div>
+                    <p class="text-sm text-indigo-700 text-center">Lock 획득만 허용</p>
+                    <p class="text-xs text-indigo-500 text-center mt-1">새로운 락 설정 가능, 해제 불가</p>
+                    <div class="text-center mt-3 text-sm text-indigo-800">Lock(A) → Lock(B) → Lock(C)</div>
+                </div>
+                <div class="flex items-center justify-center">
+                    <div class="bg-amber-400 text-white px-4 py-2 rounded-full text-sm font-bold shadow">Lock Point</div>
+                </div>
+                <div class="flex-1 bg-green-50 border-2 border-green-300 rounded-xl p-5">
+                    <div class="text-center mb-2"><span class="bg-green-600 text-white px-3 py-1 rounded-full text-sm font-bold">축소 단계 (Shrinking)</span></div>
+                    <p class="text-sm text-green-700 text-center">Unlock만 허용</p>
+                    <p class="text-xs text-green-500 text-center mt-1">락 해제 가능, 새 설정 불가</p>
+                    <div class="text-center mt-3 text-sm text-green-800">Unlock(A) → Unlock(B) → Unlock(C)</div>
+                </div>
+            </div>
+            <div class="insight-box"><p class="text-sm text-amber-800"><strong>직렬 가능성 보장:</strong> 모든 트랜잭션의 Lock Point를 기준으로 위상 정렬(Topological Sort)이 가능하여, Ti의 Lock Point가 Tj보다 앞서면 직렬 순서에서도 Ti가 먼저 실행된 것과 동등한 결과 보장. (Eswaran et al., 1976)</p></div>
+        </div>
+
+        <!-- 2PL 변형 비교 -->
+        <div class="bg-white rounded-xl shadow-sm border p-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">2PL 변형 비교</h3>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm border-collapse">
+                    <thead><tr class="bg-indigo-50"><th class="border border-gray-200 px-3 py-2 text-left">변형</th><th class="border border-gray-200 px-3 py-2">특징</th><th class="border border-gray-200 px-3 py-2">교착상태</th><th class="border border-gray-200 px-3 py-2">Cascading Rollback</th></tr></thead>
+                    <tbody>
+                        <tr><td class="border border-gray-200 px-3 py-2 font-medium">Basic 2PL</td><td class="border border-gray-200 px-3 py-2">기본 2단계 분리</td><td class="border border-gray-200 px-3 py-2 text-center text-red-600">가능</td><td class="border border-gray-200 px-3 py-2 text-center text-red-600">가능</td></tr>
+                        <tr class="bg-green-50"><td class="border border-gray-200 px-3 py-2 font-medium">Conservative 2PL</td><td class="border border-gray-200 px-3 py-2">시작 시 모든 락 획득</td><td class="border border-gray-200 px-3 py-2 text-center text-green-600 font-bold">불가능</td><td class="border border-gray-200 px-3 py-2 text-center text-red-600">가능</td></tr>
+                        <tr class="bg-blue-50"><td class="border border-gray-200 px-3 py-2 font-bold text-indigo-800">Strict 2PL ⭐</td><td class="border border-gray-200 px-3 py-2">X-Lock을 커밋/롤백까지 유지</td><td class="border border-gray-200 px-3 py-2 text-center text-red-600">가능</td><td class="border border-gray-200 px-3 py-2 text-center text-green-600 font-bold">불가능</td></tr>
+                        <tr><td class="border border-gray-200 px-3 py-2 font-medium">Rigorous 2PL</td><td class="border border-gray-200 px-3 py-2">모든 Lock을 커밋/롤백까지 유지</td><td class="border border-gray-200 px-3 py-2 text-center text-red-600">가능</td><td class="border border-gray-200 px-3 py-2 text-center text-green-600 font-bold">불가능</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="text-sm text-gray-500 mt-3">⭐ <strong>Strict 2PL</strong>이 실무에서 가장 널리 사용됨. Dirty Read 차단 + Cascading Rollback 방지.</p>
+        </div>
+    </div>
+    <div id="deadlock" class="hidden space-y-8">
+        <h2 class="text-2xl font-bold text-gray-900">교착상태 발생 조건 및 해결</h2>
+        <p class="text-gray-600">2PL의 부작용인 교착상태의 4대 필요조건과 예방·회피·탐지·복구 전략을 학습합니다.</p>
+
+        <!-- 교착상태 시각화 -->
+        <div class="bg-white rounded-xl shadow-sm border p-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">교착상태(Deadlock) 개념</h3>
+            <p class="text-gray-600 mb-4">두 개 이상의 트랜잭션이 서로 상대방이 보유한 락의 해제를 무한히 기다리는 상태.</p>
+            <div class="flex justify-center">
+                <div class="relative bg-red-50 border-2 border-red-300 rounded-xl p-6" style="min-width: 280px;">
+                    <div class="flex justify-between items-center">
+                        <div class="bg-indigo-100 border-2 border-indigo-400 rounded-lg px-4 py-3 text-center">
+                            <div class="font-bold text-indigo-800">T1</div>
+                            <div class="text-xs text-indigo-600">Lock(A) 보유</div>
+                        </div>
+                        <div class="bg-green-100 border-2 border-green-400 rounded-lg px-4 py-3 text-center">
+                            <div class="font-bold text-green-800">T2</div>
+                            <div class="text-xs text-green-600">Lock(B) 보유</div>
+                        </div>
+                    </div>
+                    <div class="flex justify-between mt-2 px-8">
+                        <div class="text-xs text-red-600 font-bold">→ Lock(B) 대기</div>
+                        <div class="text-xs text-red-600 font-bold">← Lock(A) 대기</div>
+                    </div>
+                    <div class="text-center mt-3"><span class="bg-red-500 text-white px-3 py-1 rounded-full text-xs font-bold">🔄 순환 대기 → 교착상태!</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Coffman 4조건 -->
+        <div class="bg-white rounded-xl shadow-sm border p-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">Coffman 4대 필요조건 (1971) — <span class="text-amber-600">"상점비순"</span></h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-red-50 border border-red-200 rounded-xl p-4">
+                    <div class="font-bold text-red-800 mb-1">상 — 상호 배제 (Mutual Exclusion)</div>
+                    <p class="text-sm text-red-700">자원은 한 번에 하나의 프로세스만 사용 가능. X-Lock은 동시 공유 불가.</p>
+                </div>
+                <div class="bg-orange-50 border border-orange-200 rounded-xl p-4">
+                    <div class="font-bold text-orange-800 mb-1">점 — 점유와 대기 (Hold and Wait)</div>
+                    <p class="text-sm text-orange-700">자원을 보유한 채 추가 자원을 대기. Lock(A) 보유하고 Lock(B) 대기.</p>
+                </div>
+                <div class="bg-purple-50 border border-purple-200 rounded-xl p-4">
+                    <div class="font-bold text-purple-800 mb-1">비 — 비선점 (No Preemption)</div>
+                    <p class="text-sm text-purple-700">다른 프로세스가 보유한 자원을 강제 해제 불가.</p>
+                </div>
+                <div class="bg-teal-50 border border-teal-200 rounded-xl p-4">
+                    <div class="font-bold text-teal-800 mb-1">순 — 순환 대기 (Circular Wait)</div>
+                    <p class="text-sm text-teal-700">프로세스 간 자원 대기 관계가 순환 고리 형성. T1→T2→...→Tn→T1.</p>
+                </div>
+            </div>
+            <p class="text-sm text-gray-600 mt-4 text-center font-medium">4조건 모두 동시 충족 시 교착상태 발생. <strong class="text-red-600">하나라도 제거하면 방지 가능.</strong></p>
+        </div>
+
+        <!-- 해결 전략 -->
+        <div class="bg-white rounded-xl shadow-sm border p-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">해결 4전략 — <span class="text-amber-600">"예회탐복"</span></h3>
+            <div class="space-y-4">
+                <div class="tech-block bg-white rounded-xl border border-gray-200 p-5 shadow-sm" onclick="toggleBlock(this)">
+                    <div class="flex items-center gap-3">
+                        <span class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-sm font-bold text-blue-600">예</span>
+                        <div><h4 class="font-bold text-gray-900">예방 (Prevention)</h4><p class="text-sm text-gray-500">4대 조건 중 하나를 원천 제거</p></div>
+                        <span class="ml-auto text-gray-400 text-sm">▼</span>
+                    </div>
+                    <div class="detail-content hidden mt-4 pt-4 border-t border-gray-100 animate-fade-in">
+                        <table class="w-full text-sm border-collapse">
+                            <thead><tr class="bg-blue-50"><th class="border border-gray-200 px-2 py-2 text-left">제거 조건</th><th class="border border-gray-200 px-2 py-2">기법</th><th class="border border-gray-200 px-2 py-2 text-left">설명</th><th class="border border-gray-200 px-2 py-2">단점</th></tr></thead>
+                            <tbody>
+                                <tr><td class="border border-gray-200 px-2 py-2">점유와 대기</td><td class="border border-gray-200 px-2 py-2 font-medium">Conservative 2PL</td><td class="border border-gray-200 px-2 py-2">시작 시 모든 락 한번에 획득</td><td class="border border-gray-200 px-2 py-2">자원 활용도 저하</td></tr>
+                                <tr><td class="border border-gray-200 px-2 py-2">비선점</td><td class="border border-gray-200 px-2 py-2 font-medium">선점 허용</td><td class="border border-gray-200 px-2 py-2">높은 우선순위가 강제 해제</td><td class="border border-gray-200 px-2 py-2">롤백 빈번</td></tr>
+                                <tr><td class="border border-gray-200 px-2 py-2">순환 대기</td><td class="border border-gray-200 px-2 py-2 font-medium">자원 순서 부여</td><td class="border border-gray-200 px-2 py-2">오름차순으로만 락 요청</td><td class="border border-gray-200 px-2 py-2">유연성 감소</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="tech-block bg-white rounded-xl border border-gray-200 p-5 shadow-sm" onclick="toggleBlock(this)">
+                    <div class="flex items-center gap-3">
+                        <span class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-sm font-bold text-green-600">회</span>
+                        <div><h4 class="font-bold text-gray-900">회피 (Avoidance)</h4><p class="text-sm text-gray-500">타임스탬프 기반 사전 판단 — Wait-Die vs Wound-Wait</p></div>
+                        <span class="ml-auto text-gray-400 text-sm">▼</span>
+                    </div>
+                    <div class="detail-content hidden mt-4 pt-4 border-t border-gray-100 animate-fade-in">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="bg-blue-50 border-2 border-blue-300 rounded-xl p-4">
+                                <h5 class="font-bold text-blue-900 mb-2">Wait-Die (비선점)</h5>
+                                <p class="text-sm text-blue-700 mb-1">오래된 T → <strong>기다림(Wait)</strong></p>
+                                <p class="text-sm text-blue-700">최신 T → <strong>롤백(Die)</strong></p>
+                                <p class="text-xs text-blue-500 mt-2">TS(Ti) &lt; TS(Tj) → Wait, else Die</p>
+                            </div>
+                            <div class="bg-red-50 border-2 border-red-300 rounded-xl p-4">
+                                <h5 class="font-bold text-red-900 mb-2">Wound-Wait (선점)</h5>
+                                <p class="text-sm text-red-700 mb-1">오래된 T → <strong>상대 강제 롤백(Wound)</strong></p>
+                                <p class="text-sm text-red-700">최신 T → <strong>기다림(Wait)</strong></p>
+                                <p class="text-xs text-red-500 mt-2">TS(Ti) &lt; TS(Tj) → Wound(Tj), else Wait</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tech-block bg-white rounded-xl border border-gray-200 p-5 shadow-sm" onclick="toggleBlock(this)">
+                    <div class="flex items-center gap-3">
+                        <span class="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-sm font-bold text-amber-600">탐</span>
+                        <div><h4 class="font-bold text-gray-900">탐지 (Detection)</h4><p class="text-sm text-gray-500">대기 그래프(Wait-for Graph) — 사이클 존재 → 교착상태</p></div>
+                        <span class="ml-auto text-gray-400 text-sm">▼</span>
+                    </div>
+                    <div class="detail-content hidden mt-4 pt-4 border-t border-gray-100 animate-fade-in">
+                        <p class="text-gray-600 mb-3">트랜잭션 간 대기 관계를 방향 그래프로 구성, <strong class="text-amber-700">사이클(Cycle)이 존재하면 교착상태</strong>로 판정.</p>
+                        <div class="flex justify-center mb-3">
+                            <div class="bg-amber-50 border-2 border-amber-300 rounded-xl px-6 py-3 text-center">
+                                <span class="text-sm font-bold text-amber-800">T1 → T2 → T3 → T1</span>
+                                <div class="text-xs text-red-600 font-bold mt-1">사이클 존재 → 교착상태!</div>
+                            </div>
+                        </div>
+                        <p class="text-sm text-gray-500">Oracle, PostgreSQL, MySQL InnoDB 등 대부분 상용 DBMS가 이 방식 채택 (교착상태 빈도 &lt; 1%).</p>
+                    </div>
+                </div>
+
+                <div class="tech-block bg-white rounded-xl border border-gray-200 p-5 shadow-sm" onclick="toggleBlock(this)">
+                    <div class="flex items-center gap-3">
+                        <span class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-sm font-bold text-red-600">복</span>
+                        <div><h4 class="font-bold text-gray-900">복구 (Recovery)</h4><p class="text-sm text-gray-500">Victim 선정 후 롤백 (전체/부분)</p></div>
+                        <span class="ml-auto text-gray-400 text-sm">▼</span>
+                    </div>
+                    <div class="detail-content hidden mt-4 pt-4 border-t border-gray-100 animate-fade-in">
+                        <table class="w-full text-sm border-collapse mb-3">
+                            <thead><tr class="bg-red-50"><th class="border border-gray-200 px-3 py-2 text-left">기법</th><th class="border border-gray-200 px-3 py-2">설명</th><th class="border border-gray-200 px-3 py-2">비용</th></tr></thead>
+                            <tbody>
+                                <tr><td class="border border-gray-200 px-3 py-2 font-medium">Victim 선정 후 롤백</td><td class="border border-gray-200 px-3 py-2">실행시간, 보유 락 수, 남은 작업량 기준</td><td class="border border-gray-200 px-3 py-2 text-center">중간</td></tr>
+                                <tr><td class="border border-gray-200 px-3 py-2 font-medium">전체 롤백</td><td class="border border-gray-200 px-3 py-2">처음부터 다시 실행</td><td class="border border-gray-200 px-3 py-2 text-center text-red-600">높음</td></tr>
+                                <tr><td class="border border-gray-200 px-3 py-2 font-medium">부분 롤백</td><td class="border border-gray-200 px-3 py-2">체크포인트까지만 롤백</td><td class="border border-gray-200 px-3 py-2 text-center text-green-600">낮음</td></tr>
+                            </tbody>
+                        </table>
+                        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm text-yellow-700"><strong>기아 방지:</strong> 동일 트랜잭션이 반복 Victim이 되지 않도록 롤백 횟수를 선정 기준에 반영.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 전략 비교표 -->
+        <div class="bg-white rounded-xl shadow-sm border p-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">해결 전략 비교</h3>
+            <table class="w-full text-sm border-collapse">
+                <thead><tr class="bg-indigo-50"><th class="border border-gray-200 px-3 py-2 text-left">전략</th><th class="border border-gray-200 px-3 py-2">시점</th><th class="border border-gray-200 px-3 py-2">자원 활용도</th><th class="border border-gray-200 px-3 py-2">오버헤드</th><th class="border border-gray-200 px-3 py-2">적용 환경</th></tr></thead>
+                <tbody>
+                    <tr><td class="border border-gray-200 px-3 py-2 font-medium">예방</td><td class="border border-gray-200 px-3 py-2 text-center">사전</td><td class="border border-gray-200 px-3 py-2 text-center">낮음</td><td class="border border-gray-200 px-3 py-2 text-center">낮음</td><td class="border border-gray-200 px-3 py-2">교착상태 비용이 매우 큰 환경</td></tr>
+                    <tr><td class="border border-gray-200 px-3 py-2 font-medium">회피</td><td class="border border-gray-200 px-3 py-2 text-center">요청 시</td><td class="border border-gray-200 px-3 py-2 text-center">중간</td><td class="border border-gray-200 px-3 py-2 text-center">중간</td><td class="border border-gray-200 px-3 py-2">패턴 예측 가능 시</td></tr>
+                    <tr class="bg-green-50"><td class="border border-gray-200 px-3 py-2 font-bold text-green-800">탐지+복구 ⭐</td><td class="border border-gray-200 px-3 py-2 text-center">사후</td><td class="border border-gray-200 px-3 py-2 text-center font-medium text-green-600">높음</td><td class="border border-gray-200 px-3 py-2 text-center">높음</td><td class="border border-gray-200 px-3 py-2">교착상태 빈도가 낮은 환경 (상용 DBMS)</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div id="textbook" class="tab-content hidden">
+      <div class="max-w-4xl mx-auto textbook-content">
+        <h3>제1장 동시성 제어 미수행 시 3대 문제점 (소문제 1)</h3>
+        <h4>1.1 동시성 제어(Concurrency Control) 개요</h4>
+        <div class="def-box">
+          <p>동시성 제어란, 다중 사용자 데이터베이스 환경에서 둘 이상의 트랜잭션이 동시에 같은 데이터에 접근할 때 <strong>데이터의 일관성(Consistency)과 무결성(Integrity)을 보장</strong>하기 위한 메커니즘이다.</p>
+        </div>
+        <p>트랜잭션의 ACID 속성 중 <strong>격리성(Isolation)</strong>을 보장하는 핵심 기술이며, 동시성 제어가 수행되지 않으면 아래 3대 문제가 발생한다.</p>
+
+        <h4>1.2 갱신 손실(Lost Update)</h4>
+        <p>갱신 손실은 두 개의 트랜잭션이 동일한 데이터를 동시에 갱신할 때, <strong>한 트랜잭션의 갱신 결과가 다른 트랜잭션에 의해 덮어써져 소실</strong>되는 현상이다.</p>
+        <p><strong>시나리오</strong>: 계좌 잔액이 100만 원인 상태에서 T1(10만 원 입금)과 T2(20만 원 출금)가 동시 실행</p>
+        <table>
+          <thead><tr><th>시간</th><th>T1 (입금 10만)</th><th>T2 (출금 20만)</th><th>DB 값</th></tr></thead>
+          <tbody>
+            <tr><td>t1</td><td>Read(잔액) = 100만</td><td></td><td>100만</td></tr>
+            <tr><td>t2</td><td></td><td>Read(잔액) = 100만</td><td>100만</td></tr>
+            <tr><td>t3</td><td>잔액 = 100 + 10 = 110만</td><td></td><td>100만</td></tr>
+            <tr><td>t4</td><td>Write(110만)</td><td></td><td><strong>110만</strong></td></tr>
+            <tr><td>t5</td><td></td><td>잔액 = 100 - 20 = 80만</td><td>110만</td></tr>
+            <tr><td>t6</td><td></td><td>Write(80만)</td><td><strong>80만</strong></td></tr>
+          </tbody>
+        </table>
+        <div class="insight-box">
+          <p><strong>결과</strong>: T1의 입금이 손실됨. 정상 결과는 90만 원(100+10-20)이어야 하나 80만 원이 됨.</p>
+        </div>
+
+        <h4>1.3 현황 파악 오류(Dirty Read / Uncommitted Dependency)</h4>
+        <p>현황 파악 오류는 한 트랜잭션이 <strong>커밋되지 않은(Uncommitted) 다른 트랜잭션의 변경 데이터</strong>를 읽는 현상이다. 읽은 후 원래 트랜잭션이 롤백(Rollback)되면 잘못된 데이터를 기반으로 처리한 결과가 된다.</p>
+        <p><strong>시나리오</strong>: T1이 재고를 100→80으로 갱신 후 롤백, T2가 중간에 80을 읽음</p>
+        <table>
+          <thead><tr><th>시간</th><th>T1</th><th>T2</th><th>DB 값</th></tr></thead>
+          <tbody>
+            <tr><td>t1</td><td>Write(재고 = 80)</td><td></td><td><strong>80</strong></td></tr>
+            <tr><td>t2</td><td></td><td>Read(재고) = <strong>80</strong></td><td>80</td></tr>
+            <tr><td>t3</td><td><strong>Rollback</strong> (80→100 복원)</td><td></td><td><strong>100</strong></td></tr>
+            <tr><td>t4</td><td></td><td>80 기준으로 주문 처리 → <strong>오류</strong></td><td>100</td></tr>
+          </tbody>
+        </table>
+        <div class="insight-box">
+          <p><strong>결과</strong>: T2는 존재한 적 없는 값(80)을 기준으로 의사결정을 수행하여 데이터 불일치가 발생한다.</p>
+        </div>
+
+        <h4>1.4 모순성(Inconsistency / Non-repeatable Read)</h4>
+        <p>모순성은 하나의 트랜잭션 내에서 <strong>동일 데이터를 두 번 읽었을 때 값이 달라지는</strong> 현상이다. 중간에 다른 트랜잭션이 해당 데이터를 변경하고 커밋했기 때문에 발생한다.</p>
+        <p><strong>시나리오</strong>: T1이 계좌 A와 계좌 B의 잔액 합계를 조회하는 동안 T2가 이체를 수행</p>
+        <table>
+          <thead><tr><th>시간</th><th>T1 (합계 조회)</th><th>T2 (이체)</th><th>A잔액</th><th>B잔액</th></tr></thead>
+          <tbody>
+            <tr><td>t1</td><td>Read(A) = 100</td><td></td><td>100</td><td>200</td></tr>
+            <tr><td>t2</td><td></td><td>A = A - 50 → Write(50)</td><td><strong>50</strong></td><td>200</td></tr>
+            <tr><td>t3</td><td></td><td>B = B + 50 → Write(250)</td><td>50</td><td><strong>250</strong></td></tr>
+            <tr><td>t4</td><td>Read(B) = <strong>250</strong></td><td></td><td>50</td><td>250</td></tr>
+          </tbody>
+        </table>
+        <div class="insight-box">
+          <p><strong>결과</strong>: T1이 읽은 합계 = 100 + 250 = 350 (실제 합계는 300). 동일 트랜잭션 내에서 데이터 모순이 발생한다.</p>
+        </div>
+
+        <h4>1.5 3대 문제점 비교</h4>
+        <table>
+          <thead><tr><th>문제점</th><th>원인</th><th>피해 유형</th><th>관련 격리 수준</th></tr></thead>
+          <tbody>
+            <tr><td>갱신 손실</td><td>동시 Write-Write 충돌</td><td>데이터 소실</td><td>모든 수준에서 방지</td></tr>
+            <tr><td>현황 파악 오류(Dirty Read)</td><td>Uncommitted 데이터 Read</td><td>잘못된 데이터 기반 처리</td><td>Read Committed 이상</td></tr>
+            <tr><td>모순성(Non-repeatable Read)</td><td>트랜잭션 중간 외부 Write-Commit</td><td>동일 쿼리 결과 불일치</td><td>Repeatable Read 이상</td></tr>
+          </tbody>
+        </table>
+
+        <h3>제2장 로킹 기법과 2PL의 직렬 가능성 보장 원리 (소문제 2)</h3>
+        <h4>2.1 로킹(Locking) 기법 개념</h4>
+        <p>로킹이란, 트랜잭션이 데이터에 접근할 때 <strong>락(Lock)</strong>을 설정하여 다른 트랜잭션의 동시 접근을 제어하는 기법이다. 락의 종류는 크게 두 가지이다.</p>
+        <table>
+          <thead><tr><th>락 유형</th><th>설명</th><th>호환성</th></tr></thead>
+          <tbody>
+            <tr><td><strong>공유 락(S-Lock)</strong></td><td>읽기 전용 락. 여러 트랜잭션이 동시에 S-Lock 가능</td><td>S-Lock과 호환, X-Lock과 비호환</td></tr>
+            <tr><td><strong>배타 락(X-Lock)</strong></td><td>쓰기 락. 해당 데이터에 대한 독점적 접근 보장</td><td>S-Lock, X-Lock 모두 비호환</td></tr>
+          </tbody>
+        </table>
+        <p><strong>락 호환성 매트릭스(Lock Compatibility Matrix)</strong>:</p>
+        <table>
+          <thead><tr><th></th><th>S-Lock 요청</th><th>X-Lock 요청</th></tr></thead>
+          <tbody>
+            <tr><td><strong>S-Lock 보유</strong></td><td>✅ 호환 (동시 읽기 허용)</td><td>❌ 대기</td></tr>
+            <tr><td><strong>X-Lock 보유</strong></td><td>❌ 대기</td><td>❌ 대기</td></tr>
+          </tbody>
+        </table>
+
+        <h4>2.2 2단계 로킹 프로토콜(2PL: Two-Phase Locking)</h4>
+        <p>2PL은 트랜잭션의 로킹 연산을 <strong>확장 단계(Growing Phase)</strong>와 <strong>축소 단계(Shrinking Phase)</strong>의 두 단계로 분리하여, <strong>직렬 가능성(Serializability)</strong>을 보장하는 프로토콜이다.</p>
+        <table>
+          <thead><tr><th>단계</th><th>허용 연산</th><th>설명</th></tr></thead>
+          <tbody>
+            <tr><td>확장 단계(Growing Phase)</td><td>Lock 획득만 허용</td><td>새로운 락을 계속 설정할 수 있지만, 어떤 락도 해제할 수 없음</td></tr>
+            <tr><td>축소 단계(Shrinking Phase)</td><td>Unlock만 허용</td><td>락을 해제할 수 있지만, 새로운 락을 설정할 수 없음</td></tr>
+          </tbody>
+        </table>
+        <p><strong>Lock Point</strong>: 확장 단계에서 축소 단계로 전환되는 시점, 즉 마지막 Lock이 설정된 시점을 Lock Point라 한다.</p>
+        <!-- 2PL 단계 다이어그램 - HTML/CSS 시각화 -->
+        <div class="bg-white rounded-lg border p-6 my-4">
+          <div class="flex items-center justify-between text-sm mb-2">
+            <span class="text-indigo-600 font-bold">확장 단계(Growing)</span>
+            <span class="text-red-600 font-bold">축소 단계(Shrinking)</span>
+          </div>
+          <div class="relative h-16 bg-gray-100 rounded-lg overflow-hidden">
+            <div class="absolute left-0 top-0 h-full w-1/2 bg-indigo-100 flex items-center justify-center text-xs text-indigo-700 font-medium border-r-2 border-dashed border-indigo-400">
+              Lock(A) → Lock(B) → Lock(C)
+            </div>
+            <div class="absolute right-0 top-0 h-full w-1/2 bg-red-50 flex items-center justify-center text-xs text-red-700 font-medium">
+              Unlock(A) → Unlock(B) → Unlock(C)
+            </div>
+            <div class="absolute top-0 left-1/2 transform -translate-x-1/2 h-full flex items-center">
+              <div class="bg-amber-500 text-white text-xs px-2 py-1 rounded font-bold shadow">Lock Point</div>
+            </div>
+          </div>
+          <div class="flex justify-between text-xs text-gray-500 mt-1">
+            <span>↑ Lock만 가능</span>
+            <span>↑ Unlock만 가능</span>
+          </div>
+        </div>
+
+        <h4>2.3 직렬 가능성(Serializability) 보장 원리</h4>
+        <p><strong>직렬 가능성</strong>이란, 동시에 실행된 트랜잭션들의 결과가 <strong>어떤 직렬 실행(Serial Execution) 순서의 결과와 동일</strong>한 성질을 의미한다.</p>
+        <p><strong>2PL이 직렬 가능성을 보장하는 수학적 근거</strong>: 2PL을 따르는 모든 트랜잭션의 Lock Point를 기준으로 <strong>위상 정렬(Topological Sort)</strong>이 가능하다. 즉, 트랜잭션 Ti의 Lock Point가 Tj의 Lock Point보다 앞서면, 직렬 순서에서도 Ti가 Tj보다 먼저 실행된 것과 동등한 결과를 보장한다.</p>
+        <div class="insight-box">
+          <p><strong>정리(Theorem)</strong>: 2PL을 따르는 모든 스케줄은 직렬 가능(Serializable)하다. 이는 Eswaran et al.(1976)에 의해 증명되었다.</p>
+        </div>
+
+        <h4>2.4 2PL의 변형</h4>
+        <table>
+          <thead><tr><th>변형</th><th>특징</th><th>교착상태</th><th>Cascading Rollback</th></tr></thead>
+          <tbody>
+            <tr><td>Basic 2PL</td><td>기본 2단계 분리</td><td>가능</td><td>가능</td></tr>
+            <tr><td>Conservative 2PL</td><td>트랜잭션 시작 시 모든 락 획득</td><td><strong>불가능</strong></td><td>가능</td></tr>
+            <tr><td>Strict 2PL</td><td>X-Lock을 커밋/롤백 시까지 유지</td><td>가능</td><td><strong>불가능</strong></td></tr>
+            <tr><td>Rigorous 2PL</td><td>모든 Lock을 커밋/롤백 시까지 유지</td><td>가능</td><td><strong>불가능</strong></td></tr>
+          </tbody>
+        </table>
+        <p><strong>실무에서 가장 널리 사용되는 것은 Strict 2PL</strong>이다. X-Lock을 트랜잭션 종료 시까지 유지함으로써 Dirty Read를 원천 차단하고, Cascading Rollback을 방지한다.</p>
+
+        <h4>2.5 연관 이론 연결</h4>
+        <p><strong>트랜잭션 격리 수준(Isolation Level)</strong>: SQL 표준(SQL:2003)에서 정의한 4가지 격리 수준(Read Uncommitted, Read Committed, Repeatable Read, Serializable)은 로킹의 강도를 단계별로 조절한 것이다. Serializable 수준이 2PL과 가장 유사하며, 최고 수준의 일관성을 보장한다.</p>
+        <p><strong>MVCC(Multi-Version Concurrency Control)</strong>: 로킹의 대안적 접근으로, 데이터의 여러 버전을 유지하여 읽기와 쓰기가 서로 차단하지 않는 기법이다. PostgreSQL, Oracle, MySQL InnoDB 등 대부분의 현대 DBMS는 MVCC를 기본으로 채택하고 있으며, 2PL과 MVCC를 결합하여 사용한다.</p>
+        <h3>제3장 교착상태 발생 4조건 및 해결 기법 (소문제 3)</h3>
+        <h4>3.1 교착상태(Deadlock) 개념</h4>
+        <div class="def-box">
+          <p>교착상태란, 두 개 이상의 트랜잭션이 <strong>서로 상대방이 보유한 락(Lock)의 해제를 무한히 기다리는 상태</strong>이다.</p>
+        </div>
+        <!-- 교착상태 순환 대기 시각화 -->
+        <div class="bg-white rounded-lg border p-4 my-4">
+          <div class="flex items-center justify-center gap-8">
+            <div class="text-center">
+              <div class="bg-indigo-100 border-2 border-indigo-400 rounded-lg px-4 py-2 font-bold text-indigo-700">T1: Lock(A)</div>
+              <div class="text-xs text-gray-500 mt-1">대기: Lock(B)</div>
+            </div>
+            <div class="flex flex-col items-center gap-1">
+              <span class="text-red-500 font-bold text-lg">→ 대기 →</span>
+              <span class="text-red-500 font-bold text-lg">← 대기 ←</span>
+              <span class="text-red-600 text-xs font-bold">(순환 대기)</span>
+            </div>
+            <div class="text-center">
+              <div class="bg-green-100 border-2 border-green-400 rounded-lg px-4 py-2 font-bold text-green-700">T2: Lock(B)</div>
+              <div class="text-xs text-gray-500 mt-1">대기: Lock(A)</div>
+            </div>
+          </div>
+        </div>
+        <p>T1은 A를 잠그고 B를 기다리며, T2는 B를 잠그고 A를 기다린다. 양측 모두 상대방의 락이 해제되기를 무한히 기다리므로 시스템이 교착 상태에 빠진다.</p>
+
+        <h4>3.2 교착상태 발생 4대 필요조건 (Coffman Conditions, 1971)</h4>
+        <p>Edward Coffman이 정의한 4대 필요조건이 <strong>모두 동시에 충족</strong>되어야 교착상태가 발생한다.</p>
+        <table>
+          <thead><tr><th>조건</th><th>설명</th><th>DB 환경 예시</th></tr></thead>
+          <tbody>
+            <tr><td><strong>상호 배제(Mutual Exclusion)</strong></td><td>자원은 한 번에 하나의 프로세스만 사용 가능</td><td>X-Lock은 동시 공유 불가</td></tr>
+            <tr><td><strong>점유와 대기(Hold and Wait)</strong></td><td>자원을 보유한 채 추가 자원을 대기</td><td>Lock(A)을 보유하고 Lock(B) 대기</td></tr>
+            <tr><td><strong>비선점(No Preemption)</strong></td><td>다른 프로세스가 보유한 자원을 강제 해제 불가</td><td>다른 트랜잭션의 락을 강제로 빼앗을 수 없음</td></tr>
+            <tr><td><strong>순환 대기(Circular Wait)</strong></td><td>프로세스 간 자원 대기 관계가 순환 고리 형성</td><td>T1→T2→...→Tn→T1 순환</td></tr>
+          </tbody>
+        </table>
+        <div class="insight-box">
+          <p><strong>핵심</strong>: 4조건 중 <strong>하나라도 제거</strong>하면 교착상태를 방지할 수 있다. 이것이 교착상태 해결 전략의 이론적 근거이다.</p>
+        </div>
+
+        <h4>3.3 교착상태 해결 기법</h4>
+        <p>교착상태 해결 전략은 크게 <strong>예방(Prevention)</strong>, <strong>회피(Avoidance)</strong>, <strong>탐지(Detection)</strong>, <strong>복구(Recovery)</strong>의 4가지로 분류된다.</p>
+
+        <p><strong>[1] 예방(Prevention)</strong> — 4대 조건 중 하나를 원천 제거</p>
+        <table>
+          <thead><tr><th>제거 대상 조건</th><th>예방 기법</th><th>설명</th><th>단점</th></tr></thead>
+          <tbody>
+            <tr><td>점유와 대기</td><td><strong>Conservative 2PL</strong></td><td>트랜잭션 시작 시 필요한 모든 락을 한 번에 획득</td><td>자원 활용도 저하, 기아 가능</td></tr>
+            <tr><td>비선점</td><td><strong>선점 허용</strong></td><td>높은 우선순위 트랜잭션이 낮은 우선순위의 락을 강제 해제</td><td>롤백 빈번 발생</td></tr>
+            <tr><td>순환 대기</td><td><strong>자원 순서 부여</strong></td><td>모든 자원에 번호를 부여하고 오름차순으로만 락 요청</td><td>유연성 감소</td></tr>
+          </tbody>
+        </table>
+
+        <p><strong>[2] 회피(Avoidance)</strong> — 교착상태 발생 가능성을 사전 판단</p>
+        <table>
+          <thead><tr><th>기법</th><th>원리</th><th>특징</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Wait-Die</strong> (비선점)</td><td>오래된 트랜잭션은 기다리고(Wait), 최신 트랜잭션은 롤백(Die)</td><td>오래된 것 우선, Wound-Wait와 반대</td></tr>
+            <tr><td><strong>Wound-Wait</strong> (선점)</td><td>오래된 트랜잭션이 최신 트랜잭션을 강제 롤백(Wound)시키고 진행</td><td>오래된 것이 적극적으로 진행</td></tr>
+          </tbody>
+        </table>
+        <p>두 기법 모두 <strong>타임스탬프(Timestamp)</strong>를 기반으로 트랜잭션의 "나이"를 판단한다.</p>
+        <p><strong>Wait-Die</strong>: Ti가 Tj의 락을 기다릴 때, TS(Ti) &lt; TS(Tj)(Ti가 더 오래됨)이면 Wait, 아니면 Die(롤백)</p>
+        <p><strong>Wound-Wait</strong>: Ti가 Tj의 락을 기다릴 때, TS(Ti) &lt; TS(Tj)(Ti가 더 오래됨)이면 Wound(Tj 롤백), 아니면 Wait</p>
+
+        <p><strong>[3] 탐지(Detection)</strong> — 교착상태 발생 후 감지</p>
+        <p><strong>대기 그래프(Wait-for Graph)</strong> 기법이 대표적이다. 트랜잭션 간의 대기 관계를 방향 그래프로 구성하고, <strong>사이클(Cycle)이 존재하면 교착상태</strong>로 판정한다.</p>
+        <!-- 대기 그래프 시각화 -->
+        <div class="bg-white rounded-lg border p-4 my-4">
+          <p class="text-sm font-bold text-gray-700 mb-2">대기 그래프 예시:</p>
+          <div class="flex items-center justify-center gap-3">
+            <div class="bg-indigo-100 border border-indigo-300 rounded-lg px-3 py-1 text-sm font-bold text-indigo-700">T1</div>
+            <span class="text-gray-500">→</span>
+            <div class="bg-green-100 border border-green-300 rounded-lg px-3 py-1 text-sm font-bold text-green-700">T2</div>
+            <span class="text-gray-500">→</span>
+            <div class="bg-purple-100 border border-purple-300 rounded-lg px-3 py-1 text-sm font-bold text-purple-700">T3</div>
+            <span class="text-gray-500">→</span>
+            <div class="bg-indigo-100 border border-indigo-300 rounded-lg px-3 py-1 text-sm font-bold text-indigo-700">T1</div>
+            <span class="text-red-600 font-bold text-sm ml-2">← 사이클 존재 → 교착상태!</span>
+          </div>
+        </div>
+        <p>탐지 주기는 시스템 부하에 따라 결정하며, 주기가 짧으면 오버헤드가 크고 길면 교착상태 지속 시간이 증가한다.</p>
+
+        <p><strong>[4] 복구(Recovery)</strong> — 탐지된 교착상태 해소</p>
+        <table>
+          <thead><tr><th>복구 기법</th><th>설명</th><th>비용 기준</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Victim 선정 후 롤백</strong></td><td>교착상태 트랜잭션 중 하나를 희생(Victim)으로 선택하여 롤백</td><td>실행 시간, 보유 락 수, 남은 작업량</td></tr>
+            <tr><td><strong>전체 롤백</strong></td><td>Victim을 처음부터 다시 실행</td><td>비용 높음, 구현 간단</td></tr>
+            <tr><td><strong>부분 롤백</strong></td><td>Victim을 교착상태 발생 직전 체크포인트까지만 롤백</td><td>비용 낮음, 구현 복잡</td></tr>
+          </tbody>
+        </table>
+        <p><strong>기아(Starvation) 방지</strong>: 동일 트랜잭션이 반복적으로 Victim으로 선정되지 않도록 <strong>롤백 횟수를 Victim 선정 기준에 반영</strong>한다.</p>
+
+        <h4>3.4 교착상태 해결 전략 비교</h4>
+        <table>
+          <thead><tr><th>전략</th><th>시점</th><th>자원 활용도</th><th>오버헤드</th><th>적용 환경</th></tr></thead>
+          <tbody>
+            <tr><td>예방</td><td>사전</td><td>낮음 (보수적 자원 할당)</td><td>낮음</td><td>교착상태 비용이 매우 큰 환경</td></tr>
+            <tr><td>회피</td><td>자원 요청 시</td><td>중간</td><td>중간</td><td>트랜잭션 패턴 예측 가능 시</td></tr>
+            <tr><td>탐지+복구</td><td>사후</td><td>높음 (낙관적 접근)</td><td>높음 (그래프 탐지 비용)</td><td>교착상태 빈도가 낮은 환경</td></tr>
+          </tbody>
+        </table>
+        <p><strong>실무 적용</strong>: 대부분의 상용 DBMS(Oracle, PostgreSQL, MySQL)는 <strong>탐지+복구</strong> 전략을 채택하고 있다. 교착상태 발생 빈도가 전체 트랜잭션의 1% 미만인 환경에서는 예방보다 탐지가 효율적이기 때문이다.</p>
+
+        <h3>소문제 간 통합 분석</h3>
+        <p>세 소문제는 <strong>"문제 → 해결 → 부작용 해결"</strong>의 완결적 구조로 연결된다.</p>
+        <table>
+          <thead><tr><th>관점</th><th>소문제 1</th><th>소문제 2</th><th>소문제 3</th></tr></thead>
+          <tbody>
+            <tr><td>역할</td><td>문제 정의</td><td>해결책 제시</td><td>부작용 대응</td></tr>
+            <tr><td>핵심 질문</td><td>왜 동시성 제어가 필요한가?</td><td>어떻게 일관성을 보장하는가?</td><td>락의 부작용을 어떻게 해결하는가?</td></tr>
+            <tr><td>핵심 개념</td><td>갱신 손실, Dirty Read, 모순성</td><td>2PL, Lock Point, 직렬 가능성</td><td>Coffman 4조건, Wait-Die, 대기 그래프</td></tr>
+          </tbody>
+        </table>
+        <div class="insight-box">
+          <p>결론적으로, 동시성 제어는 <strong>3대 문제점(소문제 1)</strong>을 해결하기 위해 <strong>2PL(소문제 2)</strong>을 적용하되, 2PL이 초래하는 <strong>교착상태(소문제 3)</strong>에 대한 탐지·복구 메커니즘을 함께 구축해야 하는 <strong>통합적 접근</strong>이 필수적이다.</p>
+        </div>
+      </div>
+    </div>
+    <div id="script" class="tab-content hidden">
+      <div class="max-w-4xl mx-auto">
+        <div class="bg-amber-50 border border-amber-200 rounded-xl p-6">
+          <div class="flex items-center gap-2 mb-4">
+            <span class="text-2xl">🎬</span>
+            <h3 class="text-xl font-bold text-amber-800">강의 스크립트 (멘토 전용)</h3>
+            <span class="bg-amber-200 text-amber-800 text-xs px-2 py-1 rounded-full font-bold">20분 강의용</span>
+          </div>
+          <div class="prose text-gray-700 leading-relaxed space-y-4 text-[0.97rem]">
+            <p>안녕하세요, 여러분. 오늘은 데이터베이스의 정통 문제를 다뤄볼 건데요. 동시성 제어, 2PL, 그리고 교착상태입니다. 이 세 가지는 DB 과목에서 가장 빈출되는 토픽이에요. 거의 매 회차 1~2교시에서 직간접적으로 출제되거든요. 제가 최근 5년간 기출을 분석해봤는데, 동시성 제어 관련 문제가 안 나온 회차가 거의 없더라고요. 그만큼 핵심 중의 핵심이라는 거예요.</p>
+
+            <p>이 문제의 구조가 정말 깔끔해요. 소문제 1이 "문제가 뭐냐", 소문제 2가 "그걸 어떻게 해결하냐", 소문제 3이 "해결하다 보니 부작용이 생기는데 그건 어떻게 하냐"예요. <span class="highlight">"문제 → 해결 → 부작용 해결"</span>의 완결 구조입니다. 서론에서 "다중 사용자 환경에서의 동시성 문제를 정의하고, 2PL을 통한 해결 원리를 논한 후, 락의 부작용인 교착상태의 해소 전략까지 단계적으로 서술하겠다"라고 쓰면 답안의 흐름이 확 잡혀요.</p>
+
+            <p>소문제 1부터 갈게요. 동시성 제어를 안 하면 뭐가 문제냐. 3가지입니다. <span class="highlight">"갱현모"</span>로 외우세요. 갱신 손실, 현황 파악 오류, 모순성. 이 세 가지를 단순히 정의만 쓰면 안 되고, 반드시 <strong>시나리오</strong>를 그려야 해요. 시간순으로 T1과 T2의 Read/Write를 표로 정리하는 거예요. 이 표가 있고 없고의 차이가 정말 크거든요. 정의만 쓰면 기본 점수, 시나리오까지 그리면 만점이에요.</p>
+
+            <p>갱신 손실이 가장 직관적이에요. 제가 늘 드는 비유가 은행 ATM이에요. 여러분이 ATM에서 10만 원을 입금하고 있는데, 동시에 누군가가 같은 계좌에서 20만 원을 출금해요. 계좌에 100만 원이 있었다면 결과가 90만 원이어야 하잖아요? 근데 동시 처리 과정에서 출금 쪽이 아까 읽어둔 100만 원에서 20만 원을 빼서 80만 원을 기록해버려요. 입금한 쪽의 결과(110만)가 완전히 덮어써진 거예요. 10만 원이 공중에서 사라진 거죠.</p>
+
+            <p>현황 파악 오류는 Dirty Read라고도 하는데요, 아직 커밋 안 된 데이터를 읽어버리는 거예요. T1이 재고를 100에서 80으로 바꿨는데 아직 "확정"을 안 누른 상태에서 T2가 80을 읽어갔어요. 근데 T1이 "취소"(롤백)를 해버렸어요. 그러면 T2는 한 번도 존재한 적 없는 80이라는 숫자를 믿고 의사결정을 한 거죠.</p>
+
+            <p>모순성은 같은 트랜잭션 안에서 같은 데이터를 두 번 읽었는데 값이 달라지는 거예요. Non-repeatable Read라고도 하는데, 계좌 A와 B의 합계를 조회하고 있는데 중간에 다른 트랜잭션이 이체를 해버리면 합계가 틀어지는 거죠. 세 가지 시나리오를 각각 시간순 표로 그리고, 마지막에 3대 문제를 비교하는 표를 하나 넣으면 소문제 1은 완벽합니다.</p>
+
+            <p>소문제 2로 넘어가면, 로킹과 2PL이에요. 먼저 락의 종류를 알아야 해요. S-Lock(공유 락)은 읽기용이고 여러 트랜잭션이 동시에 잡을 수 있어요. X-Lock(배타 락)은 쓰기용이고 독점이에요. 이걸 <strong>호환성 매트릭스</strong>로 꼭 그리세요. S-S만 호환되고, 나머지는 전부 대기. 이 2×2 표 하나가 락의 본질을 보여주거든요.</p>
+
+            <p>2PL의 핵심은 확장 단계와 축소 단계의 분리예요. 확장 단계에서는 Lock만 하고 Unlock은 절대 안 해요. 축소 단계에서는 Unlock만 하고 Lock은 절대 안 하는 거죠. 이 단순한 규칙이 왜 직렬 가능성을 보장하냐면, <span class="highlight">Lock Point</span>라는 개념 때문이에요. 마지막 Lock을 건 시점이 Lock Point인데, 이 시점을 기준으로 트랜잭션들의 실행 순서가 결정됩니다. 이걸 1976년에 <span class="highlight">Eswaran</span>이 수학적으로 증명했거든요.</p>
+
+            <p>차별화 포인트를 하나 더 드리면, 2PL의 변형 4가지를 꼭 비교표로 정리하세요. Basic, Conservative, Strict, Rigorous 2PL. 특히 <span class="highlight">Strict 2PL</span>이 실무에서 가장 많이 쓰이는데, X-Lock을 커밋할 때까지 유지해서 Dirty Read와 Cascading Rollback을 방지하거든요.</p>
+
+            <p>마지막 소문제 3, 교착상태입니다. 이건 2PL의 "부작용"이에요. 교착상태 4조건은 1971년 <span class="highlight">Coffman</span>이 정의했는데, <span class="highlight">"상점비순"</span>으로 외우세요. 상호 배제, 점유와 대기, 비선점, 순환 대기. 핵심은 이 네 가지가 <strong>전부</strong> 동시에 만족되어야 교착상태가 발생한다는 거예요. 하나만 깨뜨리면 교착상태를 막을 수 있어요.</p>
+
+            <p>해결 전략은 4가지예요. <span class="highlight">"예회탐복"</span>으로 외우세요. 예방, 회피, 탐지, 복구. 회피는 <span class="highlight">Wait-Die</span>와 <span class="highlight">Wound-Wait</span>가 핵심인데, Wait-Die는 "오래된 트랜잭션이 참고 기다리고, 젊은 놈이 죽는다(롤백)"예요. Wound-Wait는 반대로 "오래된 놈이 젊은 놈을 찔러서(강제 롤백) 자기가 먼저 간다"입니다.</p>
+
+            <p>탐지는 <span class="highlight">대기 그래프(Wait-for Graph)</span>를 그려서 사이클이 있는지 확인하는 거예요. 실무에서 Oracle, PostgreSQL, MySQL InnoDB 등 대부분의 상용 DBMS가 이 탐지+복구 방식을 쓰고 있어요. 교착상태가 실제로 발생하는 빈도가 전체 트랜잭션의 1% 미만이거든요.</p>
+
+            <p>결론에서는 "동시성 3대 문제를 2PL로 해결하되, 교착상태에 대한 탐지+복구 전략을 병행하는 것이 현대 DBMS의 표준 접근"이라고 정리하면 됩니다. 미래 전망으로 <span class="highlight">MVCC</span>와 2PL의 결합을 언급하면 더 좋아요.</p>
+
+            <p>분량 배분은 서론 10%, 소문제 1이 25%, 소문제 2가 30%, 소문제 3이 25%, 결론 10%입니다. 필수 도식 세 가지 꼭 기억하세요. 시나리오 시간순 표, 2PL 단계 다이어그램, 교착상태 대기 그래프. 그리고 두문자어 세 개, <span class="highlight">"갱현모"</span>, <span class="highlight">"상점비순"</span>, <span class="highlight">"예회탐복"</span>을 반드시 외우고 가세요. 시험장에서 이 세 개만 기억나면 답안 뼈대는 잡을 수 있습니다. 오늘도 수고 많으셨습니다!</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="quiz" class="tab-content hidden">
+      <div class="max-w-4xl mx-auto">
+            <!-- AI 실전 퀴즈 영역 -->
+            <div class="bg-indigo-50 rounded-xl p-6 border border-indigo-100 mb-8">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-bold text-indigo-900 text-lg flex items-center"><span class="mr-2">🧠</span> AI 실전 문제 생성</h3>
+                    <button onclick="generateQuiz()" id="btn-quiz-gen" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm transition-colors flex items-center gap-2"><span>✨ 새로운 문제 생성</span></button>
+                </div>
+                <div id="quiz-loading" class="hidden py-8 text-center">
+                    <div class="typing-indicator flex justify-center mb-2"><span></span><span></span><span></span></div>
+                    <p class="text-indigo-600 text-sm">AI가 문제를 출제하고 있습니다...</p>
+                </div>
+                <div id="quiz-container" class="hidden space-y-4">
+                    <div class="bg-white p-5 rounded-lg shadow-sm border border-indigo-100">
+                        <div class="flex items-start gap-2 mb-4">
+                            <span id="quiz-type-badge" class="bg-indigo-100 text-indigo-800 text-xs font-bold px-2 py-1 rounded whitespace-nowrap mt-1">객관식</span>
+                            <p id="quiz-question" class="font-bold text-gray-800 text-lg"></p>
+                        </div>
+                        <div id="quiz-options" class="space-y-2"></div>
+                        <div id="quiz-input-area" class="hidden mt-4">
+                            <div class="flex gap-2">
+                                <input type="text" id="quiz-answer-input" placeholder="정답을 입력하세요" class="flex-grow border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <button onclick="checkShortAnswer()" id="btn-short-submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-bold">제출</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="quiz-feedback" class="hidden bg-white p-5 rounded-lg border-l-4"></div>
+                </div>
+                <div id="quiz-placeholder" class="text-center py-8 text-gray-500 border-2 border-dashed border-indigo-200 rounded-lg">
+                    <p>&#39;새로운 문제 생성&#39; 버튼을 눌러 실력을 점검해보세요.</p>
+                </div>
+            </div>
+
+        <!-- 암기 노트 ① 두문자어 -->
+        <div class="mb-8">
+          <h3 class="font-bold text-lg text-indigo-900 mb-4">📝 암기 노트 ① 두문자어</h3>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-4">
+              <div class="text-center mb-2"><span class="text-2xl font-black text-indigo-700">갱현모</span></div>
+              <p class="text-sm text-indigo-600 font-medium mb-2">동시성 3대 문제</p>
+              <ul class="text-sm text-gray-700 space-y-1">
+                <li><strong>갱</strong>: 갱신 손실(Lost Update)</li>
+                <li><strong>현</strong>: 현황 파악 오류(Dirty Read)</li>
+                <li><strong>모</strong>: 모순성(Non-repeatable Read)</li>
+              </ul>
+            </div>
+            <div class="bg-green-50 border border-green-200 rounded-xl p-4">
+              <div class="text-center mb-2"><span class="text-2xl font-black text-green-700">상점비순</span></div>
+              <p class="text-sm text-green-600 font-medium mb-2">교착상태 4조건(Coffman)</p>
+              <ul class="text-sm text-gray-700 space-y-1">
+                <li><strong>상</strong>: 상호 배제(Mutual Exclusion)</li>
+                <li><strong>점</strong>: 점유와 대기(Hold and Wait)</li>
+                <li><strong>비</strong>: 비선점(No Preemption)</li>
+                <li><strong>순</strong>: 순환 대기(Circular Wait)</li>
+              </ul>
+            </div>
+            <div class="bg-purple-50 border border-purple-200 rounded-xl p-4">
+              <div class="text-center mb-2"><span class="text-2xl font-black text-purple-700">예회탐복</span></div>
+              <p class="text-sm text-purple-600 font-medium mb-2">교착상태 해결 4전략</p>
+              <ul class="text-sm text-gray-700 space-y-1">
+                <li><strong>예</strong>: 예방(Prevention) — 4조건 제거</li>
+                <li><strong>회</strong>: 회피(Avoidance) — Wait-Die, Wound-Wait</li>
+                <li><strong>탐</strong>: 탐지(Detection) — 대기 그래프</li>
+                <li><strong>복</strong>: 복구(Recovery) — Victim 롤백</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- 암기 노트 ② 골격 답안 -->
+        <div class="mb-8">
+          <h3 class="font-bold text-lg text-indigo-900 mb-4">📝 암기 노트 ② 골격 답안</h3>
+          <div class="bg-white rounded-xl border p-5 overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead><tr class="bg-gray-50"><th class="border p-2 text-left">구간</th><th class="border p-2 text-left">비중</th><th class="border p-2 text-left">핵심 내용</th></tr></thead>
+              <tbody>
+                <tr><td class="border p-2 font-bold">서론</td><td class="border p-2">10%</td><td class="border p-2">다중 사용자 환경, ACID 격리성 보장 필요성</td></tr>
+                <tr><td class="border p-2 font-bold">소문제 1</td><td class="border p-2">25%</td><td class="border p-2">갱신 손실·Dirty Read·모순성 시나리오(시간순 표) + 비교표</td></tr>
+                <tr><td class="border p-2 font-bold">소문제 2</td><td class="border p-2">30%</td><td class="border p-2">S/X-Lock 호환성 + 2PL 단계 + Lock Point 직렬 가능성 + 변형 비교표</td></tr>
+                <tr><td class="border p-2 font-bold">소문제 3</td><td class="border p-2">25%</td><td class="border p-2">Coffman 4조건 + 예방/회피/탐지/복구 + Wait-Die vs Wound-Wait</td></tr>
+                <tr><td class="border p-2 font-bold">결론</td><td class="border p-2">10%</td><td class="border p-2">문제→해결→부작용 통합 관점 + MVCC 결합 전망</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 암기 노트 ③ 필수 도식 + 차별화 -->
+        <div class="mb-8">
+          <h3 class="font-bold text-lg text-indigo-900 mb-4">📝 암기 노트 ③ 필수 도식 + 차별화 포인트</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-amber-50 border border-amber-200 rounded-xl p-4">
+              <p class="font-bold text-amber-800 mb-2">📊 필수 도식 3가지</p>
+              <ul class="text-sm text-gray-700 space-y-2">
+                <li>1. <strong>동시성 문제 시나리오 표</strong> — 시간순 T1, T2의 Read/Write</li>
+                <li>2. <strong>2PL 단계 다이어그램</strong> — 확장(Lock)→Lock Point→축소(Unlock)</li>
+                <li>3. <strong>교착상태 대기 그래프</strong> — 사이클 존재 여부로 판정</li>
+              </ul>
+            </div>
+            <div class="bg-teal-50 border border-teal-200 rounded-xl p-4">
+              <p class="font-bold text-teal-800 mb-2">💎 차별화 포인트</p>
+              <ul class="text-sm text-gray-700 space-y-2">
+                <li>• Eswaran et al.(1976) 인용: 2PL 직렬 가능성 증명</li>
+                <li>• Coffman(1971) 인용: 교착상태 필요조건 정의</li>
+                <li>• MVCC와 2PL의 현대적 결합 언급</li>
+                <li>• 상용 DBMS(Oracle, PostgreSQL)의 실제 전략 비교</li>
+                <li>• 트랜잭션 격리 수준과의 연계</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- 제2부 전체 암기 요약 -->
+        <div class="mb-8">
+          <h3 class="font-bold text-lg text-indigo-900 mb-4">📖 제2부 암기 요약 자료 (전체)</h3>
+          <div class="bg-white rounded-xl border p-6 textbook-content">
+            <h4>한 줄 정의</h4>
+            <div class="def-box">
+              <p>동시성 제어 미수행 시 갱신 손실·현황 파악 오류·모순성이 발생하며, 2PL은 확장/축소 단계 분리로 직렬 가능성을 보장하고, 교착상태는 Coffman 4조건을 기반으로 예방·회피·탐지·복구 전략으로 해결한다.</p>
+            </div>
+
+            <h4>핵심 키워드 맵</h4>
+            <!-- 키워드 맵을 HTML/CSS로 시각화 -->
+            <div class="space-y-4 my-4">
+              <div class="bg-indigo-50 rounded-lg p-4">
+                <p class="font-bold text-indigo-700 mb-2">[동시성 3대 문제]</p>
+                <div class="pl-4 border-l-2 border-indigo-300 space-y-1 text-sm text-gray-700">
+                  <p>├─ <strong>갱신 손실</strong>: W-W 충돌, 한 쪽 갱신 소실</p>
+                  <p>├─ <strong>현황 파악 오류(Dirty Read)</strong>: Uncommitted 데이터 읽기</p>
+                  <p>└─ <strong>모순성(Non-repeatable Read)</strong>: 같은 데이터 두 번 읽기 결과 상이</p>
+                </div>
+              </div>
+              <div class="bg-green-50 rounded-lg p-4">
+                <p class="font-bold text-green-700 mb-2">[2PL]</p>
+                <div class="pl-4 border-l-2 border-green-300 space-y-1 text-sm text-gray-700">
+                  <p>├─ <strong>확장 단계</strong>: Lock만 허용, Unlock 불가</p>
+                  <p>├─ <strong>축소 단계</strong>: Unlock만 허용, Lock 불가</p>
+                  <p>├─ <strong>Lock Point</strong>: 확장→축소 전환점 (직렬 순서 결정)</p>
+                  <p>└─ <strong>변형</strong>: Basic / Conservative / Strict / Rigorous</p>
+                </div>
+              </div>
+              <div class="bg-purple-50 rounded-lg p-4">
+                <p class="font-bold text-purple-700 mb-2">[교착상태]</p>
+                <div class="pl-4 border-l-2 border-purple-300 space-y-1 text-sm text-gray-700">
+                  <p>├─ <strong>4조건(Coffman)</strong>: 상호배제, 점유대기, 비선점, 순환대기</p>
+                  <p>├─ <strong>예방</strong>: Conservative 2PL, 자원순서</p>
+                  <p>├─ <strong>회피</strong>: Wait-Die, Wound-Wait</p>
+                  <p>└─ <strong>탐지+복구</strong>: 대기 그래프, Victim 선정</p>
+                </div>
+              </div>
+            </div>
+
+            <h4>두문자어 암기법</h4>
+            <p><strong>동시성 3대 문제</strong>: <span class="highlight">"갱현모"</span> — 갱신 손실, 현황 파악 오류, 모순성</p>
+            <p><strong>교착상태 4조건(Coffman)</strong>: <span class="highlight">"상점비순"</span> — 상호 배제, 점유와 대기, 비선점, 순환 대기</p>
+            <p><strong>교착상태 해결 4전략</strong>: <span class="highlight">"예회탐복"</span> — 예방, 회피, 탐지, 복구</p>
+
+            <h4>골격 답안 구조</h4>
+            <p><strong>[서론 — 10%]</strong> 다중 사용자 환경에서 트랜잭션 간 간섭 문제 + ACID 격리성 보장의 필요성</p>
+            <p><strong>[소문제 1 — 25%]</strong> 3대 문제점: 갱신 손실·Dirty Read·모순성 시나리오(시간순 표) + 비교표</p>
+            <p><strong>[소문제 2 — 30%]</strong> 2PL: S/X-Lock 호환성 + 2PL 두 단계 + Lock Point 직렬 가능성 + 변형 비교표</p>
+            <p><strong>[소문제 3 — 25%]</strong> 교착상태: Coffman 4조건 + 예방/회피/탐지/복구 + Wait-Die vs Wound-Wait</p>
+            <p><strong>[결론 — 10%]</strong> 문제→해결→부작용 해결의 통합 관점 + MVCC와의 현대적 결합 전망</p>
+
+            <h4>필수 도식</h4>
+            <ul>
+              <li><strong>동시성 문제 시나리오 표</strong> — 시간순으로 T1, T2의 Read/Write 표현</li>
+              <li><strong>2PL 단계 다이어그램</strong> — 확장(Lock)→Lock Point→축소(Unlock)</li>
+              <li><strong>교착상태 대기 그래프</strong> — 사이클 존재 여부로 교착상태 판정</li>
+            </ul>
+
+            <h4>차별화 포인트</h4>
+            <ul>
+              <li>Eswaran et al.(1976) 인용: 2PL의 직렬 가능성 증명</li>
+              <li>Coffman(1971) 인용: 교착상태 필요조건 정의</li>
+              <li>MVCC와 2PL의 현대적 결합 언급</li>
+              <li>상용 DBMS(Oracle, PostgreSQL)의 실제 전략 비교</li>
+              <li>트랜잭션 격리 수준과의 연계</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+    </main>
+    <div id="chat-sidebar" class="fixed top-0 right-0 h-full w-80 sm:w-96 bg-white shadow-2xl z-50 closed flex flex-col">
+        <div class="flex items-center justify-between p-4 border-b bg-indigo-600 text-white">
+            <h3 class="font-bold">💬 AI 튜터</h3>
+            <button onclick="toggleChat()" class="text-white hover:text-indigo-200 text-xl">&times;</button>
+        </div>
+        <div id="chat-messages" class="flex-grow overflow-y-auto p-4 flex flex-col space-y-2">
+            <div class="chat-msg ai">안녕하세요! 동시성 제어, 2PL, 교착상태에 대해 무엇이든 물어보세요.</div>
+        </div>
+        <div class="p-3 border-t flex gap-2">
+            <input type="text" id="chat-input" placeholder="질문을 입력하세요..." class="flex-grow border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" onkeydown="if(event.key==='Enter')sendChat()">
+            <button onclick="sendChat()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-indigo-700">전송</button>
+        </div>
+    </div>
+    <button onclick="toggleChat()" id="chat-fab" class="fixed bottom-6 right-6 w-14 h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-lg flex items-center justify-center text-2xl z-40 transition-transform hover:scale-110">💬</button>
+    <div id="settings-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-gray-900">🔑 API Key 설정</h3>
+                <button onclick="toggleSettings()" class="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
+            </div>
+            <p class="text-sm text-gray-600 mb-4">Gemini API Key를 입력하면 AI 퀴즈 생성과 튜터 채팅 기능을 사용할 수 있습니다.</p>
+            <input type="password" id="api-key-input" placeholder="Gemini API Key 입력" class="w-full border border-gray-300 rounded-lg px-4 py-2 mb-3 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <div class="flex gap-2">
+                <button onclick="saveApiKey()" class="flex-grow bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg font-bold text-sm">저장</button>
+                <button onclick="clearApiKey()" class="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50">초기화</button>
+            </div>
+            <p id="api-key-status" class="text-xs text-gray-400 mt-2 text-center"></p>
+        </div>
+    </div>
+    <footer class="bg-white border-t mt-auto">
+        <div class="max-w-5xl mx-auto px-4 py-6 text-center">
+            <p class="text-sm text-gray-500">박교익PE (132회 정보관리기술사, dr.code92@gmail.com)</p>
+            <p class="text-xs text-gray-400 mt-1">Copyright &copy; KPC 정보관리기술사 ZIP-UP 심화반. All rights reserved.</p>
+        </div>
+    </footer>
+<script>
+    var sections = ['overview','problems','twopl','deadlock','textbook','quiz'];
+    var isMentorMode = new URLSearchParams(window.location.search).get('mentor') === 'true';
+    if (isMentorMode) {
+        sections = ['overview','problems','twopl','deadlock','textbook','script','quiz'];
+        var sn = document.getElementById('nav-script'); if(sn) sn.classList.remove('hidden');
+    }
+    var urlKey = new URLSearchParams(window.location.search).get('key') || '';
+    if (urlKey) localStorage.setItem('geminiKey', urlKey);
+
+    function navTo(id) {
+        sections.forEach(function(s) {
+            var sec = document.getElementById(s); var nav = document.getElementById('nav-' + s);
+            if (sec) sec.classList.add('hidden'); if (nav) { nav.classList.remove('active','text-gray-900'); nav.classList.add('text-gray-500'); }
+        });
+        var el = document.getElementById(id); var navEl = document.getElementById('nav-' + id);
+        if (el) { el.classList.remove('hidden'); el.classList.add('animate-fade-in'); }
+        if (navEl) { navEl.classList.add('active','text-gray-900'); navEl.classList.remove('text-gray-500'); }
+        window.scrollTo({top: 0, behavior: 'smooth'});
+    }
+    function toggleBlock(el) {
+        var detail = el.querySelector('.detail-content'); if (!detail) return;
+        var isOpen = !detail.classList.contains('hidden');
+        el.closest('.grid,.space-y-4,.space-y-3').querySelectorAll('.detail-content').forEach(function(d) { d.classList.add('hidden'); });
+        el.closest('.grid,.space-y-4,.space-y-3').querySelectorAll('.tech-block').forEach(function(b) { b.classList.remove('selected','border-indigo-500'); b.classList.add('border-gray-200'); });
+        if (!isOpen) { detail.classList.remove('hidden'); el.classList.add('selected','border-indigo-500'); el.classList.remove('border-gray-200'); }
+    }
+    function getApiKey() { return localStorage.getItem('geminiKey') || localStorage.getItem('gemini_api_key') || ''; }
+    function toggleSettings() { document.getElementById('settings-modal').classList.toggle('hidden'); var k=getApiKey(); document.getElementById('api-key-input').value=k; document.getElementById('api-key-status').textContent=k?'✅ API Key가 설정되어 있습니다.':''; }
+    function saveApiKey() { var k=document.getElementById('api-key-input').value.trim(); if(k){localStorage.setItem('geminiKey',k);document.getElementById('api-key-status').textContent='✅ 저장되었습니다.';}else{alert('API Key를 입력해주세요.');}}
+    function clearApiKey() { localStorage.removeItem('geminiKey');localStorage.removeItem('gemini_api_key');document.getElementById('api-key-input').value='';document.getElementById('api-key-status').textContent='🗑️ 초기화되었습니다.'; }
+    function toggleChat() { var s=document.getElementById('chat-sidebar'); s.classList.toggle('open'); s.classList.toggle('closed'); }
+    async function sendChat() {
+        geminiKey = (typeof getApiKey==='function')?(getApiKey()||''):(localStorage.getItem('geminiKey')||localStorage.getItem('gemini_api_key')||'');
+        if(!geminiKey){alert('API Key를 먼저 설정해주세요.');toggleSettings();return;}
+        var input=document.getElementById('chat-input'); var msg=input.value.trim(); if(!msg) return; input.value='';
+        var box=document.getElementById('chat-messages');
+        box.innerHTML+='<div class="chat-msg user">'+msg+'</div>';
+        box.innerHTML+='<div class="chat-msg ai" id="chat-loading"><div class="typing-indicator"><span></span><span></span><span></span></div></div>';
+        box.scrollTop=box.scrollHeight;
+        try {
+            var r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key='+geminiKey,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:"당신은 정보관리기술사 시험 멘토입니다. '동시성 제어, 2PL, 교착상태' 관련 질문에 전문적이고 명쾌하게 답변해주세요. 300자 이내로 핵심만 요약.\n\n질문: "+msg}]}],generationConfig:{maxOutputTokens:1024}})});
+            var d=await r.json(); var t=d.candidates[0].content.parts[0].text;
+            var loading=document.getElementById('chat-loading'); if(loading) loading.outerHTML='<div class="chat-msg ai prose">'+marked.parse(t)+'</div>';
+        } catch(e) { var loading=document.getElementById('chat-loading'); if(loading) loading.outerHTML='<div class="chat-msg ai text-red-500">오류: '+e.message+'</div>'; }
+        box.scrollTop=box.scrollHeight;
+    }
+
+    // ── 퀴즈 (QUIZ_TEMPLATE 그대로) ──
+    var geminiKey = (typeof getApiKey==='function')?(getApiKey()||''):(localStorage.getItem('geminiKey')||localStorage.getItem('gemini_api_key')||'');
+    var quizTypeHistory = [];
+    var currentQuizData = null;
+    var quizTopics = [
+        { category: "동시성 제어 개요", keywords: "ACID, 격리성, 다중 사용자, 일관성, 무결성" },
+        { category: "갱신 손실과 Dirty Read", keywords: "Lost Update, Write-Write 충돌, Uncommitted, Rollback" },
+        { category: "모순성과 격리 수준", keywords: "Non-repeatable Read, Read Committed, Repeatable Read, Serializable" },
+        { category: "로킹과 락 호환성", keywords: "S-Lock, X-Lock, 공유 락, 배타 락, 호환성 매트릭스" },
+        { category: "2PL과 직렬 가능성", keywords: "확장 단계, 축소 단계, Lock Point, Eswaran, Serializability" },
+        { category: "2PL 변형", keywords: "Basic, Conservative, Strict, Rigorous, Cascading Rollback" },
+        { category: "교착상태 조건과 예방", keywords: "Coffman, 상호배제, 점유대기, 비선점, 순환대기" },
+        { category: "교착상태 회피와 탐지", keywords: "Wait-Die, Wound-Wait, 대기 그래프, Victim, 타임스탬프" }
+    ];
+
+    async function generateQuiz() {
+        geminiKey=(typeof getApiKey==='function')?(getApiKey()||''):(localStorage.getItem('geminiKey')||localStorage.getItem('gemini_api_key')||'');
+        if(!geminiKey){alert('API Key를 먼저 설정해주세요.');toggleSettings();return;}
+        var btn=document.getElementById('btn-quiz-gen'); btn.disabled=true; btn.innerHTML='<span>생성 중...</span>';
+        document.getElementById('quiz-placeholder').classList.add('hidden');
+        document.getElementById('quiz-container').classList.add('hidden');
+        document.getElementById('quiz-loading').classList.remove('hidden');
+        var isMC; var recent=quizTypeHistory.slice(-2);
+        if(recent.length>=2&&recent[0]===recent[1]){isMC=!recent[1];}else{isMC=Math.random()>0.5;}
+        quizTypeHistory.push(isMC);
+        var selected=quizTopics[Math.floor(Math.random()*quizTopics.length)];
+        var quizType=isMC?'객관식 (4지선다)':'단답형';
+        var format=isMC?'{"question":"문제","options":["A","B","C","D"],"correctIndex":0,"explanation":"해설"}':'{"question":"문제","correctAnswer":"정답","explanation":"해설"}';
+        var prompt="다음 카테고리에 대한 "+quizType+" 퀴즈 1문제를 만드세요.\n"+"카테고리: "+selected.category+"\n"+"관련 키워드: "+selected.keywords+"\n"+"규칙: 반드시 위 카테고리와 키워드에 직접 관련된 문제를 출제하세요.\n"+"JSON 형식으로 응답: "+format;
+        try {
+            var r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key='+geminiKey,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{responseMimeType:"application/json"}})});
+            var d=await r.json(); var t=d.candidates[0].content.parts[0].text;
+            t=t.replace(/```json\s*/gi,"").replace(/```\s*/g,"").trim();
+            var depth=0,start=-1,end=-1;
+            for(var i=0;i<t.length;i++){if(t[i]==='{'){if(depth===0)start=i;depth++;}else if(t[i]==='}'){depth--;if(depth===0&&start!==-1){end=i;break;}}}
+            if(start===-1||end===-1)throw new Error("No JSON found");
+            t=t.substring(start,end+1);
+            t=t.replace(/[\x00-\x1F\x7F]/g,function(c){return c==='\n'||c==='\r'||c==='\t'?' ':'';});
+            currentQuizData=JSON.parse(t); renderQuiz(isMC);
+        } catch(e) {
+            document.getElementById('quiz-loading').classList.add('hidden');
+            document.getElementById('quiz-placeholder').classList.remove('hidden');
+            document.getElementById('quiz-placeholder').innerHTML='<p class="text-red-500">퀴즈 생성 오류: '+e.message+'</p>';
+        }
+        btn.disabled=false; btn.innerHTML='<span>✨ 새로운 문제 생성</span>';
+    }
+    function renderQuiz(isMC) {
+        document.getElementById('quiz-loading').classList.add('hidden');
+        document.getElementById('quiz-feedback').classList.add('hidden');
+        document.getElementById('quiz-container').classList.remove('hidden');
+        document.getElementById('quiz-type-badge').textContent=isMC?'객관식':'단답형';
+        document.getElementById('quiz-question').textContent=currentQuizData.question;
+        var optDiv=document.getElementById('quiz-options'); var inputDiv=document.getElementById('quiz-input-area');
+        if(isMC){optDiv.classList.remove('hidden');inputDiv.classList.add('hidden');
+            var h=''; var letters=['A','B','C','D'];
+            currentQuizData.options.forEach(function(opt,i){h+='<button onclick="checkMultipleChoice('+i+', this)" class="w-full text-left p-4 rounded-lg border border-gray-200 hover:bg-indigo-50 hover:border-indigo-300 transition-all mb-2 flex items-center group"><span class="w-8 h-8 rounded-full bg-gray-100 group-hover:bg-indigo-100 flex items-center justify-center text-sm font-bold text-gray-500 group-hover:text-indigo-600 mr-3 flex-shrink-0">'+letters[i]+'</span><span class="text-sm text-gray-700">'+opt+'</span></button>';});
+            optDiv.innerHTML=h;
+        } else {optDiv.classList.add('hidden');inputDiv.classList.remove('hidden');document.getElementById('quiz-answer-input').value='';document.getElementById('quiz-answer-input').focus();}
+    }
+    function checkMultipleChoice(idx,btnEl) {
+        var correct=idx===currentQuizData.correctIndex;
+        document.querySelectorAll('#quiz-options button').forEach(function(b,i){b.disabled=true;if(i===currentQuizData.correctIndex){b.classList.add('bg-green-50','border-green-400');b.querySelector('span:first-child').classList.add('bg-green-100','text-green-700');}else if(i===idx&&!correct){b.classList.add('bg-red-50','border-red-400');b.querySelector('span:first-child').classList.add('bg-red-100','text-red-700');}});
+        showQuizFeedback(correct,currentQuizData.options[currentQuizData.correctIndex],currentQuizData.explanation);
+    }
+    async function checkShortAnswer() {
+        geminiKey=(typeof getApiKey==='function')?(getApiKey()||''):(localStorage.getItem('geminiKey')||localStorage.getItem('gemini_api_key')||'');
+        var ans=document.getElementById('quiz-answer-input').value.trim(); if(!ans){alert('답을 입력해주세요.');return;}
+        var btn=document.getElementById('btn-short-submit'); btn.disabled=true; btn.textContent='채점 중...';
+        try {
+            var gradingPrompt="당신은 정보관리기술사 시험 채점관입니다. 아래 문제에 대해 사용자의 답안이 정답으로 인정될 수 있는지 판정하세요.\n\n"+"문제: "+currentQuizData.question+"\n"+"모범 정답: "+currentQuizData.correctAnswer+"\n"+"사용자 답안: "+ans+"\n\n"+"판정 기준:\n- 핵심 의미가 동일하면 정답\n- 약어/풀네임 모두 인정\n- 영어/한글 혼용 인정\n- 띄어쓰기/조사 차이는 무시\n- 의미가 명확히 다르면 오답\n\n"+"Output JSON: {\"correct\":true/false,\"reason\":\"판정 이유\"}";
+            var r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key='+geminiKey,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:gradingPrompt}]}],generationConfig:{responseMimeType:"application/json"}})});
+            var d=await r.json(); var gt=d.candidates[0].content.parts[0].text;
+            gt=gt.replace(/```json\s*/gi,"").replace(/```\s*/g,"").trim();
+            var gd=0,gs=-1,ge=-1;for(var i=0;i<gt.length;i++){if(gt[i]==='{'){if(gd===0)gs=i;gd++;}else if(gt[i]==='}'){gd--;if(gd===0&&gs!==-1){ge=i;break;}}}
+            if(gs===-1||ge===-1)throw new Error("No JSON");
+            gt=gt.substring(gs,ge+1);gt=gt.replace(/[\x00-\x1F\x7F]/g,function(c){return c==='\n'||c==='\r'||c==='\t'?' ':'';});
+            var result=JSON.parse(gt);
+            showQuizFeedback(result.correct,currentQuizData.correctAnswer,currentQuizData.explanation+(result.reason?' (AI: '+result.reason+')':''));
+        } catch(e) {
+            var normalize=function(s){return s.replace(/\s/g,'').toLowerCase();};
+            var correct=normalize(currentQuizData.correctAnswer).includes(normalize(ans))||normalize(ans).includes(normalize(currentQuizData.correctAnswer));
+            showQuizFeedback(correct,currentQuizData.correctAnswer,currentQuizData.explanation+' (로컬 채점)');
+        }
+        btn.disabled=false; btn.textContent='제출';
+    }
+    function showQuizFeedback(correct,answer,explanation) {
+        var fb=document.getElementById('quiz-feedback'); fb.classList.remove('hidden','border-green-500','bg-green-50','border-red-500','bg-red-50');
+        if(correct){fb.classList.add('border-green-500','bg-green-50');fb.innerHTML='<p class="font-bold text-green-700 mb-1">✅ 정답입니다!</p><p class="text-sm text-green-600">'+explanation+'</p>';}
+        else{fb.classList.add('border-red-500','bg-red-50');fb.innerHTML='<p class="font-bold text-red-700 mb-1">❌ 오답입니다.</p><p class="text-sm text-red-700 mb-1">정답: '+answer+'</p><p class="text-sm text-red-600">'+explanation+'</p>';}
+    }
+    document.addEventListener('keydown',function(e){if(e.key==='Enter'&&document.getElementById('quiz-answer-input')===document.activeElement){checkShortAnswer();}});
+</script>
+</body></html>

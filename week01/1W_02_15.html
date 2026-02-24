@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Memory Disaggregation, CXL 3.0, 랙 단위 메모리 풀링</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+body{font-family:'Noto Sans KR',sans-serif}
+.tab-btn{padding:0.5rem 1rem;font-size:0.85rem;font-weight:500;border-radius:0.5rem;white-space:nowrap;transition:all 0.2s}
+.tab-btn.active{background:#4f46e5;color:#fff;box-shadow:0 2px 8px rgba(79,70,229,0.3)}
+.tab-btn:not(.active){color:#6b7280}
+.tab-btn:not(.active):hover{background:#e0e7ff;color:#4338ca}
+.tab-btn.mentor-tab{color:#b45309}
+.tab-btn.mentor-tab.active{background:#d97706;color:#fff;box-shadow:0 2px 8px rgba(217,119,6,0.3)}
+.def-box{background:linear-gradient(135deg,#ede9fe 0%,#e0e7ff 100%);border-left:4px solid #6366f1;padding:1.5rem;border-radius:0.75rem;margin:1rem 0}
+.info-card{border-radius:0.75rem;padding:1.25rem;margin-bottom:1rem;border-left:4px solid}
+.info-card.indigo{background:#eef2ff;border-color:#6366f1}
+.info-card.green{background:#ecfdf5;border-color:#10b981}
+.info-card.purple{background:#faf5ff;border-color:#8b5cf6}
+.info-card.amber{background:#fffbeb;border-color:#f59e0b}
+.info-card.teal{background:#f0fdfa;border-color:#14b8a6}
+.info-card.red{background:#fef2f2;border-color:#ef4444}
+.tech-block{background:#fff;border:1px solid #e5e7eb;border-radius:0.75rem;margin-bottom:0.75rem;overflow:hidden;cursor:pointer}
+.tech-block .header{padding:1rem 1.25rem;display:flex;justify-content:space-between;align-items:center}
+.tech-block .body{padding:0 1.25rem 1.25rem;display:none}
+.tech-block.open .body{display:block}
+.tech-block .toggle{transition:transform 0.2s}
+.tech-block.open .toggle{transform:rotate(180deg)}
+.highlight{background:linear-gradient(120deg,#a78bfa 0%,#818cf8 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:700}
+.chat-sidebar{position:fixed;top:0;right:-400px;width:400px;height:100%;background:#fff;box-shadow:-4px 0 20px rgba(0,0,0,0.15);z-index:1000;transition:right 0.3s;display:flex;flex-direction:column}
+.chat-sidebar.open{right:0}
+.chat-fab{position:fixed;bottom:24px;right:24px;width:56px;height:56px;background:#4f46e5;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;cursor:pointer;box-shadow:0 4px 12px rgba(79,70,229,0.4);z-index:999;transition:transform 0.2s}
+.chat-fab:hover{transform:scale(1.1)}
+.typing-indicator span{display:inline-block;width:8px;height:8px;margin:0 2px;background:#6366f1;border-radius:50%;animation:typing 1s infinite}
+.typing-indicator span:nth-child(2){animation-delay:0.2s}
+.typing-indicator span:nth-child(3){animation-delay:0.4s}
+@keyframes typing{0%,100%{opacity:0.3;transform:scale(0.8)}50%{opacity:1;transform:scale(1.2)}}
+.strategy-card{background:#fff;border:1px solid #e5e7eb;border-radius:0.75rem;overflow:hidden;cursor:pointer;margin-bottom:0.75rem}
+.strategy-card .s-header{padding:1rem 1.25rem;display:flex;justify-content:space-between;align-items:center}
+.strategy-card .s-body{padding:0 1.25rem 1.25rem;display:none}
+.strategy-card.open .s-body{display:block}
+.textbook-content h3{font-size:1.25rem;font-weight:700;color:#1e293b;margin-top:2.5rem;margin-bottom:1rem;padding-bottom:0.5rem;border-bottom:2px solid #e0e7ff}
+.textbook-content h4{font-size:1.1rem;font-weight:600;color:#334155;margin-top:1.5rem;margin-bottom:0.75rem}
+.textbook-content p{color:#374151;line-height:1.8;margin-bottom:0.75rem}
+.textbook-content table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:0.9rem}
+.textbook-content th{background:#f1f5f9;padding:0.625rem;border:1px solid #d1d5db;font-weight:600;text-align:left}
+.textbook-content td{padding:0.625rem;border:1px solid #d1d5db}
+.textbook-content blockquote{border-left:4px solid #6366f1;padding:1rem;background:#eef2ff;border-radius:0 0.5rem 0.5rem 0;margin:1rem 0}
+.textbook-content pre{background:#f8fafc;border:1px solid #e2e8f0;border-radius:0.5rem;padding:1rem;overflow-x:auto;font-size:0.85rem;margin:1rem 0}
+.insight-box{background:linear-gradient(135deg,#fef3c7 0%,#fde68a 100%);border-left:4px solid #f59e0b;padding:1.25rem;border-radius:0.75rem;margin:1rem 0}
+.arch-box{background:#fff;border:2px solid #6366f1;border-radius:0.75rem;padding:1.25rem;margin:1rem 0}
+.arch-layer{background:#f8fafc;border:1px solid #e2e8f0;border-radius:0.5rem;padding:0.75rem;margin:0.5rem 0;text-align:center;font-size:0.85rem}
+</style>
+</head>
+<body class="bg-gray-50">
+<div class="max-w-5xl mx-auto px-4 py-6">
+  <header class="bg-white rounded-2xl shadow-sm border p-6 mb-6">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <p class="text-sm text-indigo-600 font-medium tracking-wide mb-1">KPC 정보관리기술사 ZIP-UP 심화반</p>
+        <h1 class="text-2xl font-black text-gray-900">Memory Disaggregation, CXL 3.0, 랙 단위 메모리 풀링</h1>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="bg-indigo-100 text-indigo-700 text-xs font-bold px-3 py-1 rounded-full">2026</span>
+        <button onclick="toggleSettings()" class="bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs font-medium px-3 py-1.5 rounded-full transition-colors flex items-center gap-1">🔑 API 설정</button>
+      </div>
+    </div>
+    <nav class="flex gap-2 overflow-x-auto pb-2" id="tabNav">
+      <button class="tab-btn active" onclick="navTo('overview')">개요 및 개념</button>
+      <button class="tab-btn" onclick="navTo('disaggregation')">메모리 분리</button>
+      <button class="tab-btn" onclick="navTo('cxlprotocol')">CXL 3.0 프로토콜</button>
+      <button class="tab-btn" onclick="navTo('pooling')">메모리 풀링</button>
+      <button class="tab-btn" onclick="navTo('textbook')">원문 학습</button>
+      <button class="tab-btn mentor-tab" onclick="navTo('script')" id="scriptTabBtn" style="display:none;">🎬 강의 스크립트</button>
+      <button class="tab-btn" onclick="navTo('quiz')">퀴즈 & 암기</button>
+    </nav>
+  </header>
+  <main>
+
+<div id="overview" class="space-y-6">
+  <div class="def-box">
+    <p class="font-bold text-indigo-900 text-lg mb-2">📘 핵심 정의</p>
+    <p class="text-indigo-800 leading-relaxed"><strong>Memory Disaggregation</strong>은 CPU와 메모리를 물리적으로 분리하여 네트워크(CXL Fabric)를 통해 메모리 풀을 공유하는 차세대 데이터센터 아키텍처이며, <strong>CXL 3.0</strong>은 PCIe 6.0 기반 캐시 일관성 프로토콜로 하드웨어 수준의 메모리 풀링을 가능하게 하는 오픈 인터커넥트 표준이다.</p>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border p-6">
+    <h3 class="font-bold text-gray-900 text-lg mb-3">📚 개념 해설</h3>
+    <p class="text-gray-700 leading-relaxed mb-3">본 토픽은 기존 서버 아키텍처의 로컬 메모리 종속성 한계를 인식하고, CXL 3.0의 프로토콜 체계를 이해하며, CXL Switch 기반 랙 단위 메모리 풀링 아키텍처의 구조와 기대효과를 분석하는 능력을 검증합니다.</p>
+    <div class="bg-indigo-50 rounded-lg p-4 border border-indigo-100">
+      <p class="text-sm text-indigo-800"><strong>소문제 간 흐름:</strong> <strong>문제 인식</strong>(메모리 종속성) → <strong>핵심 기술</strong>(CXL 3.0) → <strong>실제 적용</strong>(풀링 아키텍처)</p>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div class="info-card indigo">
+      <p class="font-bold text-indigo-800 mb-1">💡 소문제 1</p>
+      <p class="text-sm text-indigo-700 font-medium mb-1">Memory Disaggregation</p>
+      <p class="text-xs text-gray-600">자원 불균형 · 확장성 한계 · 과잉 프로비저닝</p>
+    </div>
+    <div class="info-card green">
+      <p class="font-bold text-green-800 mb-1">🔌 소문제 2</p>
+      <p class="text-sm text-green-700 font-medium mb-1">CXL 3.0 프로토콜</p>
+      <p class="text-xs text-gray-600">CXL.io · CXL.cache · CXL.mem</p>
+    </div>
+    <div class="info-card purple">
+      <p class="font-bold text-purple-800 mb-1">🏗️ 소문제 3</p>
+      <p class="text-sm text-purple-700 font-medium mb-1">랙 단위 메모리 풀링</p>
+      <p class="text-xs text-gray-600">CXL Switch · Fabric Manager · 동적 할당</p>
+    </div>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border p-6">
+    <h3 class="font-bold text-gray-900 text-lg mb-3">📊 메모리 활용률 개선 효과</h3>
+    <div style="max-width:450px;margin:0 auto;"><canvas id="chartUtil"></canvas></div>
+    <script>
+    document.addEventListener('DOMContentLoaded',function(){
+      new Chart(document.getElementById('chartUtil'),{type:'bar',data:{labels:['기존\n(Tightly Coupled)','CXL 메모리\n풀링 적용'],datasets:[{label:'메모리 활용률 (%)',data:[50,90],backgroundColor:['#f87171','#34d399'],borderRadius:8}]},options:{responsive:true,plugins:{title:{display:true,text:'데이터센터 메모리 활용률 개선',font:{size:14,weight:'bold'}},legend:{display:false}},scales:{y:{beginAtZero:true,max:100,ticks:{callback:function(v){return v+'%'}}}}}});
+    });
+    </script>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border p-6">
+    <h3 class="font-bold text-gray-900 text-lg mb-3">🏷️ 핵심 기술 키워드</h3>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div class="bg-indigo-50 rounded-lg p-3 text-center"><p class="font-bold text-indigo-700 text-sm">CXL.io</p><p class="text-xs text-gray-500">장치 발견/설정</p></div>
+      <div class="bg-green-50 rounded-lg p-3 text-center"><p class="font-bold text-green-700 text-sm">CXL.cache</p><p class="text-xs text-gray-500">디바이스→호스트</p></div>
+      <div class="bg-purple-50 rounded-lg p-3 text-center"><p class="font-bold text-purple-700 text-sm">CXL.mem</p><p class="text-xs text-gray-500">호스트→디바이스</p></div>
+      <div class="bg-amber-50 rounded-lg p-3 text-center"><p class="font-bold text-amber-700 text-sm">CXL Switch</p><p class="text-xs text-gray-500">동적 메모리 풀링</p></div>
+    </div>
+  </div>
+</div>
+
+<div id="disaggregation" style="display:none;" class="space-y-6">
+  <h2 class="text-2xl font-bold text-gray-900 mb-2">💡 Memory Disaggregation</h2>
+
+  <div class="bg-white rounded-xl shadow-sm border p-6">
+    <h3 class="font-bold text-gray-800 mb-4">기존 서버 아키텍처 (Tightly Coupled)</h3>
+    <div class="arch-box" style="border-color:#ef4444;">
+      <div class="grid grid-cols-3 gap-3">
+        <div class="text-center"><div class="arch-layer" style="background:#fef2f2;border-color:#ef4444;"><p class="font-bold text-red-700 text-xs">Server 1</p><p class="text-xs">CPU + 128GB</p><p class="text-xs text-red-600 font-bold">사용률 90% ❌</p></div></div>
+        <div class="text-center"><div class="arch-layer" style="background:#fef2f2;border-color:#f59e0b;"><p class="font-bold text-amber-700 text-xs">Server 2</p><p class="text-xs">CPU + 256GB</p><p class="text-xs text-amber-600 font-bold">사용률 30% 낭비</p></div></div>
+        <div class="text-center"><div class="arch-layer" style="background:#fef2f2;border-color:#ef4444;"><p class="font-bold text-red-700 text-xs">Server 3</p><p class="text-xs">CPU + 64GB</p><p class="text-xs text-red-600 font-bold">사용률 95% ❌</p></div></div>
+      </div>
+      <p class="text-center text-sm text-red-600 mt-3 font-medium">서버 간 메모리 공유 불가 → 자원 불균형</p>
+    </div>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border p-6">
+    <h3 class="font-bold text-gray-800 mb-4">Memory Disaggregation 아키텍처</h3>
+    <div class="arch-box" style="border-color:#10b981;">
+      <div class="grid grid-cols-3 gap-3 mb-3">
+        <div class="arch-layer" style="background:#ecfdf5;border-color:#10b981;"><p class="font-bold text-green-800 text-xs">CPU 1</p></div>
+        <div class="arch-layer" style="background:#ecfdf5;border-color:#10b981;"><p class="font-bold text-green-800 text-xs">CPU 2</p></div>
+        <div class="arch-layer" style="background:#ecfdf5;border-color:#10b981;"><p class="font-bold text-green-800 text-xs">CPU 3</p></div>
+      </div>
+      <div class="arch-layer" style="background:#dbeafe;border-color:#3b82f6;"><p class="font-bold text-blue-800 text-sm">CXL Fabric (고속 인터커넥트)</p></div>
+      <div class="arch-layer" style="background:#f0fdf4;border-color:#22c55e;"><p class="font-bold text-green-700 text-sm">Shared Memory Pool (수 TB ~ 수십 TB)</p><p class="text-xs text-green-600">동적 할당 · 고활용률 · 독립 확장</p></div>
+    </div>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border p-6">
+    <h3 class="font-bold text-gray-800 mb-4">3대 문제점: "자확과"</h3>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="info-card red"><p class="font-bold text-red-800 mb-1">자원 불균형</p><p class="text-sm text-gray-700">서버 간 메모리 편차. 평균 활용률 40~60%. 연간 260억$ 낭비 (McKinsey 2023)</p></div>
+      <div class="info-card amber"><p class="font-bold text-amber-800 mb-1">확장성 한계</p><p class="text-sm text-gray-700">DIMM 슬롯/채널 수 물리적 제한. Intel Xeon 4세대 최대 4TB. AI/ML 메모리 폭증</p></div>
+      <div class="info-card purple"><p class="font-bold text-purple-800 mb-1">과잉 프로비저닝</p><p class="text-sm text-gray-700">피크 대비 과다 장착 → 평시 유휴. CAPEX + 전력 비용 증가</p></div>
+    </div>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border p-6">
+    <h3 class="font-bold text-gray-800 mb-4">대안 기술 비교표</h3>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm border-collapse">
+        <thead><tr class="bg-indigo-600 text-white"><th class="p-3 text-left rounded-tl-lg">비교 기준</th><th class="p-3 text-left">NUMA</th><th class="p-3 text-left">RDMA</th><th class="p-3 text-left rounded-tr-lg">CXL</th></tr></thead>
+        <tbody>
+          <tr class="bg-white border-b"><td class="p-3 font-medium">지연 시간</td><td class="p-3">로컬 대비 2~3배</td><td class="p-3">수 μs</td><td class="p-3 font-bold text-green-700">150~300 ns</td></tr>
+          <tr class="bg-indigo-50 border-b"><td class="p-3 font-medium">캐시 일관성</td><td class="p-3">지원</td><td class="p-3">미지원 (SW)</td><td class="p-3 font-bold text-green-700">HW 캐시 일관성</td></tr>
+          <tr class="bg-white border-b"><td class="p-3 font-medium">프로그래밍</td><td class="p-3">기존 코드</td><td class="p-3">RDMA API 필요</td><td class="p-3 font-bold text-green-700">load/store 호환</td></tr>
+          <tr class="bg-indigo-50 border-b"><td class="p-3 font-medium">확장 범위</td><td class="p-3">2~8소켓</td><td class="p-3">랙 간</td><td class="p-3">랙 내/간 (Switch)</td></tr>
+          <tr class="bg-white"><td class="p-3 font-medium rounded-bl-lg">적합 워크로드</td><td class="p-3">SMP</td><td class="p-3">분산 스토리지</td><td class="p-3 rounded-br-lg">AI/ML, In-Memory DB</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div id="cxlprotocol" style="display:none;" class="space-y-6">
+  <h2 class="text-2xl font-bold text-gray-900 mb-2">🔌 CXL 3.0의 3대 서브 프로토콜</h2>
+
+  <div class="bg-white rounded-xl shadow-sm border p-6">
+    <h3 class="font-bold text-gray-800 mb-4">CXL 3대 프로토콜 구조</h3>
+    <div class="arch-box" style="border-color:#6366f1;">
+      <div class="grid grid-cols-3 gap-3 mb-3">
+        <div class="arch-layer" style="background:#eef2ff;border-color:#6366f1;">
+          <p class="font-bold text-indigo-800 text-sm">CXL.io</p>
+          <p class="text-xs text-gray-600 mt-1">장치 발견/설정</p>
+          <p class="text-xs text-indigo-500">(PCIe 호환)</p>
+        </div>
+        <div class="arch-layer" style="background:#fef3c7;border-color:#f59e0b;">
+          <p class="font-bold text-amber-800 text-sm">CXL.cache</p>
+          <p class="text-xs text-gray-600 mt-1">디바이스 → 호스트</p>
+          <p class="text-xs text-amber-500">캐시 접근</p>
+        </div>
+        <div class="arch-layer" style="background:#d1fae5;border-color:#10b981;">
+          <p class="font-bold text-green-800 text-sm">CXL.mem</p>
+          <p class="text-xs text-gray-600 mt-1">호스트 → 디바이스</p>
+          <p class="text-xs text-green-500">메모리 접근</p>
+        </div>
+      </div>
+      <div class="arch-layer" style="background:#f1f5f9;border-color:#94a3b8;">
+        <p class="font-bold text-gray-700 text-sm">PCIe 물리 계층 (PHY)</p>
+        <p class="text-xs text-gray-500">PCIe 6.0: 64 GT/s, PAM4</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="tech-block">
+    <div class="header"><div><span class="text-lg mr-2">📡</span><span class="font-bold text-gray-800">CXL.io — 장치 발견과 설정</span></div><span class="toggle text-gray-400">▼</span></div>
+    <div class="body"><p class="text-gray-700 text-sm">PCIe 트랜잭션 계층과 동일한 프로토콜. 장치 열거(Enumeration), 구성(Configuration), 인터럽트, DMA 담당. 기존 PCIe 드라이버와 하위 호환성 보장.</p></div>
+  </div>
+  <div class="tech-block">
+    <div class="header"><div><span class="text-lg mr-2">⚡</span><span class="font-bold text-gray-800">CXL.cache — 디바이스의 호스트 메모리 캐싱</span></div><span class="toggle text-gray-400">▼</span></div>
+    <div class="body"><p class="text-gray-700 text-sm mb-2"><strong>방향: 디바이스 → 호스트.</strong> 디바이스(GPU, 가속기)가 호스트 CPU 메모리를 캐싱. MESI 기반 캐시 일관성 프로토콜로 호스트 캐시와 일관성 유지.</p><p class="text-sm text-gray-600">예: GPU가 CPU 메모리 데이터를 직접 캐싱 → PCIe DMA 대비 지연 10배+ 단축.</p></div>
+  </div>
+  <div class="tech-block">
+    <div class="header"><div><span class="text-lg mr-2">🧠</span><span class="font-bold text-gray-800">CXL.mem — 호스트의 디바이스 메모리 접근</span></div><span class="toggle text-gray-400">▼</span></div>
+    <div class="body"><p class="text-gray-700 text-sm mb-2"><strong>방향: 호스트 → 디바이스.</strong> CPU가 디바이스에 부착된 메모리를 load/store 명령으로 직접 접근. Memory Disaggregation의 핵심 기반.</p><p class="text-sm text-gray-600">지연: 로컬 DDR5 ~80ns, CXL.mem ~150-300ns (RDMA 수μs보다 10배+ 빠름)</p></div>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border p-6">
+    <h3 class="font-bold text-gray-800 mb-4">CXL 디바이스 유형 (Type 1/2/3)</h3>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm border-collapse">
+        <thead><tr class="bg-indigo-600 text-white"><th class="p-3 text-left rounded-tl-lg">유형</th><th class="p-3 text-left">사용 프로토콜</th><th class="p-3 text-left">캐시 일관성</th><th class="p-3 text-left rounded-tr-lg">대표 디바이스</th></tr></thead>
+        <tbody>
+          <tr class="bg-white border-b"><td class="p-3 font-bold text-indigo-700">Type 1</td><td class="p-3">CXL.io + CXL.cache</td><td class="p-3">디바이스→호스트</td><td class="p-3">SmartNIC, FPGA</td></tr>
+          <tr class="bg-indigo-50 border-b"><td class="p-3 font-bold text-indigo-700">Type 2</td><td class="p-3">CXL.io + .cache + .mem</td><td class="p-3">양방향</td><td class="p-3">GPU, AI 가속기</td></tr>
+          <tr class="bg-white"><td class="p-3 font-bold text-green-700 rounded-bl-lg">Type 3 ⭐</td><td class="p-3">CXL.io + CXL.mem</td><td class="p-3">호스트→디바이스</td><td class="p-3 rounded-br-lg font-medium">CXL 메모리 확장기 (풀링 핵심)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border p-6">
+    <h3 class="font-bold text-gray-800 mb-4">CXL 버전 진화</h3>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm border-collapse">
+        <thead><tr class="bg-green-600 text-white"><th class="p-3 text-left rounded-tl-lg">버전</th><th class="p-3 text-left">연도</th><th class="p-3 text-left">물리 계층</th><th class="p-3 text-left rounded-tr-lg">핵심 기능</th></tr></thead>
+        <tbody>
+          <tr class="bg-white border-b"><td class="p-3 font-medium">CXL 1.0/1.1</td><td class="p-3">2019/2020</td><td class="p-3">PCIe 5.0 (32 GT/s)</td><td class="p-3">기본 3대 프로토콜 정의</td></tr>
+          <tr class="bg-green-50 border-b"><td class="p-3 font-medium">CXL 2.0</td><td class="p-3">2022</td><td class="p-3">PCIe 5.0 (32 GT/s)</td><td class="p-3 font-bold">스위칭, 메모리 풀링, 핫플러그</td></tr>
+          <tr class="bg-white"><td class="p-3 font-bold text-green-700 rounded-bl-lg">CXL 3.0</td><td class="p-3">2023</td><td class="p-3 font-bold">PCIe 6.0 (64 GT/s)</td><td class="p-3 font-bold rounded-br-lg">다중 레벨 스위칭, P2P, 공유 메모리, IDE 보안</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div id="pooling" style="display:none;" class="space-y-6">
+  <h2 class="text-2xl font-bold text-gray-900 mb-2">🏗️ CXL Switch 기반 랙 단위 메모리 풀링</h2>
+
+  <div class="bg-white rounded-xl shadow-sm border p-6">
+    <h3 class="font-bold text-gray-800 mb-4">3계층 풀링 아키텍처</h3>
+    <div class="arch-box" style="border-color:#6366f1;">
+      <p class="text-center text-xs text-gray-500 mb-2 font-medium">Compute Tier</p>
+      <div class="grid grid-cols-4 gap-2 mb-3">
+        <div class="arch-layer" style="background:#eef2ff;border-color:#6366f1;"><p class="font-bold text-indigo-800 text-xs">Host 1 (CPU)</p></div>
+        <div class="arch-layer" style="background:#eef2ff;border-color:#6366f1;"><p class="font-bold text-indigo-800 text-xs">Host 2 (CPU)</p></div>
+        <div class="arch-layer" style="background:#eef2ff;border-color:#6366f1;"><p class="font-bold text-indigo-800 text-xs">Host 3 (CPU)</p></div>
+        <div class="arch-layer" style="background:#eef2ff;border-color:#6366f1;"><p class="font-bold text-indigo-800 text-xs">Host 4 (CPU)</p></div>
+      </div>
+      <p class="text-center text-xs text-gray-500 mb-1 font-medium">Fabric Tier</p>
+      <div class="arch-layer" style="background:#fef3c7;border-color:#f59e0b;">
+        <p class="font-bold text-amber-800 text-sm">CXL Switch</p>
+        <p class="text-xs text-amber-600">동적 메모리 할당/해제 · Fabric Manager</p>
+      </div>
+      <p class="text-center text-xs text-gray-500 mt-2 mb-1 font-medium">Memory Tier</p>
+      <div class="grid grid-cols-4 gap-2">
+        <div class="arch-layer" style="background:#d1fae5;border-color:#10b981;"><p class="font-bold text-green-800 text-xs">CXL Mem 1</p><p class="text-xs text-green-600">256GB</p></div>
+        <div class="arch-layer" style="background:#d1fae5;border-color:#10b981;"><p class="font-bold text-green-800 text-xs">CXL Mem 2</p><p class="text-xs text-green-600">256GB</p></div>
+        <div class="arch-layer" style="background:#d1fae5;border-color:#10b981;"><p class="font-bold text-green-800 text-xs">CXL Mem 3</p><p class="text-xs text-green-600">512GB</p></div>
+        <div class="arch-layer" style="background:#d1fae5;border-color:#10b981;"><p class="font-bold text-green-800 text-xs">CXL Mem 4</p><p class="text-xs text-green-600">512GB</p></div>
+      </div>
+      <p class="text-center text-sm text-green-700 mt-3 font-bold">총 메모리 풀: 1.5TB (동적 할당 가능)</p>
+    </div>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border p-6">
+    <h3 class="font-bold text-gray-800 mb-4">메모리 할당 5단계 흐름</h3>
+    <div class="space-y-3">
+      <div class="flex items-start gap-3"><div class="w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0">1</div><div><p class="font-bold text-gray-800">메모리 요청</p><p class="text-sm text-gray-600">Host 1이 추가 512GB 요청 → CXL Fabric Manager에 전달</p></div></div>
+      <div class="flex items-start gap-3"><div class="w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0">2</div><div><p class="font-bold text-gray-800">유휴 메모리 검색</p><p class="text-sm text-gray-600">Fabric Manager가 풀에서 유휴 영역 검색 (CXL Mem 3, 4에서 할당)</p></div></div>
+      <div class="flex items-start gap-3"><div class="w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0">3</div><div><p class="font-bold text-gray-800">경로 설정</p><p class="text-sm text-gray-600">CXL Switch가 Host 1 ↔ CXL Mem 3/4 간 경로 설정</p></div></div>
+      <div class="flex items-start gap-3"><div class="w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0">4</div><div><p class="font-bold text-gray-800">주소 공간 매핑</p><p class="text-sm text-gray-600">Host 1의 물리 주소 공간에 CXL 메모리 영역 매핑</p></div></div>
+      <div class="flex items-start gap-3"><div class="w-8 h-8 bg-purple-600 text-white rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0">5</div><div><p class="font-bold text-gray-800">직접 접근</p><p class="text-sm text-gray-600">Host 1이 load/store 명령으로 CXL 메모리 직접 접근</p></div></div>
+    </div>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border p-6">
+    <h3 class="font-bold text-gray-800 mb-4">CXL 2.0 vs 3.0 비교</h3>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm border-collapse">
+        <thead><tr class="bg-purple-600 text-white"><th class="p-3 text-left rounded-tl-lg">기능</th><th class="p-3 text-left">CXL 2.0</th><th class="p-3 text-left rounded-tr-lg">CXL 3.0</th></tr></thead>
+        <tbody>
+          <tr class="bg-white border-b"><td class="p-3 font-medium">스위칭</td><td class="p-3">단일 레벨</td><td class="p-3 font-bold text-purple-700">다중 레벨 (랙 간 확장)</td></tr>
+          <tr class="bg-purple-50 border-b"><td class="p-3 font-medium">P2P 통신</td><td class="p-3">미지원</td><td class="p-3 font-bold text-purple-700">디바이스 간 직접 통신</td></tr>
+          <tr class="bg-white border-b"><td class="p-3 font-medium">메모리 공유</td><td class="p-3">단일 호스트 할당</td><td class="p-3 font-bold text-purple-700">다중 호스트 동시 공유</td></tr>
+          <tr class="bg-purple-50 border-b"><td class="p-3 font-medium">보안</td><td class="p-3">기본</td><td class="p-3 font-bold text-purple-700">IDE (Integrity & Encryption)</td></tr>
+          <tr class="bg-white"><td class="p-3 font-medium rounded-bl-lg">대역폭</td><td class="p-3">32 GT/s (PCIe 5.0)</td><td class="p-3 font-bold text-purple-700 rounded-br-lg">64 GT/s (PCIe 6.0)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border p-6">
+    <h3 class="font-bold text-gray-800 mb-4">기대효과 분석</h3>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm border-collapse">
+        <thead><tr class="bg-green-600 text-white"><th class="p-3 text-left rounded-tl-lg">효과 영역</th><th class="p-3 text-left">기존</th><th class="p-3 text-left">CXL 풀링</th><th class="p-3 text-left rounded-tr-lg">개선율</th></tr></thead>
+        <tbody>
+          <tr class="bg-white border-b"><td class="p-3 font-medium">메모리 활용률</td><td class="p-3">40~60%</td><td class="p-3">85~95%</td><td class="p-3 font-bold text-green-700">+40~50%p</td></tr>
+          <tr class="bg-green-50 border-b"><td class="p-3 font-medium">서버 비용</td><td class="p-3">피크 대비 과다</td><td class="p-3">동적 할당</td><td class="p-3 font-bold text-green-700">CAPEX 30% 절감</td></tr>
+          <tr class="bg-white border-b"><td class="p-3 font-medium">확장성</td><td class="p-3">DIMM 제한 (4TB)</td><td class="p-3">풀 단위 (수십 TB)</td><td class="p-3 font-bold text-green-700">10배 이상</td></tr>
+          <tr class="bg-green-50"><td class="p-3 font-medium rounded-bl-lg">장애 영향</td><td class="p-3">서버 단위</td><td class="p-3">모듈 단위 격리</td><td class="p-3 font-bold text-green-700 rounded-br-lg">가용성 향상</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="tech-block">
+    <div class="header"><div><span class="text-lg mr-2">💡</span><span class="font-bold text-gray-800">적용 사례</span></div><span class="toggle text-gray-400">▼</span></div>
+    <div class="body">
+      <div class="info-card green"><p class="font-bold text-green-800 mb-1">Meta — CXL 메모리 확장기 도입</p><p class="text-sm text-gray-700">2023년 시범 도입. 메모리 활용률 45%→87%, 연간 서버 구매 비용 약 2억 달러 절감 예상.</p></div>
+      <div class="info-card indigo"><p class="font-bold text-indigo-800 mb-1">Samsung/SK hynix</p><p class="text-sm text-gray-700">Samsung: CXL 2.0 CMM-D 세계 최초 양산. SK hynix와 CXL 3.0 메모리 풀링 실증 테스트 진행 중.</p></div>
+    </div>
+  </div>
+</div>
+
+<div id="textbook" style="display:none;" class="space-y-4">
+  <h2 class="text-2xl font-bold text-gray-900 mb-4">📖 원문 학습</h2>
+  <div class="bg-white rounded-xl shadow-sm border p-6 textbook-content" style="font-size:0.95rem;">
+
+    <h3>제1장 Memory Disaggregation: 로컬 메모리 종속성의 탈피</h3>
+
+    <h4>1.1 기존 서버 아키텍처의 메모리 한계</h4>
+    <p>전통적 서버에서 CPU와 메모리(DRAM)는 Tightly Coupled. 3대 한계: (1) 자원 불균형 — 서버 간 활용률 편차, 평균 40~60%, 유휴 메모리 연간 260억$ 낭비. (2) 확장성 한계 — DIMM 슬롯 수 제한, Intel Xeon 4세대 최대 4TB. (3) 과잉 프로비저닝 — 피크 대비 과다 장착, CAPEX+전력 증가.</p>
+
+    <h4>1.2 Memory Disaggregation 개념</h4>
+    <p>CPU와 메모리를 물리적으로 분리, CXL Fabric으로 메모리 풀 공유. 3대 가치: 독립적 확장, 동적 할당, 활용률 극대화(85~95%).</p>
+
+    <h4>1.3 대안 기술 비교</h4>
+    <table><thead><tr><th>비교</th><th>NUMA</th><th>RDMA</th><th>CXL</th></tr></thead><tbody>
+      <tr><td>지연</td><td>2~3배</td><td>수 μs</td><td><strong>150~300ns</strong></td></tr>
+      <tr><td>캐시 일관성</td><td>지원</td><td>미지원</td><td><strong>HW 캐시 일관성</strong></td></tr>
+      <tr><td>프로그래밍</td><td>기존 코드</td><td>RDMA API</td><td><strong>load/store 호환</strong></td></tr>
+    </tbody></table>
+
+    <h3>제2장 CXL 3.0의 3대 서브 프로토콜</h3>
+
+    <h4>2.1 CXL 개요</h4>
+    <p>Intel 2019년 발표, 오픈 인터커넥트 표준. PCIe 물리 계층 위 캐시 일관성 프로토콜. 80개+ 기업 참여.</p>
+
+    <h4>2.2 3대 서브 프로토콜</h4>
+    <p><strong>CXL.io</strong>: PCIe 호환, 장치 발견/설정. <strong>CXL.cache</strong>: 디바이스→호스트 캐싱, MESI 일관성. <strong>CXL.mem</strong>: 호스트→디바이스 메모리 접근, load/store 명령 호환. Memory Disaggregation의 핵심.</p>
+
+    <h4>2.3 디바이스 유형</h4>
+    <table><thead><tr><th>유형</th><th>프로토콜</th><th>대표</th></tr></thead><tbody>
+      <tr><td>Type 1</td><td>.io + .cache</td><td>SmartNIC, FPGA</td></tr>
+      <tr><td>Type 2</td><td>.io + .cache + .mem</td><td>GPU, AI 가속기</td></tr>
+      <tr><td><strong>Type 3</strong></td><td>.io + .mem</td><td>CXL 메모리 확장기 (풀링 핵심)</td></tr>
+    </tbody></table>
+
+    <h3>제3장 CXL Switch 기반 랙 단위 메모리 풀링</h3>
+
+    <h4>3.1 CXL Switch</h4>
+    <p>CXL 2.0에서 도입. 여러 호스트(CPU)와 CXL 메모리 디바이스를 연결하여 동적 할당. CXL 3.0에서 다중 레벨 스위칭 + P2P 추가.</p>
+
+    <h4>3.2 풀링 아키텍처</h4>
+    <p>3계층: Compute Tier(Host CPU) — Fabric Tier(CXL Switch) — Memory Tier(CXL Mem). 총 메모리 풀을 동적 할당/회수.</p>
+
+    <h4>3.3 할당 흐름</h4>
+    <p>Host 요청 → Fabric Manager 검색 → Switch 경로 설정 → 주소 공간 매핑 → load/store 접근. 종료 시 풀로 회수, 재할당 가능.</p>
+
+    <h4>3.4 CXL 3.0 신규 기능</h4>
+    <table><thead><tr><th>기능</th><th>2.0</th><th>3.0</th></tr></thead><tbody>
+      <tr><td>스위칭</td><td>단일</td><td><strong>다중 레벨</strong></td></tr>
+      <tr><td>P2P</td><td>미지원</td><td><strong>직접 통신</strong></td></tr>
+      <tr><td>공유</td><td>단일 호스트</td><td><strong>다중 호스트</strong></td></tr>
+      <tr><td>보안</td><td>기본</td><td><strong>IDE</strong></td></tr>
+      <tr><td>대역폭</td><td>32 GT/s</td><td><strong>64 GT/s</strong></td></tr>
+    </tbody></table>
+
+    <h4>3.5 기대효과</h4>
+    <p>활용률 40~60%→85~95%, CAPEX 30% 절감, 확장성 10배+, PUE 개선.</p>
+
+    <h3>통합 관점</h3>
+    <p>"문제 인식 → 핵심 기술 → 실제 적용"의 기술 도입 논리 구조. 연관: NUMA(CXL 전신), Composable Infrastructure(궁극적 지향), AI/ML(가장 큰 동인).</p>
+
+    <div class="insight-box">
+      <p class="text-sm text-amber-800">CXL은 궁극적으로 CPU/메모리/스토리지/네트워크를 모두 독립적으로 구성하는 <strong>Composable Infrastructure</strong>로 발전하며, AI/ML 워크로드의 폭발적 메모리 수요가 가장 큰 기술 동인이다.</p>
+    </div>
+
+  </div>
+</div>
+</div><!-- close section before script -->
+
+<div id="script" style="display:none;" class="space-y-6">
+  <h2 class="text-2xl font-bold text-amber-800 mb-6 flex items-center gap-2">🎬 강의 스크립트 <span class="text-sm bg-amber-100 text-amber-700 px-2 py-1 rounded-full">멘토 전용</span></h2>
+  <div class="bg-amber-50 border border-amber-200 rounded-xl p-6 mb-6">
+    <p class="text-amber-800 text-sm mb-1 font-medium">📋 ZIP-UP 심화반 강의용 | 약 20분 분량</p>
+    <p class="text-amber-600 text-xs">본 스크립트는 멘토 전용이며, 학습자에게는 ?mentor=true 파라미터로만 표시됩니다.</p>
+  </div>
+  <div class="bg-white rounded-xl shadow-sm border p-6 space-y-5 text-gray-700 leading-relaxed textbook-content" style="font-size:0.97rem;">
+
+    <p>안녕하세요, 여러분. 오늘은 CA/OS 트렌드 영역에서 최근 가장 뜨거운 토픽인 CXL과 메모리 분리를 다뤄볼 건데요. 기술사 시험에서 트렌드 토픽은 아는 사람과 모르는 사람의 점수 차이가 가장 큰 영역이에요. AI 시대에 가장 큰 병목이 바로 메모리이고, 데이터센터 아키텍처 자체를 바꿔야 한다는 이야기가 나오고 있어요.</p>
+
+    <p>국내외 반도체 산업의 최전선 기술이기도 해요. 삼성전자와 SK하이닉스가 CXL 메모리 제품을 양산하기 시작했고, Meta나 Google이 실제 도입을 시작했거든요.</p>
+
+    <p>소문제 구조: 소문제 1은 "왜 메모리를 분리해야 하느냐", 소문제 2는 "CXL 3.0의 프로토콜 체계", 소문제 3은 "실제 적용과 효과". <strong>"문제 인식 → 핵심 기술 → 실제 적용"</strong>의 전형적 기술 도입 논리 구조예요.</p>
+
+    <hr class="my-4 border-gray-200">
+
+    <p>소문제 1. 문제를 세 가지로 정리하면 <span class="highlight">"자확과"</span>. <strong>자</strong>원 불균형, <strong>확</strong>장성 한계, <strong>과</strong>잉 프로비저닝. McKinsey에 따르면 평균 활용률 40~60%, 연간 260억$ 낭비.</p>
+
+    <p>해결책이 Memory Disaggregation. 핵심 가치는 <span class="highlight">"독동활"</span>. <strong>독</strong>립적 확장, <strong>동</strong>적 할당, <strong>활</strong>용률 극대화(85~95%). NUMA/RDMA와 비교표를 넣되, CXL의 "하드웨어 캐시 일관성"과 "load/store 호환"이 킬러 피처.</p>
+
+    <hr class="my-4 border-gray-200">
+
+    <p>소문제 2가 30%로 가장 비중이 커요. CXL 3대 서브 프로토콜은 <span class="highlight">"아캐멤"</span>. CXL.<strong>아</strong>이오(장치 발견), CXL.<strong>캐</strong>시(디바이스→호스트 캐싱), CXL.<strong>멤</strong>(호스트→디바이스 메모리 접근).</p>
+
+    <p>방향성이 핵심: CXL.cache는 "디바이스→호스트", CXL.mem은 "호스트→디바이스". 디바이스 유형 Type 1/2/3 중 메모리 풀링 핵심은 Type 3. Samsung CMM-D, SK hynix CXL 메모리 모듈이 Type 3.</p>
+
+    <p>CXL 3.0 신규 기능 <span class="highlight">"다피공보"</span>. <strong>다</strong>중 레벨 스위칭, <strong>피</strong>어-투-피어, <strong>공</strong>유 메모리, <strong>보</strong>안(IDE).</p>
+
+    <hr class="my-4 border-gray-200">
+
+    <p>소문제 3. 3계층 아키텍처 도식이 필수: Compute Tier(Host CPU) — Fabric Tier(CXL Switch) — Memory Tier(CXL Mem). 할당 5단계 흐름을 써주면 됩니다.</p>
+
+    <p>기대효과는 숫자로: 활용률 40%→85%, CAPEX 30% 절감, 확장성 10배+. Meta가 활용률 45%→87%, 연간 2억$ 절감 사례.</p>
+
+    <p>결론: "CXL 3.0 기반 Memory Disaggregation → 궁극적으로 Composable Infrastructure. AI/ML 폭발적 메모리 수요가 동인."</p>
+
+    <p>여러분, <span class="highlight">"자확과"</span>, <span class="highlight">"독동활"</span>, <span class="highlight">"아캐멤"</span>, <span class="highlight">"다피공보"</span> — 이 네 두문자어만 확실히 외우면 이 토픽은 끝입니다. 오늘도 수고 많으셨습니다!</p>
+
+  </div>
+</div>
+
+<div id="quiz" style="display:none;" class="space-y-6">
+  <h2 class="text-2xl font-bold text-gray-900 mb-6">🧠 퀴즈 & 암기</h2>
+
+  <div class="bg-indigo-50 rounded-xl p-6 border border-indigo-100 mb-8">
+      <div class="flex items-center justify-between mb-4">
+          <h3 class="font-bold text-indigo-900 text-lg flex items-center"><span class="mr-2">🧠</span> AI 실전 문제 생성</h3>
+          <button onclick="generateQuiz()" id="btn-quiz-gen" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm transition-colors flex items-center gap-2"><span>✨ 새로운 문제 생성</span></button>
+      </div>
+      <div id="quiz-loading" class="hidden py-8 text-center"><div class="typing-indicator flex justify-center mb-2"><span></span><span></span><span></span></div><p class="text-indigo-600 text-sm">AI가 문제를 출제하고 있습니다...</p></div>
+      <div id="quiz-container" class="hidden space-y-4"><div class="bg-white p-5 rounded-lg shadow-sm border border-indigo-100"><div class="flex items-start gap-2 mb-4"><span id="quiz-type-badge" class="bg-indigo-100 text-indigo-800 text-xs font-bold px-2 py-1 rounded whitespace-nowrap mt-1">객관식</span><p id="quiz-question" class="font-bold text-gray-800 text-lg"></p></div><div id="quiz-options" class="space-y-2"></div><div id="quiz-input-area" class="hidden mt-4"><div class="flex gap-2"><input type="text" id="quiz-answer-input" placeholder="정답을 입력하세요" class="flex-grow border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"><button onclick="checkShortAnswer()" id="btn-short-submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-bold">제출</button></div></div></div><div id="quiz-feedback" class="hidden bg-white p-5 rounded-lg border-l-4"></div></div>
+      <div id="quiz-placeholder" class="text-center py-8 text-gray-500 border-2 border-dashed border-indigo-200 rounded-lg"><p>&#39;새로운 문제 생성&#39; 버튼을 눌러 실력을 점검해보세요.</p></div>
+  </div>
+
+  <div class="mb-8">
+    <h3 class="text-lg font-bold text-gray-800 mb-4">📌 암기 노트 ① 두문자어</h3>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div class="bg-gradient-to-br from-red-50 to-orange-50 rounded-xl p-4 border border-red-200 text-center">
+        <div class="text-2xl font-black text-red-600 mb-1">자확과</div>
+        <div class="text-xs text-gray-600 font-medium mb-1">3대 문제</div>
+        <div class="text-xs text-gray-500"><strong>자</strong>원불균형·<strong>확</strong>장성·<strong>과</strong>잉프로비저닝</div>
+      </div>
+      <div class="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-4 border border-green-200 text-center">
+        <div class="text-2xl font-black text-green-600 mb-1">독동활</div>
+        <div class="text-xs text-gray-600 font-medium mb-1">3대 가치</div>
+        <div class="text-xs text-gray-500"><strong>독</strong>립확장·<strong>동</strong>적할당·<strong>활</strong>용극대화</div>
+      </div>
+      <div class="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-xl p-4 border border-indigo-200 text-center">
+        <div class="text-2xl font-black text-indigo-600 mb-1">아캐멤</div>
+        <div class="text-xs text-gray-600 font-medium mb-1">CXL 3대 프로토콜</div>
+        <div class="text-xs text-gray-500"><strong>아</strong>이오·<strong>캐</strong>시·<strong>멤</strong></div>
+      </div>
+      <div class="bg-gradient-to-br from-purple-50 to-violet-50 rounded-xl p-4 border border-purple-200 text-center">
+        <div class="text-2xl font-black text-purple-600 mb-1">다피공보</div>
+        <div class="text-xs text-gray-600 font-medium mb-1">CXL 3.0 신규</div>
+        <div class="text-xs text-gray-500"><strong>다</strong>중스위칭·<strong>피</strong>2피·<strong>공</strong>유메모리·<strong>보</strong>안</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mb-8">
+    <h3 class="text-lg font-bold text-gray-800 mb-4">📌 암기 노트 ② 골격 답안</h3>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm border-collapse">
+        <thead><tr class="bg-indigo-600 text-white"><th class="p-3 text-left rounded-tl-lg">구간</th><th class="p-3 text-left">비중</th><th class="p-3 text-left rounded-tr-lg">핵심 내용</th></tr></thead>
+        <tbody>
+          <tr class="bg-white border-b"><td class="p-3 font-bold text-indigo-700">서론</td><td class="p-3">10%</td><td class="p-3">메모리 종속성 문제 → Disaggregation 필요성</td></tr>
+          <tr class="bg-indigo-50 border-b"><td class="p-3 font-bold text-indigo-700">소문제 1</td><td class="p-3">25%</td><td class="p-3">기존vs분리 비교도 + 3대 문제(자확과) + NUMA/RDMA/CXL 비교표</td></tr>
+          <tr class="bg-white border-b"><td class="p-3 font-bold text-indigo-700">소문제 2</td><td class="p-3">30%</td><td class="p-3">3대 프로토콜 구조도(아캐멤) + 방향성 + Type 1/2/3 분류</td></tr>
+          <tr class="bg-indigo-50 border-b"><td class="p-3 font-bold text-indigo-700">소문제 3</td><td class="p-3">25%</td><td class="p-3">3계층 풀링 아키텍처도 + 할당 흐름 + 기대효과 정량 분석</td></tr>
+          <tr class="bg-white"><td class="p-3 font-bold text-indigo-700 rounded-bl-lg">결론</td><td class="p-3">10%</td><td class="p-3 rounded-br-lg">Composable Infrastructure + AI/ML 전망</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="mb-8">
+    <h3 class="text-lg font-bold text-gray-800 mb-4">📌 암기 노트 ③ 필수 도식 & 차별화</h3>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="info-card indigo"><h4 class="font-bold text-indigo-800 mb-2">📐 필수 도식 3종</h4><ol class="text-sm text-gray-700 space-y-1 list-decimal list-inside"><li><strong>기존 vs 분리 아키텍처 비교도</strong></li><li><strong>CXL 3대 프로토콜 + PCIe 구조도</strong></li><li><strong>CXL Switch 3계층 풀링 아키텍처도</strong></li></ol></div>
+      <div class="info-card purple"><h4 class="font-bold text-purple-800 mb-2">⭐ 차별화 포인트</h4><ul class="text-sm text-gray-700 space-y-1 list-disc list-inside"><li>CXL vs RDMA: 캐시 일관성 + load/store 호환</li><li>CXL 2.0→3.0 진화 비교표</li><li>Type 3 = 메모리 풀링 핵심</li><li>수치: 활용률 40%→85%, CAPEX 30%, 지연 150~300ns</li><li>Samsung/Meta 사례</li></ul></div>
+    </div>
+  </div>
+
+  <div class="mb-6">
+    <h3 class="text-lg font-bold text-gray-800 mb-4">📖 제2부 암기 요약 전체</h3>
+    <div class="bg-white rounded-xl shadow-sm border p-6 textbook-content" style="font-size:0.95rem;">
+      <p class="text-sm text-gray-500 italic mb-4">시험 직전 최종 정리용</p>
+      <h4 class="font-bold text-gray-800 mb-2">한 줄 정의</h4>
+      <div class="def-box mb-4"><p class="text-gray-800">Memory Disaggregation은 CPU와 메모리를 물리적으로 분리하여 CXL Fabric으로 메모리 풀을 공유하는 차세대 데이터센터 아키텍처이며, CXL 3.0은 PCIe 6.0 기반 캐시 일관성 프로토콜로 하드웨어 수준의 메모리 풀링을 가능하게 하는 오픈 인터커넥트 표준이다.</p></div>
+
+      <h4 class="font-bold text-gray-800 mb-2">핵심 키워드 맵</h4>
+      <div class="bg-slate-50 rounded-lg border p-4 text-sm mb-4 space-y-2">
+        <div><strong class="text-red-700">[Memory Disaggregation]</strong></div>
+        <div class="pl-4">├─ 3대 문제: 자원 불균형, 확장성 한계, 과잉 프로비저닝</div>
+        <div class="pl-4">├─ 3대 가치: 독립적 확장, 동적 할당, 활용률 극대화</div>
+        <div class="pl-4">└─ 비교: NUMA(2~3배) vs RDMA(수μs) vs CXL(150~300ns)</div>
+        <div class="mt-2"><strong class="text-indigo-700">[CXL 3.0 프로토콜]</strong></div>
+        <div class="pl-4">├─ CXL.io: 장치 발견/설정 (PCIe 호환)</div>
+        <div class="pl-4">├─ CXL.cache: 디바이스→호스트 캐싱 (MESI)</div>
+        <div class="pl-4">├─ CXL.mem: 호스트→디바이스 접근 (load/store)</div>
+        <div class="pl-4">└─ Type 1(가속기) / Type 2(GPU) / Type 3(메모리 풀링)</div>
+        <div class="mt-2"><strong class="text-green-700">[메모리 풀링]</strong></div>
+        <div class="pl-4">├─ CXL Switch: 다중 레벨, 동적 할당/해제</div>
+        <div class="pl-4">├─ 3.0 신규: 다중 스위칭, P2P, 공유 메모리, IDE</div>
+        <div class="pl-4">└─ 기대효과: 활용률 85~95%, CAPEX 30% 절감</div>
+      </div>
+
+      <h4 class="font-bold text-gray-800 mb-2">두문자어 암기법</h4>
+      <div class="space-y-2 mb-4">
+        <div class="bg-red-50 rounded-lg p-3 border-l-4 border-red-400"><p class="font-bold text-red-800">"자확과" — 3대 문제</p><p class="text-sm text-gray-700"><strong>자</strong>원 불균형 · <strong>확</strong>장성 한계 · <strong>과</strong>잉 프로비저닝</p></div>
+        <div class="bg-green-50 rounded-lg p-3 border-l-4 border-green-400"><p class="font-bold text-green-800">"독동활" — 3대 가치</p><p class="text-sm text-gray-700"><strong>독</strong>립적 확장 · <strong>동</strong>적 할당 · <strong>활</strong>용률 극대화</p></div>
+        <div class="bg-indigo-50 rounded-lg p-3 border-l-4 border-indigo-400"><p class="font-bold text-indigo-800">"아캐멤" — CXL 3대 프로토콜</p><p class="text-sm text-gray-700">CXL.<strong>아</strong>이오(io) · CXL.<strong>캐</strong>시(cache) · CXL.<strong>멤</strong>(mem)</p></div>
+        <div class="bg-purple-50 rounded-lg p-3 border-l-4 border-purple-400"><p class="font-bold text-purple-800">"다피공보" — CXL 3.0 4대 신규</p><p class="text-sm text-gray-700"><strong>다</strong>중 레벨 스위칭 · <strong>피</strong>어-투-피어 · <strong>공</strong>유 메모리 · <strong>보</strong>안(IDE)</p></div>
+      </div>
+
+      <h4 class="font-bold text-gray-800 mb-2">필수 도식</h4>
+      <ol class="text-sm text-gray-700 list-decimal list-inside space-y-1 mb-4">
+        <li>기존(Tightly Coupled) vs 분리(Disaggregated) 비교도</li>
+        <li>CXL 3대 서브 프로토콜 + PCIe 물리 계층 구조도</li>
+        <li>CXL Switch 기반 3계층 풀링 아키텍처도</li>
+      </ol>
+
+      <h4 class="font-bold text-gray-800 mb-2">차별화 포인트</h4>
+      <ul class="text-sm text-gray-700 list-disc list-inside space-y-1">
+        <li>CXL vs RDMA 비교 시 "캐시 일관성"과 "load/store 호환" 강조</li>
+        <li>CXL 2.0→3.0 진화 비교표</li>
+        <li>Type 3 디바이스가 메모리 풀링의 핵심임을 명시</li>
+        <li>수치: 활용률 40%→85%, CAPEX 30% 절감, 지연 150~300ns</li>
+        <li>Samsung/SK hynix/Meta의 실제 도입 사례</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="chat-sidebar" id="chatSidebar">
+  <div class="flex items-center justify-between p-4 border-b bg-indigo-600 text-white">
+    <div class="flex items-center gap-2"><span class="text-xl">🤖</span><h3 class="font-bold">AI 튜터</h3></div>
+    <button onclick="toggleChat()" class="text-white hover:text-indigo-200 text-xl">&times;</button>
+  </div>
+  <div id="chatMessages" class="flex-grow overflow-y-auto p-4 space-y-3">
+    <div class="bg-indigo-50 rounded-lg p-3 text-sm text-indigo-800">안녕하세요! Memory Disaggregation, CXL 3.0, 메모리 풀링에 대해 질문해주세요.</div>
+  </div>
+  <div class="p-4 border-t"><div class="flex gap-2">
+    <input type="text" id="chatInput" placeholder="질문을 입력하세요..." class="flex-grow border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" onkeydown="if(event.key==='Enter')sendChat()">
+    <button onclick="sendChat()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium">전송</button>
+  </div></div>
+</div>
+<div class="chat-fab" onclick="toggleChat()">💬</div>
+<div id="settingsModal" class="fixed inset-0 bg-black bg-opacity-50 z-[1100] hidden flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+    <div class="flex items-center justify-between mb-4"><h3 class="text-lg font-bold text-gray-900">🔑 API 설정</h3><button onclick="toggleSettings()" class="text-gray-400 hover:text-gray-600 text-xl">&times;</button></div>
+    <div class="space-y-4">
+      <div><label class="block text-sm font-medium text-gray-700 mb-1">Gemini API Key</label><input type="password" id="apiKeyInput" placeholder="AIza..." class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"></div>
+      <div class="flex gap-2"><button onclick="saveApiKey()" class="flex-grow bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg text-sm font-medium">저장</button><button onclick="toggleSettings()" class="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50">취소</button></div>
+      <p class="text-xs text-gray-500">API Key는 브라우저에 로컬 저장되며 외부로 전송되지 않습니다.</p>
+    </div>
+  </div>
+</div>
+
+  </main>
+  <footer class="text-center text-sm text-gray-400 py-8 mt-12 border-t">
+    <p>박교익PE (132회 정보관리기술사, dr.code92@gmail.com)</p>
+    <p class="mt-1">Copyright &copy; KPC 정보관리기술사 ZIP-UP 심화반. All rights reserved.</p>
+  </footer>
+<script>
+    var isMentorMode = new URLSearchParams(window.location.search).get('mentor') === 'true';
+    var sections = ['overview','disaggregation','cxlprotocol','pooling','textbook','quiz'];
+    if(isMentorMode){ sections.splice(5,0,'script'); document.getElementById('scriptTabBtn').style.display=''; }
+    function navTo(id){ sections.forEach(function(s){var el=document.getElementById(s);if(el)el.style.display=s===id?'block':'none';}); document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active');}); document.querySelectorAll('.tab-btn').forEach(function(b){if(b.getAttribute('onclick')&&b.getAttribute('onclick').includes("'"+id+"'"))b.classList.add('active');}); window.scrollTo({top:0,behavior:'smooth'}); }
+    document.querySelectorAll('.tech-block .header, .strategy-card .s-header').forEach(function(h){ h.addEventListener('click',function(){this.parentElement.classList.toggle('open');}); });
+    function getApiKey(){return localStorage.getItem('geminiKey')||localStorage.getItem('gemini_api_key')||'';}
+    function saveApiKey(){var k=document.getElementById('apiKeyInput').value.trim();if(k){localStorage.setItem('geminiKey',k);localStorage.setItem('gemini_api_key',k);alert('저장되었습니다.');toggleSettings();}else{alert('API Key를 입력해주세요.');}}
+    function toggleSettings(){var m=document.getElementById('settingsModal');m.classList.toggle('hidden');if(!m.classList.contains('hidden')){document.getElementById('apiKeyInput').value=getApiKey();}}
+    function toggleChat(){document.getElementById('chatSidebar').classList.toggle('open');}
+    async function sendChat(){var k=getApiKey();if(!k){alert('API Key를 먼저 설정해주세요.');toggleSettings();return;}var input=document.getElementById('chatInput');var msg=input.value.trim();if(!msg)return;input.value='';var box=document.getElementById('chatMessages');box.innerHTML+='<div class="bg-gray-100 rounded-lg p-3 text-sm text-gray-800 ml-8">'+msg+'</div>';box.innerHTML+='<div id="chatLoading" class="typing-indicator flex mb-2"><span></span><span></span><span></span></div>';box.scrollTop=box.scrollHeight;try{var sysPrompt="당신은 정보관리기술사 시험 멘토입니다. 'Memory Disaggregation, CXL 3.0, 랙 단위 메모리 풀링' 관련 질문에 전문적이고 명쾌하게 답변해주세요. 300자 이내로 핵심만 요약.";var r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key='+k,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{role:'user',parts:[{text:sysPrompt+"\n\n질문: "+msg}]}]})});var d=await r.json();var reply=d.candidates[0].content.parts[0].text;document.getElementById('chatLoading').remove();box.innerHTML+='<div class="bg-indigo-50 rounded-lg p-3 text-sm text-indigo-800 mr-8">'+marked.parse(reply)+'</div>';}catch(e){document.getElementById('chatLoading').remove();box.innerHTML+='<div class="bg-red-50 rounded-lg p-3 text-sm text-red-600">오류: '+e.message+'</div>';}box.scrollTop=box.scrollHeight;}
+
+    // ── 퀴즈 ──
+    var geminiKey=(typeof getApiKey==='function')?(getApiKey()||''):(localStorage.getItem('geminiKey')||localStorage.getItem('gemini_api_key')||'');
+    var quizTypeHistory=[];var currentQuizData=null;
+    var quizTopics=[
+        {category:"Memory Disaggregation 개념",keywords:"메모리 분리, Tightly Coupled, 자원 불균형, 확장성 한계, 과잉 프로비저닝, Memory Pool"},
+        {category:"Memory Disaggregation 가치",keywords:"독립적 확장, 동적 할당, 활용률 극대화, 85~95%, McKinsey, 260억 달러"},
+        {category:"NUMA vs RDMA vs CXL",keywords:"NUMA, RDMA, CXL, 캐시 일관성, load/store, 지연 시간, 150~300ns"},
+        {category:"CXL 3대 프로토콜",keywords:"CXL.io, CXL.cache, CXL.mem, PCIe 호환, MESI, 디바이스→호스트, 호스트→디바이스"},
+        {category:"CXL 디바이스 유형",keywords:"Type 1, Type 2, Type 3, SmartNIC, GPU, 메모리 확장기, Samsung CMM-D"},
+        {category:"CXL 버전 진화",keywords:"CXL 1.0, CXL 2.0, CXL 3.0, PCIe 5.0, PCIe 6.0, 64 GT/s, 스위칭, P2P"},
+        {category:"메모리 풀링 아키텍처",keywords:"CXL Switch, Fabric Manager, Compute Tier, Memory Tier, 동적 할당, 회수"},
+        {category:"CXL 3.0 신규 기능과 효과",keywords:"다중 레벨 스위칭, P2P, Shared Memory, IDE, CAPEX 30%, Meta, Composable Infrastructure"}
+    ];
+    async function generateQuiz(){geminiKey=(typeof getApiKey==='function')?(getApiKey()||''):(localStorage.getItem('geminiKey')||localStorage.getItem('gemini_api_key')||'');if(!geminiKey){alert('API Key를 먼저 설정해주세요.');toggleSettings();return;}var btn=document.getElementById('btn-quiz-gen');btn.disabled=true;btn.innerHTML='<span>생성 중...</span>';document.getElementById('quiz-placeholder').classList.add('hidden');document.getElementById('quiz-container').classList.add('hidden');document.getElementById('quiz-loading').classList.remove('hidden');var isMC;var recent=quizTypeHistory.slice(-2);if(recent.length>=2&&recent[0]===recent[1]){isMC=!recent[1];}else{isMC=Math.random()>0.5;}quizTypeHistory.push(isMC);var selected=quizTopics[Math.floor(Math.random()*quizTopics.length)];var quizType=isMC?'객관식 (4지선다)':'단답형';var format=isMC?'{"question":"문제","options":["A","B","C","D"],"correctIndex":0,"explanation":"해설"}':'{"question":"문제","correctAnswer":"정답","explanation":"해설"}';var prompt="다음 카테고리에 대한 "+quizType+" 퀴즈 1문제를 만드세요.\n카테고리: "+selected.category+"\n관련 키워드: "+selected.keywords+"\n규칙: 반드시 위 카테고리와 키워드에 직접 관련된 문제를 출제하세요.\nJSON 형식으로 응답: "+format;try{var r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key='+geminiKey,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{responseMimeType:"application/json"}})});var d=await r.json();var t=d.candidates[0].content.parts[0].text;t=t.replace(/```json\s*/gi,"").replace(/```\s*/g,"").trim();var depth=0,start=-1,end=-1;for(var i=0;i<t.length;i++){if(t[i]==='{'){if(depth===0)start=i;depth++;}else if(t[i]==='}'){depth--;if(depth===0&&start!==-1){end=i;break;}}}if(start===-1||end===-1)throw new Error("No JSON found");t=t.substring(start,end+1);t=t.replace(/[\x00-\x1F\x7F]/g,function(c){return c==='\n'||c==='\r'||c==='\t'?' ':'';});currentQuizData=JSON.parse(t);renderQuiz(isMC);}catch(e){document.getElementById('quiz-loading').classList.add('hidden');document.getElementById('quiz-placeholder').classList.remove('hidden');document.getElementById('quiz-placeholder').innerHTML='<p class="text-red-500">퀴즈 생성 오류: '+e.message+'</p>';}btn.disabled=false;btn.innerHTML='<span>✨ 새로운 문제 생성</span>';}
+    function renderQuiz(isMC){document.getElementById('quiz-loading').classList.add('hidden');document.getElementById('quiz-feedback').classList.add('hidden');document.getElementById('quiz-container').classList.remove('hidden');document.getElementById('quiz-type-badge').textContent=isMC?'객관식':'단답형';document.getElementById('quiz-question').textContent=currentQuizData.question;var optDiv=document.getElementById('quiz-options');var inputDiv=document.getElementById('quiz-input-area');if(isMC){optDiv.classList.remove('hidden');inputDiv.classList.add('hidden');var h='';var letters=['A','B','C','D'];currentQuizData.options.forEach(function(opt,i){h+='<button onclick="checkMultipleChoice('+i+', this)" class="w-full text-left p-4 rounded-lg border border-gray-200 hover:bg-indigo-50 hover:border-indigo-300 transition-all mb-2 flex items-center group"><span class="w-8 h-8 rounded-full bg-gray-100 group-hover:bg-indigo-100 flex items-center justify-center text-sm font-bold text-gray-500 group-hover:text-indigo-600 mr-3 flex-shrink-0">'+letters[i]+'</span><span class="text-sm text-gray-700">'+opt+'</span></button>';});optDiv.innerHTML=h;}else{optDiv.classList.add('hidden');inputDiv.classList.remove('hidden');document.getElementById('quiz-answer-input').value='';document.getElementById('quiz-answer-input').focus();}}
+    function checkMultipleChoice(idx,btnEl){var correct=idx===currentQuizData.correctIndex;document.querySelectorAll('#quiz-options button').forEach(function(b,i){b.disabled=true;if(i===currentQuizData.correctIndex){b.classList.add('bg-green-50','border-green-400');b.querySelector('span:first-child').classList.add('bg-green-100','text-green-700');}else if(i===idx&&!correct){b.classList.add('bg-red-50','border-red-400');b.querySelector('span:first-child').classList.add('bg-red-100','text-red-700');}});showQuizFeedback(correct,currentQuizData.options[currentQuizData.correctIndex],currentQuizData.explanation);}
+    async function checkShortAnswer(){geminiKey=(typeof getApiKey==='function')?(getApiKey()||''):(localStorage.getItem('geminiKey')||localStorage.getItem('gemini_api_key')||'');var ans=document.getElementById('quiz-answer-input').value.trim();if(!ans){alert('답을 입력해주세요.');return;}var btn=document.getElementById('btn-short-submit');btn.disabled=true;btn.textContent='채점 중...';try{var gradingPrompt="당신은 정보관리기술사 시험 채점관입니다. 아래 문제에 대해 사용자의 답안이 정답으로 인정될 수 있는지 판정하세요.\n\n문제: "+currentQuizData.question+"\n모범 정답: "+currentQuizData.correctAnswer+"\n사용자 답안: "+ans+"\n\n판정 기준:\n- 핵심 의미가 동일하면 정답\n- 약어/풀네임 모두 인정\n- 영어/한글 혼용 인정\n- 띄어쓰기/조사 차이는 무시\n- 의미가 명확히 다르면 오답\n\nOutput JSON: {\"correct\":true/false,\"reason\":\"판정 이유\"}";var r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key='+geminiKey,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:gradingPrompt}]}],generationConfig:{responseMimeType:"application/json"}})});var d=await r.json();var gt=d.candidates[0].content.parts[0].text;gt=gt.replace(/```json\s*/gi,"").replace(/```\s*/g,"").trim();var gd=0,gs=-1,ge=-1;for(var i=0;i<gt.length;i++){if(gt[i]==='{'){if(gd===0)gs=i;gd++;}else if(gt[i]==='}'){gd--;if(gd===0&&gs!==-1){ge=i;break;}}}if(gs===-1||ge===-1)throw new Error("No JSON");gt=gt.substring(gs,ge+1);gt=gt.replace(/[\x00-\x1F\x7F]/g,function(c){return c==='\n'||c==='\r'||c==='\t'?' ':'';});var result=JSON.parse(gt);showQuizFeedback(result.correct,currentQuizData.correctAnswer,currentQuizData.explanation+(result.reason?' (AI: '+result.reason+')':''));}catch(e){var normalize=function(s){return s.replace(/\s/g,'').toLowerCase();};var correct=normalize(currentQuizData.correctAnswer).includes(normalize(ans))||normalize(ans).includes(normalize(currentQuizData.correctAnswer));showQuizFeedback(correct,currentQuizData.correctAnswer,currentQuizData.explanation+' (로컬 채점)');}btn.disabled=false;btn.textContent='제출';}
+    function showQuizFeedback(correct,answer,explanation){var fb=document.getElementById('quiz-feedback');fb.classList.remove('hidden','border-green-500','bg-green-50','border-red-500','bg-red-50');if(correct){fb.classList.add('border-green-500','bg-green-50');fb.innerHTML='<p class="font-bold text-green-700 mb-1">✅ 정답입니다!</p><p class="text-sm text-green-600">'+explanation+'</p>';}else{fb.classList.add('border-red-500','bg-red-50');fb.innerHTML='<p class="font-bold text-red-700 mb-1">❌ 오답입니다.</p><p class="text-sm text-red-700 mb-1">정답: '+answer+'</p><p class="text-sm text-red-600">'+explanation+'</p>';}}
+    document.addEventListener('keydown',function(e){if(e.key==='Enter'&&document.getElementById('quiz-answer-input')===document.activeElement){checkShortAnswer();}});
+    var urlKey=new URLSearchParams(window.location.search).get('key');if(urlKey){localStorage.setItem('geminiKey',urlKey);localStorage.setItem('gemini_api_key',urlKey);}
+    navTo('overview');
+</script>
+</body>
+</html>

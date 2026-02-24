@@ -1,0 +1,1140 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>명세 기반 테스트, 구조 기반 테스트 커버리지, MC/DC</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+        body { font-family: 'Noto Sans KR', sans-serif; background-color: #f5f5f4; color: #1f2937; }
+        .chart-container { position: relative; width: 100%; max-width: 600px; margin-left: auto; margin-right: auto; height: 350px; max-height: 400px; }
+        .nav-item.active { border-bottom: 2px solid #4f46e5; color: #4f46e5; font-weight: 700; }
+        .tech-block { transition: all 0.3s ease; cursor: pointer; }
+        .tech-block:hover { transform: translateY(-2px); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        .tech-block.selected { ring: 2px; ring-color: #4f46e5; background-color: #eef2ff; border-color: #4f46e5; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        #chat-sidebar { transition: transform 0.3s ease-in-out; }
+        #chat-sidebar.closed { transform: translateX(100%); }
+        #chat-sidebar.open { transform: translateX(0); }
+        .typing-indicator span { display: inline-block; width: 6px; height: 6px; background-color: #4f46e5; border-radius: 50%; animation: typing 1.4s infinite ease-in-out both; margin: 0 2px; }
+        .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+        .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes typing { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+        .prose h1,.prose h2,.prose h3 { font-weight: bold; margin-top: 1em; margin-bottom: 0.5em; color: #312e81; font-size: 1.1em; }
+        .prose ul { list-style-type: disc; padding-left: 1.5em; margin-bottom: 1em; }
+        .prose strong { color: #4338ca; }
+        .prose p { margin-bottom: 0.8em; }
+        .chat-msg { border-radius: 12px; padding: 10px 14px; margin-bottom: 10px; max-width: 85%; font-size: 0.95rem; }
+        .chat-msg.user { background-color: #4f46e5; color: white; align-self: flex-end; margin-left: auto; }
+        .chat-msg.ai { background-color: #f3f4f6; color: #1f2937; align-self: flex-start; border: 1px solid #e5e7eb; }
+        .textbook-content h3 { font-size: 1.25rem; font-weight: 700; color: #1e3a8a; margin-top: 1.5rem; margin-bottom: 0.75rem; border-left: 4px solid #4f46e5; padding-left: 0.75rem; }
+        .textbook-content h4 { font-size: 1.1rem; font-weight: 600; color: #374151; margin-top: 1rem; margin-bottom: 0.5rem; }
+        .textbook-content p { margin-bottom: 1rem; line-height: 1.8; color: #4b5563; }
+        .textbook-content ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 1rem; color: #4b5563; }
+        .textbook-content li { margin-bottom: 0.5rem; line-height: 1.7; }
+        .textbook-content table { width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; font-size: 0.95rem; }
+        .textbook-content th,.textbook-content td { border: 1px solid #e5e7eb; padding: 0.75rem; text-align: left; }
+        .textbook-content th { background-color: #f9fafb; font-weight: 600; color: #1f2937; }
+        .textbook-content .highlight { background-color: #eef2ff; color: #4338ca; font-weight: 600; padding: 0 4px; border-radius: 4px; }
+        .textbook-content pre { background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem; overflow-x: auto; margin-bottom: 1rem; font-size: 0.85rem; line-height: 1.6; }
+        .textbook-content code { font-family: 'Courier New', monospace; }
+        .def-box { background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%); border-left: 4px solid #4f46e5; border-radius: 8px; padding: 1.25rem; margin-bottom: 1rem; }
+        .def-box p { color: #312e81; font-weight: 500; margin: 0; line-height: 1.8; }
+        .insight-box { background-color: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 1rem; margin: 1rem 0; }
+        .insight-box::before { content: '💡'; margin-right: 0.5rem; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
+    </style>
+</head><body class="bg-stone-100 min-h-screen flex flex-col overflow-x-hidden">
+    <header class="bg-white shadow-sm sticky top-0 z-40">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center pt-3 pb-1">
+                <div class="flex flex-col justify-center min-w-0">
+                    <span class="text-[10px] sm:text-xs text-indigo-600 font-bold uppercase tracking-wider leading-tight">KPC 정보관리기술사 ZIP-UP 심화반</span>
+                    <div class="flex items-center gap-2">
+                        <span class="text-lg sm:text-xl font-bold text-gray-900 tracking-tight truncate">명세 기반 테스트, 구조 기반 테스트 커버리지, MC/DC</span>
+                        <span class="text-[10px] sm:text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-bold flex-shrink-0">2026</span>
+                    </div>
+                </div>
+            </div>
+            <nav class="flex space-x-1 sm:space-x-4 overflow-x-auto no-scrollbar pb-1 items-center">
+                <button onclick="navTo('overview')" id="nav-overview" class="nav-item active px-1 pt-1 pb-2 text-xs sm:text-sm font-medium text-gray-900 whitespace-nowrap">개요 및 개념</button>
+                <button onclick="navTo('spectest')" id="nav-spectest" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium text-gray-500 hover:text-gray-700 whitespace-nowrap">명세 기반 테스트</button>
+                <button onclick="navTo('coverage')" id="nav-coverage" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium text-gray-500 hover:text-gray-700 whitespace-nowrap">커버리지 비교</button>
+                <button onclick="navTo('mcdc')" id="nav-mcdc" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium text-gray-500 hover:text-gray-700 whitespace-nowrap">MC/DC</button>
+                <button onclick="navTo('textbook')" id="nav-textbook" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium text-gray-500 hover:text-gray-700 whitespace-nowrap">원문 학습</button>
+                <button onclick="navTo('script')" id="nav-script" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium text-amber-600 hover:text-amber-800 whitespace-nowrap hidden">🎬 강의 스크립트</button>
+                <button onclick="navTo('quiz')" id="nav-quiz" class="nav-item px-1 pt-1 pb-2 text-xs sm:text-sm font-medium text-indigo-600 hover:text-indigo-800 whitespace-nowrap">퀴즈 &amp; 암기</button>
+                <span class="w-px h-4 bg-gray-300 flex-shrink-0"></span>
+                <button onclick="toggleSettings()" class="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium text-indigo-600 hover:bg-indigo-50 border border-indigo-200 hover:border-indigo-400 transition-all whitespace-nowrap flex-shrink-0" title="API Key 설정">&#128273; API</button>
+            </nav>
+        </div>
+    </header>
+    <main class="flex-grow max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12 pb-24">
+    <div id="overview" class="space-y-8">
+        <!-- 정의 박스 3개 -->
+        <div class="def-box">
+            <p><strong>명세 기반 테스트(Specification-based Testing)</strong>는 소프트웨어의 내부 구조를 알지 못하는 상태에서 요구사항 명세서, 설계 문서 등 외부 명세를 기반으로 테스트 케이스를 도출하는 블랙박스 테스트 기법이다.</p>
+        </div>
+        <div class="def-box" style="border-left-color: #10b981; background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);">
+            <p><strong>구조 기반 테스트(Structure-based Testing)</strong>는 소프트웨어의 내부 코드 구조(소스 코드, 제어 흐름)를 분석하여 테스트 케이스를 설계하는 화이트박스 테스트 기법으로, 코드의 커버리지(Coverage)가 핵심 지표이다.</p>
+        </div>
+        <div class="def-box" style="border-left-color: #f59e0b; background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);">
+            <p><strong>MC/DC(Modified Condition/Decision Coverage)</strong>는 복합 조건식에서 각 개별 조건이 전체 결정 결과에 독립적으로 영향을 미침을 증명하여 마스킹 효과를 방지하는 최상위 커버리지 기준이다.</p>
+        </div>
+
+        <!-- 개념 해설 -->
+        <div class="bg-white rounded-xl shadow-sm border p-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-3">개념 해설</h3>
+            <p class="text-gray-600 leading-relaxed mb-4">소프트웨어 테스트 설계 기법은 크게 <strong class="text-indigo-700">명세 기반(블랙박스)</strong>과 <strong class="text-green-700">구조 기반(화이트박스)</strong>으로 나뉩니다. 명세 기반은 "무엇을 테스트하는가"에 초점을 맞춰 사용자 관점에서 입력과 출력의 관계를 검증하고, 구조 기반은 "얼마나 테스트했는가"를 코드 커버리지로 측정합니다.</p>
+            <p class="text-gray-600 leading-relaxed">특히 항공, 자동차, 의료기기 같은 <strong class="text-amber-700">Safety-Critical System</strong>에서는 단순 커버리지를 넘어 각 조건이 실제로 결정 결과에 영향을 미쳤는지를 수학적으로 증명하는 <strong class="text-amber-700">MC/DC</strong>가 필수적으로 요구됩니다.</p>
+        </div>
+
+        <!-- 배경 카드 -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-5">
+                <div class="text-2xl mb-2">📋</div>
+                <h4 class="font-bold text-indigo-900 mb-2">명세 기반 (블랙박스)</h4>
+                <p class="text-sm text-indigo-700">코드를 보지 않고 요구사항 명세만으로 테스트 설계. 사용자 관점의 기능 검증에 초점. ISTQB 분류 체계의 기본 기법.</p>
+            </div>
+            <div class="bg-green-50 border border-green-200 rounded-xl p-5">
+                <div class="text-2xl mb-2">🔍</div>
+                <h4 class="font-bold text-green-900 mb-2">구조 기반 (화이트박스)</h4>
+                <p class="text-sm text-green-700">내부 코드를 분석하여 실행 경로 검증. 구문→분기→조건/분기→MC/DC 순으로 커버리지 강도가 상승하는 포함 관계 존재.</p>
+            </div>
+            <div class="bg-amber-50 border border-amber-200 rounded-xl p-5">
+                <div class="text-2xl mb-2">🛡️</div>
+                <h4 class="font-bold text-amber-900 mb-2">Safety-Critical 적용</h4>
+                <p class="text-sm text-amber-700">DO-178C Level A(항공), ISO 26262 ASIL D(자동차)에서 MC/DC 필수/강력 권고. Boeing 787은 MC/DC 100% 달성에 2년, 3,000억 원 이상 투입.</p>
+            </div>
+        </div>
+
+        <!-- 난이도 상승 구조 흐름도 -->
+        <div class="bg-white rounded-xl shadow-sm border p-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">문제 구조: 기초 → 심화 → 최상위</h3>
+            <div class="flex flex-col md:flex-row items-center justify-center gap-3">
+                <div class="bg-indigo-100 border-2 border-indigo-400 rounded-lg px-6 py-4 text-center min-w-[180px]">
+                    <div class="text-xs text-indigo-500 font-bold mb-1">소문제 1</div>
+                    <div class="font-bold text-indigo-900">명세 기반 테스트</div>
+                    <div class="text-xs text-indigo-600 mt-1">동등분할 · 경계값 · 결정테이블</div>
+                </div>
+                <div class="text-2xl text-gray-400 rotate-90 md:rotate-0">→</div>
+                <div class="bg-green-100 border-2 border-green-400 rounded-lg px-6 py-4 text-center min-w-[180px]">
+                    <div class="text-xs text-green-500 font-bold mb-1">소문제 2</div>
+                    <div class="font-bold text-green-900">커버리지 비교</div>
+                    <div class="text-xs text-green-600 mt-1">구문 · 분기 · 조건 · MC/DC</div>
+                </div>
+                <div class="text-2xl text-gray-400 rotate-90 md:rotate-0">→</div>
+                <div class="bg-amber-100 border-2 border-amber-400 rounded-lg px-6 py-4 text-center min-w-[180px]">
+                    <div class="text-xs text-amber-500 font-bold mb-1">소문제 3</div>
+                    <div class="font-bold text-amber-900">MC/DC 심화</div>
+                    <div class="text-xs text-amber-600 mt-1">마스킹 효과 · 독립적 영향</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 커버리지 레이더 차트 -->
+        <div class="bg-white rounded-xl shadow-sm border p-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-2">커버리지 유형별 특성 비교</h3>
+            <p class="text-sm text-gray-500 mb-4">5가지 기준에 대한 4개 커버리지 유형의 상대적 강점</p>
+            <div class="chart-container">
+                <canvas id="coverageChart"></canvas>
+            </div>
+        </div>
+    </div>
+    <div id="spectest" class="hidden space-y-8">
+        <h2 class="text-2xl font-bold text-gray-900">명세 기반 테스트 주요 기법</h2>
+        <p class="text-gray-600">소프트웨어의 내부 구조를 알지 못하는 상태에서 외부 명세를 기반으로 테스트 케이스를 도출하는 블랙박스 테스트 기법 3가지를 학습합니다.</p>
+
+        <!-- 3기법 클릭 확장 카드 -->
+        <div class="space-y-4">
+            <div class="tech-block bg-white rounded-xl border border-gray-200 p-5 shadow-sm" onclick="toggleBlock(this)">
+                <div class="flex items-center gap-3 mb-1">
+                    <span class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-lg font-bold text-indigo-600">1</span>
+                    <div>
+                        <h4 class="font-bold text-gray-900">동등 분할 (Equivalence Partitioning)</h4>
+                        <p class="text-sm text-gray-500">입력 도메인을 동일 처리 그룹으로 분할하여 대표값 테스트</p>
+                    </div>
+                    <span class="ml-auto text-gray-400 text-sm">클릭하여 상세 보기 ▼</span>
+                </div>
+                <div class="detail-content hidden mt-4 pt-4 border-t border-gray-100 animate-fade-in">
+                    <p class="text-gray-600 mb-3"><strong>원리:</strong> 동일 파티션 내의 모든 값은 동일한 결과를 산출할 것으로 기대되므로, 대표값 하나만 테스트해도 해당 파티션 전체를 검증한 것으로 간주합니다. ISO/IEC/IEEE 29119-4에서 표준 기법으로 정의되어 있습니다.</p>
+                    <h5 class="font-semibold text-gray-800 mb-2">예시: 성인 나이 입력 필드 (유효 범위: 19~65세)</h5>
+                    <table class="w-full text-sm border-collapse mb-3">
+                        <thead><tr class="bg-indigo-50"><th class="border border-gray-200 px-3 py-2 text-left">파티션</th><th class="border border-gray-200 px-3 py-2">범위</th><th class="border border-gray-200 px-3 py-2">대표값</th><th class="border border-gray-200 px-3 py-2">기대 결과</th></tr></thead>
+                        <tbody>
+                            <tr><td class="border border-gray-200 px-3 py-2 bg-green-50 font-medium">유효 파티션</td><td class="border border-gray-200 px-3 py-2 text-center">19 ~ 65</td><td class="border border-gray-200 px-3 py-2 text-center">30</td><td class="border border-gray-200 px-3 py-2 text-center text-green-600">정상 처리</td></tr>
+                            <tr><td class="border border-gray-200 px-3 py-2 bg-red-50 font-medium">무효 파티션 1</td><td class="border border-gray-200 px-3 py-2 text-center">~ 18</td><td class="border border-gray-200 px-3 py-2 text-center">10</td><td class="border border-gray-200 px-3 py-2 text-center text-red-600">에러 메시지</td></tr>
+                            <tr><td class="border border-gray-200 px-3 py-2 bg-red-50 font-medium">무효 파티션 2</td><td class="border border-gray-200 px-3 py-2 text-center">66 ~</td><td class="border border-gray-200 px-3 py-2 text-center">80</td><td class="border border-gray-200 px-3 py-2 text-center text-red-600">에러 메시지</td></tr>
+                        </tbody>
+                    </table>
+                    <div class="insight-box"><p class="text-sm text-amber-800">테스트 케이스 수를 체계적으로 줄이면서도 입력 영역을 포괄적으로 커버할 수 있습니다.</p></div>
+                </div>
+            </div>
+
+            <div class="tech-block bg-white rounded-xl border border-gray-200 p-5 shadow-sm" onclick="toggleBlock(this)">
+                <div class="flex items-center gap-3 mb-1">
+                    <span class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-lg font-bold text-green-600">2</span>
+                    <div>
+                        <h4 class="font-bold text-gray-900">경계값 분석 (Boundary Value Analysis)</h4>
+                        <p class="text-sm text-gray-500">파티션 경계에서 결함 집중 발생, Boris Beizer — 65~70%</p>
+                    </div>
+                    <span class="ml-auto text-gray-400 text-sm">클릭하여 상세 보기 ▼</span>
+                </div>
+                <div class="detail-content hidden mt-4 pt-4 border-t border-gray-100 animate-fade-in">
+                    <p class="text-gray-600 mb-3"><strong>원리:</strong> Boris Beizer의 연구에 따르면, 소프트웨어 결함의 약 <strong class="text-red-600">65~70%가 경계값 근처</strong>에서 발생합니다. 프로그래머가 ≤와 &lt;, ≥와 &gt;를 혼동하는 Off-by-One 오류가 빈번하기 때문입니다.</p>
+                    <h5 class="font-semibold text-gray-800 mb-2">예시: 유효 범위 19~65세의 경계값 테스트</h5>
+                    <table class="w-full text-sm border-collapse mb-3">
+                        <thead><tr class="bg-green-50"><th class="border border-gray-200 px-3 py-2 text-left">경계</th><th class="border border-gray-200 px-3 py-2">테스트 값</th><th class="border border-gray-200 px-3 py-2">기대 결과</th></tr></thead>
+                        <tbody>
+                            <tr><td class="border border-gray-200 px-3 py-2 font-medium">하한 경계</td><td class="border border-gray-200 px-3 py-2 text-center">18, <strong>19</strong>, 20</td><td class="border border-gray-200 px-3 py-2 text-center">에러, <strong class="text-green-600">정상</strong>, 정상</td></tr>
+                            <tr><td class="border border-gray-200 px-3 py-2 font-medium">상한 경계</td><td class="border border-gray-200 px-3 py-2 text-center">64, <strong>65</strong>, 66</td><td class="border border-gray-200 px-3 py-2 text-center">정상, <strong class="text-green-600">정상</strong>, 에러</td></tr>
+                        </tbody>
+                    </table>
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm">
+                        <strong class="text-blue-800">2-value BVA vs 3-value BVA:</strong>
+                        <span class="text-blue-700"> ISTQB에서는 경계값과 바로 바깥값만 테스트하는 2-value BVA를 기본으로 하며, 3-value BVA는 경계 양쪽 인접값까지 포함하여 더 정밀한 검증을 수행합니다.</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tech-block bg-white rounded-xl border border-gray-200 p-5 shadow-sm" onclick="toggleBlock(this)">
+                <div class="flex items-center gap-3 mb-1">
+                    <span class="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-lg font-bold text-purple-600">3</span>
+                    <div>
+                        <h4 class="font-bold text-gray-900">결정 테이블 (Decision Table)</h4>
+                        <p class="text-sm text-gray-500">다수 조건의 조합 → 규칙 도출, 비즈니스 로직에 효과적</p>
+                    </div>
+                    <span class="ml-auto text-gray-400 text-sm">클릭하여 상세 보기 ▼</span>
+                </div>
+                <div class="detail-content hidden mt-4 pt-4 border-t border-gray-100 animate-fade-in">
+                    <p class="text-gray-600 mb-3">다수의 <strong>조건(Condition)</strong>과 그 조합에 따른 <strong>행동(Action)</strong>을 표 형태로 정리하여 테스트 케이스를 도출하는 기법입니다. 조건 수가 N개이면 최대 <strong class="text-purple-600">2<sup>N</sup></strong>개의 규칙이 존재합니다.</p>
+                    <h5 class="font-semibold text-gray-800 mb-2">예시: 보험 할인 규칙</h5>
+                    <table class="w-full text-sm border-collapse mb-3">
+                        <thead><tr class="bg-purple-50"><th class="border border-gray-200 px-3 py-2 text-left">조건/규칙</th><th class="border border-gray-200 px-3 py-2">Rule 1</th><th class="border border-gray-200 px-3 py-2">Rule 2</th><th class="border border-gray-200 px-3 py-2">Rule 3</th><th class="border border-gray-200 px-3 py-2">Rule 4</th></tr></thead>
+                        <tbody>
+                            <tr><td class="border border-gray-200 px-3 py-2 font-medium">무사고 3년 이상</td><td class="border border-gray-200 px-3 py-2 text-center">Y</td><td class="border border-gray-200 px-3 py-2 text-center">Y</td><td class="border border-gray-200 px-3 py-2 text-center">N</td><td class="border border-gray-200 px-3 py-2 text-center">N</td></tr>
+                            <tr><td class="border border-gray-200 px-3 py-2 font-medium">장기 가입 5년 이상</td><td class="border border-gray-200 px-3 py-2 text-center">Y</td><td class="border border-gray-200 px-3 py-2 text-center">N</td><td class="border border-gray-200 px-3 py-2 text-center">Y</td><td class="border border-gray-200 px-3 py-2 text-center">N</td></tr>
+                            <tr class="bg-gray-50"><td class="border border-gray-200 px-3 py-2 font-bold">행동</td><td class="border border-gray-200 px-3 py-2 text-center font-bold text-green-600">15% 할인</td><td class="border border-gray-200 px-3 py-2 text-center font-bold text-blue-600">10% 할인</td><td class="border border-gray-200 px-3 py-2 text-center font-bold text-blue-600">10% 할인</td><td class="border border-gray-200 px-3 py-2 text-center text-gray-500">할인 없음</td></tr>
+                        </tbody>
+                    </table>
+                    <div class="insight-box"><p class="text-sm text-amber-800">조건 조합의 누락 없이 모든 규칙을 체계적으로 검증할 수 있으며, Don't-care 조건을 통해 규칙 수를 최적화할 수 있습니다.</p></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3기법 비교표 -->
+        <div class="bg-white rounded-xl shadow-sm border p-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">명세 기반 기법 비교</h3>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm border-collapse">
+                    <thead><tr class="bg-indigo-50"><th class="border border-gray-200 px-3 py-2 text-left">비교 기준</th><th class="border border-gray-200 px-3 py-2">동등 분할</th><th class="border border-gray-200 px-3 py-2">경계값 분석</th><th class="border border-gray-200 px-3 py-2">결정 테이블</th></tr></thead>
+                    <tbody>
+                        <tr><td class="border border-gray-200 px-3 py-2 font-medium">초점</td><td class="border border-gray-200 px-3 py-2 text-center">입력 도메인 분할</td><td class="border border-gray-200 px-3 py-2 text-center">경계 근처 결함</td><td class="border border-gray-200 px-3 py-2 text-center">조건 조합</td></tr>
+                        <tr><td class="border border-gray-200 px-3 py-2 font-medium">적용 시점</td><td class="border border-gray-200 px-3 py-2 text-center">입력 범위 존재 시</td><td class="border border-gray-200 px-3 py-2 text-center">수치/범위 입력 시</td><td class="border border-gray-200 px-3 py-2 text-center">비즈니스 규칙 복잡 시</td></tr>
+                        <tr><td class="border border-gray-200 px-3 py-2 font-medium">TC 수</td><td class="border border-gray-200 px-3 py-2 text-center">파티션 수와 비례</td><td class="border border-gray-200 px-3 py-2 text-center">경계 수 × 2~3</td><td class="border border-gray-200 px-3 py-2 text-center">2<sup>N</sup> (최대)</td></tr>
+                        <tr><td class="border border-gray-200 px-3 py-2 font-medium">결함 발견 유형</td><td class="border border-gray-200 px-3 py-2 text-center">범위 외 처리 오류</td><td class="border border-gray-200 px-3 py-2 text-center">Off-by-One 오류</td><td class="border border-gray-200 px-3 py-2 text-center">규칙 누락/충돌</td></tr>
+                        <tr><td class="border border-gray-200 px-3 py-2 font-medium">ISO 29119 분류</td><td class="border border-gray-200 px-3 py-2 text-center">기본 기법</td><td class="border border-gray-200 px-3 py-2 text-center">기본 기법</td><td class="border border-gray-200 px-3 py-2 text-center">고급 기법</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div id="coverage" class="hidden space-y-8">
+        <h2 class="text-2xl font-bold text-gray-900">구조 기반 테스트 커버리지 비교</h2>
+        <p class="text-gray-600">코드 내부를 분석하여 "얼마나 테스트했는가"를 측정하는 커버리지 기준들을 비교합니다. 커버리지 간 포함 관계를 이해하는 것이 핵심입니다.</p>
+
+        <!-- 포함 관계 시각화 (동심원 스타일) -->
+        <div class="bg-white rounded-xl shadow-sm border p-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">커버리지 포함 관계 (강도 순서)</h3>
+            <div class="flex justify-center">
+                <div class="relative bg-amber-50 border-2 border-amber-400 rounded-2xl p-4 w-full max-w-lg">
+                    <div class="absolute -top-3 left-4 bg-amber-400 text-white px-3 py-0.5 rounded-full text-xs font-bold">MC/DC — 최상위</div>
+                    <div class="bg-green-50 border-2 border-green-400 rounded-xl p-4 mt-2">
+                        <div class="absolute top-12 left-8 bg-green-400 text-white px-2 py-0.5 rounded-full text-xs font-bold">조건/분기 결합</div>
+                        <div class="bg-indigo-50 border-2 border-indigo-400 rounded-lg p-4 mt-3">
+                            <div class="absolute top-24 left-12 bg-indigo-400 text-white px-2 py-0.5 rounded-full text-xs font-bold">분기(Branch)</div>
+                            <div class="bg-gray-100 border-2 border-gray-400 rounded-lg p-4 mt-3 text-center">
+                                <span class="bg-gray-400 text-white px-2 py-0.5 rounded-full text-xs font-bold">구문(Statement) — 최저</span>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-xs text-amber-700 mt-3 text-center font-medium">MC/DC ⊃ 조건/분기 ⊃ 분기(결정) ⊃ 구문</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4개 커버리지 클릭 확장 -->
+        <div class="space-y-4">
+            <div class="tech-block bg-white rounded-xl border border-gray-200 p-5 shadow-sm" onclick="toggleBlock(this)">
+                <div class="flex items-center gap-3">
+                    <span class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-sm font-bold text-gray-600">1</span>
+                    <div>
+                        <h4 class="font-bold text-gray-900">구문 커버리지 (Statement Coverage)</h4>
+                        <p class="text-sm text-gray-500">모든 실행 가능한 문장이 최소 한 번 실행되었는지 측정 — 최저 수준</p>
+                    </div>
+                    <span class="ml-auto text-gray-400 text-sm">▼</span>
+                </div>
+                <div class="detail-content hidden mt-4 pt-4 border-t border-gray-100 animate-fade-in">
+                    <p class="text-gray-600 mb-2"><strong>산출 공식:</strong> 구문 커버리지(%) = (실행된 문장 수 / 전체 실행 가능 문장 수) × 100</p>
+                    <div class="bg-slate-50 rounded-lg border p-4 text-sm font-mono mb-3">
+                        <div>1: if (A &gt; 0) &nbsp;&nbsp;&nbsp;← 조건문</div>
+                        <div>2: &nbsp;&nbsp;X = X + 1 &nbsp;← 문장 1</div>
+                        <div>3: if (B &gt; 0) &nbsp;&nbsp;&nbsp;← 조건문</div>
+                        <div>4: &nbsp;&nbsp;Y = Y + 1 &nbsp;← 문장 2</div>
+                    </div>
+                    <p class="text-gray-600 text-sm">TC {A=1, B=1}로 모든 문장 실행 → 구문 커버리지 100%. 그러나 A≤0이거나 B≤0인 경우의 경로는 검증 못 함.</p>
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-3 mt-2 text-sm text-red-700"><strong>한계:</strong> 미실행 분기(False 경로)를 탐지하지 못합니다.</div>
+                </div>
+            </div>
+
+            <div class="tech-block bg-white rounded-xl border border-gray-200 p-5 shadow-sm" onclick="toggleBlock(this)">
+                <div class="flex items-center gap-3">
+                    <span class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-sm font-bold text-indigo-600">2</span>
+                    <div>
+                        <h4 class="font-bold text-gray-900">분기 커버리지 (Branch / Decision Coverage)</h4>
+                        <p class="text-sm text-gray-500">모든 분기의 True/False 경로가 최소 한 번 실행 — 분기 ⊃ 구문</p>
+                    </div>
+                    <span class="ml-auto text-gray-400 text-sm">▼</span>
+                </div>
+                <div class="detail-content hidden mt-4 pt-4 border-t border-gray-100 animate-fade-in">
+                    <p class="text-gray-600 mb-2"><strong>산출 공식:</strong> 분기 커버리지(%) = (실행된 분기 수 / 전체 분기 수) × 100</p>
+                    <p class="text-gray-600 mb-2">위 예시에서 분기 커버리지 100% 달성:</p>
+                    <div class="grid grid-cols-2 gap-3 mb-3">
+                        <div class="bg-green-50 border border-green-200 rounded-lg p-3 text-sm"><strong>TC1:</strong> {A=1, B=1} → 두 조건 모두 <span class="text-green-600 font-bold">True</span></div>
+                        <div class="bg-red-50 border border-red-200 rounded-lg p-3 text-sm"><strong>TC2:</strong> {A=-1, B=-1} → 두 조건 모두 <span class="text-red-600 font-bold">False</span></div>
+                    </div>
+                    <div class="insight-box"><p class="text-sm text-amber-800"><strong>포함 관계:</strong> 분기 커버리지 100% → 구문 커버리지 100% 자동 충족. 역은 성립하지 않음.</p></div>
+                </div>
+            </div>
+
+            <div class="tech-block bg-white rounded-xl border border-gray-200 p-5 shadow-sm" onclick="toggleBlock(this)">
+                <div class="flex items-center gap-3">
+                    <span class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-sm font-bold text-green-600">3</span>
+                    <div>
+                        <h4 class="font-bold text-gray-900">조건 커버리지 (Condition Coverage)</h4>
+                        <p class="text-sm text-gray-500">각 개별 조건의 True/False — <span class="text-red-600 font-bold">⚠️ 분기 커버리지 미보장 한계</span></p>
+                    </div>
+                    <span class="ml-auto text-gray-400 text-sm">▼</span>
+                </div>
+                <div class="detail-content hidden mt-4 pt-4 border-t border-gray-100 animate-fade-in">
+                    <p class="text-gray-600 mb-3"><code class="bg-gray-100 px-2 py-1 rounded text-sm">if (A &gt; 0 AND B &gt; 0)</code> 에서 개별 조건은 <code class="bg-gray-100 px-1 rounded text-sm">A &gt; 0</code>과 <code class="bg-gray-100 px-1 rounded text-sm">B &gt; 0</code>입니다.</p>
+                    <table class="w-full text-sm border-collapse mb-3">
+                        <thead><tr class="bg-green-50"><th class="border border-gray-200 px-3 py-2">TC</th><th class="border border-gray-200 px-3 py-2">A &gt; 0</th><th class="border border-gray-200 px-3 py-2">B &gt; 0</th><th class="border border-gray-200 px-3 py-2">조건 커버리지</th><th class="border border-gray-200 px-3 py-2">분기 결과</th></tr></thead>
+                        <tbody>
+                            <tr><td class="border border-gray-200 px-3 py-2 text-center">TC1: A=1, B=-1</td><td class="border border-gray-200 px-3 py-2 text-center text-green-600">T</td><td class="border border-gray-200 px-3 py-2 text-center text-red-600">F</td><td class="border border-gray-200 px-3 py-2 text-center">A:T, B:F ✓</td><td class="border border-gray-200 px-3 py-2 text-center font-bold text-red-600">False</td></tr>
+                            <tr><td class="border border-gray-200 px-3 py-2 text-center">TC2: A=-1, B=1</td><td class="border border-gray-200 px-3 py-2 text-center text-red-600">F</td><td class="border border-gray-200 px-3 py-2 text-center text-green-600">T</td><td class="border border-gray-200 px-3 py-2 text-center">A:F, B:T ✓</td><td class="border border-gray-200 px-3 py-2 text-center font-bold text-red-600">False</td></tr>
+                        </tbody>
+                    </table>
+                    <div class="bg-red-50 border-2 border-red-300 rounded-lg p-4 text-sm">
+                        <p class="font-bold text-red-700 mb-1">⚠️ 치명적 한계</p>
+                        <p class="text-red-600">조건 커버리지 100% 달성했지만, 분기 결과가 모두 False → <strong>분기 커버리지는 50%</strong>에 불과! True 경로를 한 번도 실행하지 않았습니다.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tech-block bg-white rounded-xl border border-gray-200 p-5 shadow-sm" onclick="toggleBlock(this)">
+                <div class="flex items-center gap-3">
+                    <span class="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-sm font-bold text-amber-600">4</span>
+                    <div>
+                        <h4 class="font-bold text-gray-900">MC/DC (Modified Condition/Decision Coverage)</h4>
+                        <p class="text-sm text-gray-500">각 조건의 독립적 영향 증명 — 최상위, N+1개 TC</p>
+                    </div>
+                    <span class="ml-auto text-gray-400 text-sm">▼</span>
+                </div>
+                <div class="detail-content hidden mt-4 pt-4 border-t border-gray-100 animate-fade-in">
+                    <p class="text-gray-600 mb-2">조건/분기 커버리지를 모두 충족하면서, 추가로 <strong class="text-amber-700">각 조건이 결정 결과에 독립적으로 영향을 미침</strong>을 증명합니다.</p>
+                    <p class="text-gray-600 mb-3">N개 조건일 때 최소 <strong class="text-amber-700">N+1</strong>개 TC 필요 (전체 2<sup>N</sup> 대비 매우 효율적).</p>
+                    <div class="insight-box"><p class="text-sm text-amber-800">마스킹 효과를 방지하여 "거짓 안전감(False Sense of Security)"을 해소합니다. DO-178C Level A, ISO 26262 ASIL D에서 필수/강력 권고.</p></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 종합 비교표 -->
+        <div class="bg-white rounded-xl shadow-sm border p-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">커버리지 수준 종합 비교</h3>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm border-collapse">
+                    <thead><tr class="bg-indigo-50"><th class="border border-gray-200 px-3 py-2 text-left">커버리지</th><th class="border border-gray-200 px-3 py-2">측정 대상</th><th class="border border-gray-200 px-3 py-2">강도</th><th class="border border-gray-200 px-3 py-2">적용 표준</th><th class="border border-gray-200 px-3 py-2">한계</th></tr></thead>
+                    <tbody>
+                        <tr><td class="border border-gray-200 px-3 py-2 font-medium">구문(Statement)</td><td class="border border-gray-200 px-3 py-2 text-center">실행 문장</td><td class="border border-gray-200 px-3 py-2 text-center"><span class="bg-gray-200 text-gray-700 px-2 py-0.5 rounded text-xs">최저</span></td><td class="border border-gray-200 px-3 py-2 text-center">일반 SW</td><td class="border border-gray-200 px-3 py-2">미실행 분기 미탐지</td></tr>
+                        <tr><td class="border border-gray-200 px-3 py-2 font-medium">분기(Branch)</td><td class="border border-gray-200 px-3 py-2 text-center">분기 T/F</td><td class="border border-gray-200 px-3 py-2 text-center"><span class="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded text-xs">중간</span></td><td class="border border-gray-200 px-3 py-2 text-center">IEC 61508 SIL 1~2</td><td class="border border-gray-200 px-3 py-2">개별 조건 미검증</td></tr>
+                        <tr><td class="border border-gray-200 px-3 py-2 font-medium">조건(Condition)</td><td class="border border-gray-200 px-3 py-2 text-center">개별 조건 T/F</td><td class="border border-gray-200 px-3 py-2 text-center"><span class="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded text-xs">중간</span></td><td class="border border-gray-200 px-3 py-2 text-center">—</td><td class="border border-gray-200 px-3 py-2 text-red-600 font-medium">분기 결과 미보장</td></tr>
+                        <tr><td class="border border-gray-200 px-3 py-2 font-medium">조건/분기 결합</td><td class="border border-gray-200 px-3 py-2 text-center">조건 + 분기</td><td class="border border-gray-200 px-3 py-2 text-center"><span class="bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs">높음</span></td><td class="border border-gray-200 px-3 py-2 text-center">IEC 61508 SIL 3</td><td class="border border-gray-200 px-3 py-2">마스킹 효과 미탐지</td></tr>
+                        <tr class="bg-amber-50"><td class="border border-gray-200 px-3 py-2 font-bold text-amber-800">MC/DC</td><td class="border border-gray-200 px-3 py-2 text-center font-medium">조건의 독립적 영향</td><td class="border border-gray-200 px-3 py-2 text-center"><span class="bg-amber-200 text-amber-800 px-2 py-0.5 rounded text-xs font-bold">최고</span></td><td class="border border-gray-200 px-3 py-2 text-center font-medium">DO-178C Level A</td><td class="border border-gray-200 px-3 py-2">TC 수 증가</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div id="mcdc" class="hidden space-y-8">
+        <h2 class="text-2xl font-bold text-gray-900">MC/DC 개념 및 마스킹 효과 방지</h2>
+        <p class="text-gray-600">Modified Condition/Decision Coverage — 1992년 Boeing의 Chilenski와 Miller가 제안. DO-178C Level A 필수 검증 기준.</p>
+
+        <!-- MC/DC 3요건 -->
+        <div class="bg-white rounded-xl shadow-sm border p-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">MC/DC 3가지 요건 — <span class="text-amber-600">"결조독"</span></h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-indigo-50 border-2 border-indigo-300 rounded-xl p-5 text-center">
+                    <div class="text-3xl mb-2 font-bold text-indigo-600">결</div>
+                    <h4 class="font-bold text-indigo-900 mb-1">Decision Coverage</h4>
+                    <p class="text-sm text-indigo-700">전체 결정이 True와 False를 모두 가져야 한다</p>
+                </div>
+                <div class="bg-green-50 border-2 border-green-300 rounded-xl p-5 text-center">
+                    <div class="text-3xl mb-2 font-bold text-green-600">조</div>
+                    <h4 class="font-bold text-green-900 mb-1">Condition Coverage</h4>
+                    <p class="text-sm text-green-700">각 개별 조건이 True와 False를 모두 가져야 한다</p>
+                </div>
+                <div class="bg-amber-50 border-2 border-amber-300 rounded-xl p-5 text-center">
+                    <div class="text-3xl mb-2 font-bold text-amber-600">독</div>
+                    <h4 class="font-bold text-amber-900 mb-1">Independent Effect</h4>
+                    <p class="text-sm text-amber-700">각 조건이 결정을 독립적으로 변경하는 테스트 쌍 존재</p>
+                </div>
+            </div>
+            <p class="text-sm text-gray-500 mt-4 text-center">N개 조건 → 최소 <strong class="text-amber-700">N+1</strong>개 TC (전체 조합 2<sup>N</sup> 대비 효율적)</p>
+        </div>
+
+        <!-- MC/DC 충족 예시: A AND B -->
+        <div class="bg-white rounded-xl shadow-sm border p-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">MC/DC 충족 예시: D = A AND B</h3>
+            <table class="w-full text-sm border-collapse mb-4">
+                <thead><tr class="bg-amber-50"><th class="border border-gray-200 px-3 py-2">TC</th><th class="border border-gray-200 px-3 py-2">A</th><th class="border border-gray-200 px-3 py-2">B</th><th class="border border-gray-200 px-3 py-2">D = A AND B</th><th class="border border-gray-200 px-3 py-2 text-left">독립적 영향</th></tr></thead>
+                <tbody>
+                    <tr><td class="border border-gray-200 px-3 py-2 text-center font-bold">TC1</td><td class="border border-gray-200 px-3 py-2 text-center text-green-600">T</td><td class="border border-gray-200 px-3 py-2 text-center text-green-600">T</td><td class="border border-gray-200 px-3 py-2 text-center font-bold text-green-600">T</td><td class="border border-gray-200 px-3 py-2"></td></tr>
+                    <tr class="bg-blue-50"><td class="border border-gray-200 px-3 py-2 text-center font-bold">TC2</td><td class="border border-gray-200 px-3 py-2 text-center text-green-600">T</td><td class="border border-gray-200 px-3 py-2 text-center text-red-600">F</td><td class="border border-gray-200 px-3 py-2 text-center font-bold text-red-600">F</td><td class="border border-gray-200 px-3 py-2 text-sm">B의 독립적 영향 (TC1↔TC2: B만 변경, D: T→F)</td></tr>
+                    <tr class="bg-purple-50"><td class="border border-gray-200 px-3 py-2 text-center font-bold">TC3</td><td class="border border-gray-200 px-3 py-2 text-center text-red-600">F</td><td class="border border-gray-200 px-3 py-2 text-center text-green-600">T</td><td class="border border-gray-200 px-3 py-2 text-center font-bold text-red-600">F</td><td class="border border-gray-200 px-3 py-2 text-sm">A의 독립적 영향 (TC1↔TC3: A만 변경, D: T→F)</td></tr>
+                </tbody>
+            </table>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm"><strong class="text-blue-800">A의 독립적 영향:</strong> <span class="text-blue-700">TC1 vs TC3 — A: T→F, B 고정=T, D: T→F ✓</span></div>
+                <div class="bg-purple-50 border border-purple-200 rounded-lg p-3 text-sm"><strong class="text-purple-800">B의 독립적 영향:</strong> <span class="text-purple-700">TC1 vs TC2 — B: T→F, A 고정=T, D: T→F ✓</span></div>
+            </div>
+            <p class="text-sm text-gray-600 mt-3 text-center">최소 <strong>3개(= 2+1)</strong> 테스트 케이스로 MC/DC 충족</p>
+        </div>
+
+        <!-- 마스킹 효과 -->
+        <div class="bg-white rounded-xl shadow-sm border p-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">마스킹 효과 (Masking Effect)</h3>
+            <p class="text-gray-600 mb-4">복합 조건식에서 하나의 조건 값이 다른 조건의 결정 결과에 대한 영향을 <strong class="text-red-600">차폐(Masking)</strong>하는 현상입니다.</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div class="bg-red-50 border-2 border-red-300 rounded-xl p-5">
+                    <h4 class="font-bold text-red-900 mb-2">AND 연산 마스킹</h4>
+                    <p class="text-sm text-red-700 mb-1"><code class="bg-red-100 px-1 rounded">D = A AND B</code></p>
+                    <p class="text-sm text-red-700">A = <strong>False</strong>이면 B가 뭐든 D = False</p>
+                    <p class="text-sm text-red-800 font-bold mt-1">→ False가 마스킹</p>
+                </div>
+                <div class="bg-orange-50 border-2 border-orange-300 rounded-xl p-5">
+                    <h4 class="font-bold text-orange-900 mb-2">OR 연산 마스킹</h4>
+                    <p class="text-sm text-orange-700 mb-1"><code class="bg-orange-100 px-1 rounded">D = A OR B</code></p>
+                    <p class="text-sm text-orange-700">A = <strong>True</strong>이면 B가 뭐든 D = True</p>
+                    <p class="text-sm text-orange-800 font-bold mt-1">→ True가 마스킹</p>
+                </div>
+            </div>
+
+            <!-- 논리식 증명: D = A AND (B OR C) -->
+            <h4 class="font-semibold text-gray-800 mb-3">논리식 증명: D = A AND (B OR C) — A=False일 때 마스킹</h4>
+            <table class="w-full text-sm border-collapse mb-3">
+                <thead><tr class="bg-red-50"><th class="border border-gray-200 px-2 py-2">TC</th><th class="border border-gray-200 px-2 py-2">A</th><th class="border border-gray-200 px-2 py-2">B</th><th class="border border-gray-200 px-2 py-2">C</th><th class="border border-gray-200 px-2 py-2">B OR C</th><th class="border border-gray-200 px-2 py-2">D</th></tr></thead>
+                <tbody>
+                    <tr><td class="border border-gray-200 px-2 py-2 text-center">TC1</td><td class="border border-gray-200 px-2 py-2 text-center text-red-600 font-bold">F</td><td class="border border-gray-200 px-2 py-2 text-center">T</td><td class="border border-gray-200 px-2 py-2 text-center">T</td><td class="border border-gray-200 px-2 py-2 text-center">T</td><td class="border border-gray-200 px-2 py-2 text-center font-bold text-red-600">F</td></tr>
+                    <tr><td class="border border-gray-200 px-2 py-2 text-center">TC2</td><td class="border border-gray-200 px-2 py-2 text-center text-red-600 font-bold">F</td><td class="border border-gray-200 px-2 py-2 text-center">T</td><td class="border border-gray-200 px-2 py-2 text-center">F</td><td class="border border-gray-200 px-2 py-2 text-center">T</td><td class="border border-gray-200 px-2 py-2 text-center font-bold text-red-600">F</td></tr>
+                    <tr><td class="border border-gray-200 px-2 py-2 text-center">TC3</td><td class="border border-gray-200 px-2 py-2 text-center text-red-600 font-bold">F</td><td class="border border-gray-200 px-2 py-2 text-center">F</td><td class="border border-gray-200 px-2 py-2 text-center">T</td><td class="border border-gray-200 px-2 py-2 text-center">T</td><td class="border border-gray-200 px-2 py-2 text-center font-bold text-red-600">F</td></tr>
+                    <tr><td class="border border-gray-200 px-2 py-2 text-center">TC4</td><td class="border border-gray-200 px-2 py-2 text-center text-red-600 font-bold">F</td><td class="border border-gray-200 px-2 py-2 text-center">F</td><td class="border border-gray-200 px-2 py-2 text-center">F</td><td class="border border-gray-200 px-2 py-2 text-center">F</td><td class="border border-gray-200 px-2 py-2 text-center font-bold text-red-600">F</td></tr>
+                </tbody>
+            </table>
+            <div class="bg-red-50 border border-red-300 rounded-lg p-4 text-sm text-red-700">
+                <p class="font-bold mb-1">거짓 안전감 (False Sense of Security)</p>
+                <p>A=False 상태에서 B, C를 어떻게 바꿔도 D=False → B, C의 결함을 전혀 검출 못 함. 단순 커버리지 100%가 실질적 검증을 보장하지 않습니다.</p>
+            </div>
+        </div>
+
+        <!-- MC/DC 마스킹 방지 예시 -->
+        <div class="bg-white rounded-xl shadow-sm border p-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">MC/DC의 마스킹 방지: D = A AND (B OR C)</h3>
+            <table class="w-full text-sm border-collapse mb-4">
+                <thead><tr class="bg-green-50"><th class="border border-gray-200 px-2 py-2">TC</th><th class="border border-gray-200 px-2 py-2">A</th><th class="border border-gray-200 px-2 py-2">B</th><th class="border border-gray-200 px-2 py-2">C</th><th class="border border-gray-200 px-2 py-2">D</th><th class="border border-gray-200 px-2 py-2 text-left">목적</th></tr></thead>
+                <tbody>
+                    <tr class="bg-green-50"><td class="border border-gray-200 px-2 py-2 text-center font-bold">TC1</td><td class="border border-gray-200 px-2 py-2 text-center">T</td><td class="border border-gray-200 px-2 py-2 text-center">T</td><td class="border border-gray-200 px-2 py-2 text-center">T</td><td class="border border-gray-200 px-2 py-2 text-center font-bold text-green-600">T</td><td class="border border-gray-200 px-2 py-2">기준</td></tr>
+                    <tr><td class="border border-gray-200 px-2 py-2 text-center font-bold">TC2</td><td class="border border-gray-200 px-2 py-2 text-center text-red-600 font-bold">F</td><td class="border border-gray-200 px-2 py-2 text-center">T</td><td class="border border-gray-200 px-2 py-2 text-center">T</td><td class="border border-gray-200 px-2 py-2 text-center font-bold text-red-600">F</td><td class="border border-gray-200 px-2 py-2">A의 독립적 영향 (TC1↔TC2)</td></tr>
+                    <tr><td class="border border-gray-200 px-2 py-2 text-center font-bold">TC3</td><td class="border border-gray-200 px-2 py-2 text-center">T</td><td class="border border-gray-200 px-2 py-2 text-center text-red-600 font-bold">F</td><td class="border border-gray-200 px-2 py-2 text-center text-red-600 font-bold">F</td><td class="border border-gray-200 px-2 py-2 text-center font-bold text-red-600">F</td><td class="border border-gray-200 px-2 py-2">B의 독립적 영향 검증</td></tr>
+                    <tr><td class="border border-gray-200 px-2 py-2 text-center font-bold">TC4</td><td class="border border-gray-200 px-2 py-2 text-center">T</td><td class="border border-gray-200 px-2 py-2 text-center">T</td><td class="border border-gray-200 px-2 py-2 text-center text-red-600 font-bold">F</td><td class="border border-gray-200 px-2 py-2 text-center font-bold text-green-600">T</td><td class="border border-gray-200 px-2 py-2">C의 독립적 영향 검증</td></tr>
+                </tbody>
+            </table>
+            <div class="insight-box"><p class="text-sm text-amber-800">MC/DC는 <strong>마스킹이 발생하지 않는 조건 조합</strong>에서만 독립적 영향 쌍을 인정하므로, 커버리지 100%라 하더라도 각 조건이 실제로 결정 결과에 영향을 미쳤음이 보장됩니다.</p></div>
+        </div>
+
+        <!-- 적용 표준 -->
+        <div class="bg-white rounded-xl shadow-sm border p-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">MC/DC 적용 표준 및 산업 현황</h3>
+            <table class="w-full text-sm border-collapse mb-4">
+                <thead><tr class="bg-amber-50"><th class="border border-gray-200 px-3 py-2 text-left">표준</th><th class="border border-gray-200 px-3 py-2">적용 분야</th><th class="border border-gray-200 px-3 py-2">MC/DC 요구 수준</th></tr></thead>
+                <tbody>
+                    <tr><td class="border border-gray-200 px-3 py-2 font-medium">DO-178C Level A</td><td class="border border-gray-200 px-3 py-2">항공 SW (최고 안전)</td><td class="border border-gray-200 px-3 py-2 text-center"><span class="bg-red-100 text-red-700 px-2 py-0.5 rounded font-bold text-xs">필수</span></td></tr>
+                    <tr><td class="border border-gray-200 px-3 py-2 font-medium">DO-178C Level B</td><td class="border border-gray-200 px-3 py-2">항공 SW (고안전)</td><td class="border border-gray-200 px-3 py-2 text-center">조건/분기 커버리지</td></tr>
+                    <tr><td class="border border-gray-200 px-3 py-2 font-medium">ISO 26262 ASIL D</td><td class="border border-gray-200 px-3 py-2">자동차 기능안전 (최고)</td><td class="border border-gray-200 px-3 py-2 text-center"><span class="bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-bold text-xs">강력 권고</span></td></tr>
+                    <tr><td class="border border-gray-200 px-3 py-2 font-medium">IEC 61508 SIL 4</td><td class="border border-gray-200 px-3 py-2">산업용 기능안전</td><td class="border border-gray-200 px-3 py-2 text-center"><span class="bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-bold text-xs">강력 권고</span></td></tr>
+                    <tr><td class="border border-gray-200 px-3 py-2 font-medium">IEC 62304 Class C</td><td class="border border-gray-200 px-3 py-2">의료기기 SW</td><td class="border border-gray-200 px-3 py-2 text-center">권고</td></tr>
+                </tbody>
+            </table>
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-700">
+                <strong>실무 사례:</strong> Boeing 787 Dreamliner의 비행 제어 SW(약 650만 라인)는 DO-178C Level A 인증을 위해 MC/DC 100%를 달성해야 했으며, 테스트에만 약 <strong>2년, 3,000억 원 이상</strong> 소요.
+            </div>
+        </div>
+    </div>
+    <div id="textbook" class="hidden space-y-6">
+        <h2 class="text-2xl font-bold text-gray-900">원문 학습</h2>
+        <p class="text-sm text-gray-500">교재 제1부(상세 해설) 전체 내용을 충실히 재현한 원문 학습 자료입니다.</p>
+
+        <div class="bg-white rounded-xl shadow-sm border p-6 textbook-content">
+
+            <!-- 문제 구조 분석 -->
+            <div class="insight-box mb-6">
+                <p class="text-sm text-amber-800"><strong>2교시형 문제 구조 분석:</strong> 소문제 1(명세 기반) → 소문제 2(구조 기반 커버리지) → 소문제 3(MC/DC). "기초 기법 → 커버리지 심화 → 최상위 MC/DC"의 난이도 상승 구조.</p>
+            </div>
+
+            <h3>제1장 명세 기반 테스트 주요 기법 (소문제 1)</h3>
+
+            <h4>1.1 명세 기반 테스트 개요</h4>
+            <div class="def-box">
+                <p>명세 기반 테스트(Specification-based Testing)는 소프트웨어의 <strong>내부 구조를 알지 못하는 상태</strong>에서 요구사항 명세서, 설계 문서 등 외부 명세를 기반으로 테스트 케이스를 도출하는 기법이다. <strong>블랙박스 테스트(Black-box Testing)</strong>라고도 불리며, ISTQB에서 체계적으로 분류하고 있다.</p>
+            </div>
+            <p>명세 기반 테스트의 핵심 가치는 <strong>"사용자 관점"</strong>에서의 기능 검증에 있다. 코드 내부를 모르더라도 입력(Input)과 기대 출력(Expected Output)의 관계를 통해 결함을 발견할 수 있다.</p>
+
+            <h4>1.2 동등 분할(Equivalence Partitioning)</h4>
+            <p>동등 분할은 입력 데이터의 영역(Domain)을 <strong>동일한 처리가 예상되는 그룹(Partition)</strong>으로 분할하고, 각 그룹에서 대표값을 선택하여 테스트하는 기법이다. ISO/IEC/IEEE 29119-4에서 표준 기법으로 정의되어 있다.</p>
+            <p><strong>원리</strong>: 동일 파티션 내의 모든 값은 동일한 결과를 산출할 것으로 기대되므로, 대표값 하나만 테스트해도 해당 파티션 전체를 검증한 것으로 간주한다.</p>
+            <p><strong>예시</strong>: 성인 나이 입력 필드 (유효 범위: 19~65세)</p>
+            <table>
+                <thead><tr><th>파티션</th><th>범위</th><th>대표값</th><th>기대 결과</th></tr></thead>
+                <tbody>
+                    <tr><td>유효 파티션</td><td>19 ~ 65</td><td>30</td><td>정상 처리</td></tr>
+                    <tr><td>무효 파티션 1 (하한 미만)</td><td>~ 18</td><td>10</td><td>에러 메시지</td></tr>
+                    <tr><td>무효 파티션 2 (상한 초과)</td><td>66 ~</td><td>80</td><td>에러 메시지</td></tr>
+                </tbody>
+            </table>
+            <p><strong>장점</strong>: 테스트 케이스 수를 체계적으로 줄이면서도 입력 영역을 포괄적으로 커버할 수 있다.</p>
+
+            <h4>1.3 경계값 분석(Boundary Value Analysis)</h4>
+            <p>경계값 분석은 동등 분할의 <strong>파티션 경계(Boundary)</strong>에서 결함이 집중적으로 발생한다는 경험적 사실에 기반하여, 경계값과 그 인접값을 테스트하는 기법이다.</p>
+            <p><strong>원리</strong>: Boris Beizer의 연구에 따르면, 소프트웨어 결함의 약 <strong>65~70%가 경계값 근처</strong>에서 발생한다. 이는 프로그래머가 &le;와 &lt;, &ge;와 &gt;를 혼동하는 Off-by-One 오류가 빈번하기 때문이다.</p>
+            <p><strong>예시</strong>: 동일 조건 (유효 범위: 19~65세)에서의 경계값 테스트</p>
+            <table>
+                <thead><tr><th>경계</th><th>테스트 값</th><th>기대 결과</th></tr></thead>
+                <tbody>
+                    <tr><td>하한 경계</td><td>18, <strong>19</strong>, 20</td><td>에러, <strong>정상</strong>, 정상</td></tr>
+                    <tr><td>상한 경계</td><td>64, <strong>65</strong>, 66</td><td>정상, <strong>정상</strong>, 에러</td></tr>
+                </tbody>
+            </table>
+            <p><strong>2-value BVA vs 3-value BVA</strong>: ISTQB에서는 경계값과 바로 바깥값만 테스트하는 2-value BVA를 기본으로 하며, 3-value BVA는 경계 양쪽 인접값까지 포함하여 더 정밀한 검증을 수행한다.</p>
+
+            <h4>1.4 결정 테이블(Decision Table)</h4>
+            <p>결정 테이블은 <strong>다수의 조건(Condition)</strong>과 그 조합에 따른 <strong>행동(Action)</strong>을 표 형태로 정리하여 테스트 케이스를 도출하는 기법이다. 비즈니스 규칙(Business Rule)이 복잡한 경우에 특히 효과적이다.</p>
+            <p><strong>예시</strong>: 보험 할인 규칙 (조건: 무사고 여부, 장기 가입 여부)</p>
+            <table>
+                <thead><tr><th>조건/규칙</th><th>Rule 1</th><th>Rule 2</th><th>Rule 3</th><th>Rule 4</th></tr></thead>
+                <tbody>
+                    <tr><td>무사고 3년 이상</td><td>Y</td><td>Y</td><td>N</td><td>N</td></tr>
+                    <tr><td>장기 가입 5년 이상</td><td>Y</td><td>N</td><td>Y</td><td>N</td></tr>
+                    <tr><td><strong>행동</strong></td><td></td><td></td><td></td><td></td></tr>
+                    <tr><td>15% 할인</td><td>&bull;</td><td></td><td></td><td></td></tr>
+                    <tr><td>10% 할인</td><td></td><td>&bull;</td><td>&bull;</td><td></td></tr>
+                    <tr><td>할인 없음</td><td></td><td></td><td></td><td>&bull;</td></tr>
+                </tbody>
+            </table>
+            <p><strong>장점</strong>: 조건 조합의 누락 없이 모든 규칙을 체계적으로 검증할 수 있다. 조건 수가 N개이면 최대 2<sup>N</sup>개의 규칙이 존재하며, Don't-care 조건을 통해 규칙 수를 최적화할 수 있다.</p>
+
+            <h4>1.5 명세 기반 기법 비교</h4>
+            <table>
+                <thead><tr><th>비교 기준</th><th>동등 분할</th><th>경계값 분석</th><th>결정 테이블</th></tr></thead>
+                <tbody>
+                    <tr><td>초점</td><td>입력 도메인 분할</td><td>경계 근처 결함</td><td>조건 조합</td></tr>
+                    <tr><td>적용 시점</td><td>입력 범위 존재 시</td><td>수치/범위 입력 시</td><td>비즈니스 규칙 복잡 시</td></tr>
+                    <tr><td>테스트 케이스 수</td><td>파티션 수와 비례</td><td>경계 수 &times; 2~3</td><td>2<sup>N</sup> (최대)</td></tr>
+                    <tr><td>결함 발견 유형</td><td>범위 외 처리 오류</td><td>Off-by-One 오류</td><td>규칙 누락/충돌</td></tr>
+                    <tr><td>ISO 29119 분류</td><td>기본 기법</td><td>기본 기법</td><td>고급 기법</td></tr>
+                </tbody>
+            </table>
+
+            <h3>제2장 구조 기반 테스트 커버리지 비교 (소문제 2)</h3>
+
+            <h4>2.1 구조 기반 테스트 개요</h4>
+            <div class="def-box">
+                <p>구조 기반 테스트(Structure-based Testing)는 소프트웨어의 <strong>내부 코드 구조(소스 코드, 제어 흐름)</strong>를 분석하여 테스트 케이스를 설계하는 기법이다. <strong>화이트박스 테스트(White-box Testing)</strong>라고도 하며, 코드의 얼마나 많은 부분이 실행되었는지를 측정하는 <strong>커버리지(Coverage)</strong>가 핵심 지표이다.</p>
+            </div>
+
+            <h4>2.2 구문 커버리지(Statement Coverage)</h4>
+            <p>구문 커버리지는 프로그램 내 <strong>모든 실행 가능한 문장(Statement)</strong>이 최소 한 번 이상 실행되었는지를 측정하는 가장 기본적인 커버리지 기준이다.</p>
+            <p><strong>산출 공식</strong>: 구문 커버리지(%) = (실행된 문장 수 / 전체 실행 가능 문장 수) &times; 100</p>
+            <pre><code>예시 코드:
+1: if (A > 0)           &larr; 조건문
+2:   X = X + 1          &larr; 문장 1
+3: if (B > 0)           &larr; 조건문
+4:   Y = Y + 1          &larr; 문장 2</code></pre>
+            <p>테스트 케이스 {A=1, B=1}로 실행하면 모든 문장(1~4)이 실행되어 구문 커버리지 100%를 달성한다. 그러나 A&le;0이거나 B&le;0인 경우의 경로는 검증하지 못하는 한계가 있다.</p>
+
+            <h4>2.3 분기 커버리지(Branch Coverage / Decision Coverage)</h4>
+            <p>분기 커버리지는 프로그램 내 모든 <strong>분기(Branch)</strong>의 <strong>참(True)과 거짓(False) 경로</strong>가 최소 한 번 이상 실행되었는지를 측정한다.</p>
+            <p><strong>산출 공식</strong>: 분기 커버리지(%) = (실행된 분기 수 / 전체 분기 수) &times; 100</p>
+            <p>위 예시에서 분기 커버리지 100%를 달성하려면:</p>
+            <ul>
+                <li>테스트 1: {A=1, B=1} &rarr; 두 조건 모두 True</li>
+                <li>테스트 2: {A=-1, B=-1} &rarr; 두 조건 모두 False</li>
+            </ul>
+            <div class="insight-box"><p class="text-sm text-amber-800"><strong>분기 커버리지 &sup; 구문 커버리지</strong>: 분기 커버리지 100%를 달성하면 구문 커버리지 100%도 자동으로 충족된다. 그 역은 성립하지 않는다.</p></div>
+
+            <h4>2.4 조건 커버리지(Condition Coverage)</h4>
+            <p>조건 커버리지는 복합 조건식 내의 <strong>각 개별 조건(Condition)</strong>이 True와 False를 모두 갖도록 하는 기준이다.</p>
+            <p><strong>예시</strong>: <code>if (A > 0 AND B > 0)</code> 에서 개별 조건은 <code>A > 0</code>과 <code>B > 0</code>의 두 가지이다.</p>
+            <table>
+                <thead><tr><th>테스트</th><th>A &gt; 0</th><th>B &gt; 0</th><th>조건 커버리지</th><th>분기 결과</th></tr></thead>
+                <tbody>
+                    <tr><td>TC1: A=1, B=-1</td><td>T</td><td>F</td><td>A:T, B:F &check;</td><td>False</td></tr>
+                    <tr><td>TC2: A=-1, B=1</td><td>F</td><td>T</td><td>A:F, B:T &check;</td><td>False</td></tr>
+                </tbody>
+            </table>
+            <p>위 두 테스트로 조건 커버리지 100%를 달성하지만, 분기 결과가 모두 False여서 <strong>분기 커버리지는 50%</strong>에 불과하다. 이것이 조건 커버리지의 치명적 한계이다.</p>
+
+            <h4>2.5 커버리지 수준 비교</h4>
+            <!-- 포함 관계 시각화 -->
+            <div class="flex justify-center my-4">
+                <div class="bg-amber-50 border-2 border-amber-400 rounded-xl p-3 text-center text-sm" style="min-width:320px;">
+                    <div class="font-bold text-amber-800 mb-1">MC/DC Coverage — 최상위 (항공/자동차)</div>
+                    <div class="bg-green-50 border-2 border-green-400 rounded-lg p-2 mx-2">
+                        <div class="font-bold text-green-800 mb-1 text-xs">Condition/Decision Coverage — 조건+분기 결합</div>
+                        <div class="bg-indigo-50 border-2 border-indigo-400 rounded-lg p-2 mx-2">
+                            <div class="font-bold text-indigo-800 mb-1 text-xs">Branch Coverage — 분기(True/False)</div>
+                            <div class="bg-gray-100 border-2 border-gray-400 rounded-lg p-2 mx-2">
+                                <span class="font-bold text-gray-700 text-xs">Statement — 문장 실행 여부</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <table>
+                <thead><tr><th>커버리지</th><th>측정 대상</th><th>강도</th><th>적용 표준</th><th>한계</th></tr></thead>
+                <tbody>
+                    <tr><td>구문(Statement)</td><td>실행 문장</td><td>최저</td><td>일반 SW</td><td>미실행 분기 미탐지</td></tr>
+                    <tr><td>분기(Branch)</td><td>분기 True/False</td><td>중간</td><td>IEC 61508 SIL 1~2</td><td>개별 조건 미검증</td></tr>
+                    <tr><td>조건(Condition)</td><td>개별 조건 T/F</td><td>중간</td><td>&mdash;</td><td>분기 결과 미보장</td></tr>
+                    <tr><td>조건/분기 결합</td><td>조건 + 분기</td><td>높음</td><td>IEC 61508 SIL 3</td><td>마스킹 효과 미탐지</td></tr>
+                    <tr><td>MC/DC</td><td>조건의 독립적 영향</td><td>최고</td><td>DO-178C Level A</td><td>테스트 케이스 수 증가</td></tr>
+                </tbody>
+            </table>
+            <h3>제3장 MC/DC 개념 및 마스킹 효과 방지 원리 (소문제 3)</h3>
+
+            <h4>3.1 MC/DC(Modified Condition/Decision Coverage) 개념</h4>
+            <div class="def-box">
+                <p>MC/DC란, 복합 조건식(Decision)에서 <strong>각 개별 조건(Condition)이 전체 결정(Decision) 결과에 독립적으로 영향을 미침</strong>을 증명하는 커버리지 기준이다. 1992년 Boeing사의 John Chilenski와 Steven Miller가 제안하였으며, FAA의 DO-178B/C 표준에서 Level A 소프트웨어의 필수 검증 기준으로 채택되었다.</p>
+            </div>
+            <p><strong>MC/DC의 정의 (3가지 요건)</strong>:</p>
+            <ul>
+                <li><strong>Decision Coverage</strong>: 전체 결정(Decision)이 True와 False를 모두 가져야 한다</li>
+                <li><strong>Condition Coverage</strong>: 각 개별 조건이 True와 False를 모두 가져야 한다</li>
+                <li><strong>독립적 영향(Independent Effect)</strong>: 각 조건이 결정 결과를 독립적으로 변경할 수 있어야 한다 &mdash; 다른 조건을 고정한 채, 해당 조건만 변경했을 때 결정 결과가 달라지는 테스트 쌍이 존재해야 한다</li>
+            </ul>
+            <p><strong>테스트 케이스 수</strong>: N개의 조건이 있을 때, MC/DC를 충족하는 최소 테스트 케이스 수는 <strong>N+1</strong>개이다. 이는 전체 조합(2<sup>N</sup>)보다 훨씬 적어, 실용적 수준에서 높은 커버리지를 보장한다.</p>
+
+            <h4>3.2 MC/DC 충족 예시</h4>
+            <p><strong>결정식</strong>: <code>D = A AND B</code> (조건 2개)</p>
+            <table>
+                <thead><tr><th>TC</th><th>A</th><th>B</th><th>D = A AND B</th><th>독립적 영향</th></tr></thead>
+                <tbody>
+                    <tr><td>TC1</td><td>T</td><td>T</td><td><strong>T</strong></td><td></td></tr>
+                    <tr><td>TC2</td><td>T</td><td>F</td><td><strong>F</strong></td><td>B의 독립적 영향 (TC1&harr;TC2: B만 변경, D: T&rarr;F)</td></tr>
+                    <tr><td>TC3</td><td>F</td><td>T</td><td><strong>F</strong></td><td>A의 독립적 영향 (TC1&harr;TC3: A만 변경, D: T&rarr;F)</td></tr>
+                </tbody>
+            </table>
+            <ul>
+                <li>A의 독립적 영향: TC1 vs TC3 (A: T&rarr;F, B 고정=T, D: T&rarr;F) &check;</li>
+                <li>B의 독립적 영향: TC1 vs TC2 (B: T&rarr;F, A 고정=T, D: T&rarr;F) &check;</li>
+                <li>최소 <strong>3개(= 2+1)</strong> 테스트 케이스로 MC/DC 충족</li>
+            </ul>
+
+            <h4>3.3 마스킹 효과(Masking Effect)와 MC/DC의 방지 원리</h4>
+            <p><strong>마스킹 효과의 정의</strong>: 복합 조건식에서 하나의 조건 값이 다른 조건의 결정 결과에 대한 <strong>영향을 차폐(Masking)</strong>하는 현상이다.</p>
+            <p><strong>마스킹 발생 메커니즘</strong>:</p>
+            <ul>
+                <li><code>D = A AND B</code> 에서: A = False이면, B가 True든 False든 D = False이다 &rarr; <strong>A = False가 B의 영향을 마스킹</strong></li>
+                <li><code>D = A OR B</code> 에서: A = True이면, B가 True든 False든 D = True이다 &rarr; <strong>A = True가 B의 영향을 마스킹</strong></li>
+            </ul>
+
+            <p><strong>논리식을 통한 증명</strong>: <code>D = A AND (B OR C)</code> 에서</p>
+            <table>
+                <thead><tr><th>TC</th><th>A</th><th>B</th><th>C</th><th>B OR C</th><th>D</th></tr></thead>
+                <tbody>
+                    <tr><td>TC1</td><td><strong>F</strong></td><td>T</td><td>T</td><td>T</td><td><strong>F</strong></td></tr>
+                    <tr><td>TC2</td><td><strong>F</strong></td><td>T</td><td>F</td><td>T</td><td><strong>F</strong></td></tr>
+                    <tr><td>TC3</td><td><strong>F</strong></td><td>F</td><td>T</td><td>T</td><td><strong>F</strong></td></tr>
+                    <tr><td>TC4</td><td><strong>F</strong></td><td>F</td><td>F</td><td>F</td><td><strong>F</strong></td></tr>
+                </tbody>
+            </table>
+            <p>A = False인 상태에서는 B와 C를 어떻게 바꿔도 D = False이다. <strong>A가 B, C의 영향을 완전히 마스킹</strong>하고 있다. 단순 조건/분기 커버리지만으로는 이 마스킹 상태에서의 테스트 케이스를 채택하여 "커버리지 100%"를 달성할 수 있지만, 실제로는 B와 C의 결함을 전혀 검출하지 못하는 <strong>거짓 안전감(False Sense of Security)</strong>을 초래한다.</p>
+
+            <p><strong>MC/DC의 마스킹 방지 원리</strong>: MC/DC는 각 조건의 독립적 영향 쌍에서 <strong>다른 조건이 마스킹되지 않는 상태</strong>를 요구한다.</p>
+            <p><code>D = A AND (B OR C)</code> 의 MC/DC 충족:</p>
+            <table>
+                <thead><tr><th>TC</th><th>A</th><th>B</th><th>C</th><th>D</th><th>목적</th></tr></thead>
+                <tbody>
+                    <tr><td>TC1</td><td>T</td><td>T</td><td>T</td><td>T</td><td>기준</td></tr>
+                    <tr><td>TC2</td><td><strong>F</strong></td><td>T</td><td>T</td><td><strong>F</strong></td><td>A의 독립적 영향 (TC1&harr;TC2)</td></tr>
+                    <tr><td>TC3</td><td>T</td><td><strong>F</strong></td><td><strong>F</strong></td><td><strong>F</strong></td><td>B의 독립적 영향 검증</td></tr>
+                    <tr><td>TC4</td><td>T</td><td>T</td><td><strong>F</strong></td><td><strong>T</strong></td><td>C의 독립적 영향 검증</td></tr>
+                </tbody>
+            </table>
+            <div class="insight-box"><p class="text-sm text-amber-800">MC/DC는 <strong>마스킹이 발생하지 않는 조건 조합</strong>에서만 독립적 영향 쌍을 인정하므로, 커버리지 100%라 하더라도 각 조건이 실제로 결정 결과에 영향을 미쳤음이 보장된다.</p></div>
+
+            <h4>3.4 MC/DC 적용 표준 및 산업 현황</h4>
+            <table>
+                <thead><tr><th>표준</th><th>적용 분야</th><th>MC/DC 요구 수준</th></tr></thead>
+                <tbody>
+                    <tr><td>DO-178C Level A</td><td>항공 소프트웨어 (최고 안전)</td><td><strong>필수</strong></td></tr>
+                    <tr><td>DO-178C Level B</td><td>항공 소프트웨어 (고안전)</td><td>조건/분기 커버리지</td></tr>
+                    <tr><td>ISO 26262 ASIL D</td><td>자동차 기능안전 (최고)</td><td><strong>강력 권고</strong></td></tr>
+                    <tr><td>IEC 61508 SIL 4</td><td>산업용 기능안전</td><td><strong>강력 권고</strong></td></tr>
+                    <tr><td>IEC 62304 Class C</td><td>의료기기 소프트웨어</td><td>권고</td></tr>
+                </tbody>
+            </table>
+            <p><strong>적용 사례</strong>: Boeing 787 Dreamliner의 비행 제어 소프트웨어(약 650만 라인)는 DO-178C Level A 인증을 위해 MC/DC 100%를 달성해야 했으며, 테스트에만 약 <strong>2년, 3,000억 원 이상</strong>이 소요된 것으로 알려져 있다.</p>
+
+            <h4>3.5 연관 이론 연결</h4>
+            <p><strong>V 모델(V-Model)</strong>: 명세 기반 테스트는 V 모델의 좌측(요구분석&harr;인수테스트, 설계&harr;시스템테스트)에서 주로 활용되고, 구조 기반 테스트와 MC/DC는 V 모델의 하단(코딩&harr;단위테스트)에서 핵심적으로 적용된다.</p>
+            <p><strong>결함 비용 곡선(Cost of Defect)</strong>: Barry Boehm의 연구에 따르면 결함의 수정 비용은 단계가 진행될수록 기하급수적으로 증가하며, MC/DC 수준의 정밀한 단위 테스트는 초기 결함 제거를 통해 전체 프로젝트 비용을 크게 절감하는 효과가 있다.</p>
+
+            <h3>소문제 간 통합 분석</h3>
+            <table>
+                <thead><tr><th>관점</th><th>소문제 1</th><th>소문제 2</th><th>소문제 3</th></tr></thead>
+                <tbody>
+                    <tr><td>접근 방식</td><td>블랙박스(외부 명세)</td><td>화이트박스(내부 구조)</td><td>화이트박스 최상위</td></tr>
+                    <tr><td>핵심 질문</td><td>무엇을 테스트하는가?</td><td>얼마나 테스트했는가?</td><td>각 조건이 진짜 검증되었는가?</td></tr>
+                    <tr><td>결함 발견 관점</td><td>요구사항 누락/오류</td><td>미실행 코드 경로</td><td>마스킹된 조건 결함</td></tr>
+                    <tr><td>적용 산업</td><td>전 산업 공통</td><td>일반 안전 시스템</td><td>항공/자동차/의료(최고 안전)</td></tr>
+                </tbody>
+            </table>
+            <p>결론적으로, Safety-Critical System의 품질 보증은 명세 기반(소문제 1)과 구조 기반(소문제 2) 테스트를 <strong>상호 보완적으로 적용</strong>하면서, 최고 수준의 안전성이 요구되는 영역에서는 MC/DC(소문제 3)를 통해 <strong>조건의 독립적 영향을 수학적으로 증명</strong>하는 것이 핵심이다.</p>
+        </div>
+    </div>
+    <div id="script" class="hidden space-y-6">
+        <div class="bg-amber-50 border-2 border-amber-300 rounded-xl p-4 mb-4">
+            <p class="text-amber-800 font-bold text-sm">🎬 멘토 전용 강의 스크립트 (20분 강의용) — URL에 ?mentor=true 추가 시 접근 가능</p>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border p-6 textbook-content">
+            <p>안녕하세요, 여러분. 오늘은 소프트웨어 테스트 문제를 다뤄볼 건데요, 이번 문제는 특히 심화 토픽까지 포함되어 있어서 제대로 준비해야 하는 문제입니다. 자율주행, 항공, 의료기기 같은 Safety-Critical System에서의 테스트 기법과 <span class="highlight">MC/DC</span>까지 다루는데, MC/DC는 기술사 시험에서 변별력 있는 토픽이에요. 이걸 제대로 설명할 수 있으면 합격권에서 확실히 차별화됩니다.</p>
+
+            <p>먼저 문제 구조를 보면, 소문제 3개가 난이도 상승 구조로 되어 있어요. 소문제 1이 <span class="highlight">명세 기반 테스트</span>, 흔히 블랙박스 테스트라고 하죠. 소문제 2가 <span class="highlight">구조 기반 테스트 커버리지</span>, 화이트박스 테스트의 핵심이에요. 소문제 3이 <span class="highlight">MC/DC</span>, 최상위 커버리지입니다. 서론에서 이 흐름을 "테스트 설계의 양대 축인 명세 기반과 구조 기반 기법을 비교하고, Safety-Critical System에 요구되는 최상위 커버리지 MC/DC까지 단계적으로 논하겠다"라고 예고하면 답안의 논리적 구조가 명확해 보입니다.</p>
+
+            <h3 style="color: #92400e;">소문제 1: 명세 기반 테스트</h3>
+            <p>소문제 1부터 갈게요. 명세 기반 테스트, 다른 말로 블랙박스 테스트예요. 소프트웨어 내부 코드를 모르는 상태에서 요구사항 명세만 보고 테스트하는 거죠. 3가지 기법을 물어보는데, <span class="highlight">동등 분할</span>, <span class="highlight">경계값 분석</span>, <span class="highlight">결정 테이블</span>이에요. <span class="highlight">"동경결"</span>로 외우세요.</p>
+
+            <p><span class="highlight">동등 분할</span>은 입력을 그룹으로 나누는 거예요. 학교에서 시험 성적을 A/B/C/D/F로 나누는 것과 비슷해요. 나이 입력 필드에서 19~65세가 유효 범위라면, 유효 파티션(19~65)과 무효 파티션 두 개(18 이하, 66 이상)로 나누는 거예요. 답안에는 반드시 파티션 구분 표를 그려야 해요.</p>
+
+            <p><span class="highlight">경계값 분석</span>은 동등 분할의 확장인데요, <span class="highlight">Boris Beizer</span>라는 소프트웨어 테스팅 대가의 연구에 따르면 결함의 <span class="highlight">65~70%</span>가 경계에서 발생한다고 해요. 이 숫자를 꼭 외워두세요. 왜 경계에서 결함이 많이 발생할까요? 프로그래머가 <code>&lt;=</code>와 <code>&lt;</code>를 헷갈려서 <span class="highlight">Off-by-One</span> 오류를 내는 경우가 많기 때문이에요. ISTQB에서는 <span class="highlight">2-value BVA</span>와 <span class="highlight">3-value BVA</span>를 구분합니다.</p>
+
+            <p><span class="highlight">결정 테이블</span>은 조건이 여러 개 있을 때 조합을 표로 정리하는 거예요. 조건 2개면 최대 4개 규칙(2<sup>2</sup>), 조건 3개면 8개 규칙(2<sup>3</sup>)이 나옵니다. 답안에 간단한 2조건 4규칙 예시를 표로 그리면 확실한 점수를 받을 수 있어요.</p>
+
+            <h3 style="color: #92400e;">소문제 2: 구조 기반 커버리지 비교</h3>
+            <p>소문제 2로 넘어가면 구조 기반 테스트 커버리지 비교입니다. 화이트박스, 즉 코드 내부를 들여다보고 "이 코드가 얼마나 테스트되었는가"를 측정하는 거예요. 가장 중요한 건 <strong>포함 관계</strong>를 정확히 이해하는 거예요. 구문 커버리지가 가장 약하고, 분기 커버리지가 그 위, 그 다음이 조건/분기, 최상위가 MC/DC예요. <span class="highlight">"구분조MC"</span>로 외우세요. 이 포함 관계도를 답안에 반드시 그려야 합니다.</p>
+
+            <p>구문 커버리지는 "모든 문장이 한 번씩 실행됐냐"를 보는 거고, 분기 커버리지는 "모든 if문의 True와 False를 다 탔냐"를 보는 거예요. True/False를 모두 타면 당연히 모든 문장도 실행되니까요.</p>
+
+            <p><span class="highlight">조건 커버리지</span>는 여기서 함정이 있어요. <code>A AND B</code>에서 {A=T, B=F}와 {A=F, B=T}를 테스트하면 조건 커버리지 100%인데, 분기 결과는 둘 다 False예요! True 경로를 안 탄 거죠! 이 예시를 반드시 답안에 쓰세요. "조건 커버리지 100%가 분기 커버리지 100%를 보장하지 않는다"는 걸 증명하는 핵심 예시거든요.</p>
+
+            <h3 style="color: #92400e;">소문제 3: MC/DC</h3>
+            <p>마지막 소문제 3, <span class="highlight">MC/DC</span>입니다. Modified Condition/Decision Coverage의 약자로, 1992년 Boeing의 <span class="highlight">Chilenski와 Miller</span>가 제안했어요. 3가지 요건이 있는데, <span class="highlight">"결조독"</span>으로 외우세요. 결정 커버리지 충족, 조건 커버리지 충족, 그리고 독립적 영향 증명.</p>
+
+            <p>핵심 개념이 <span class="highlight">마스킹 효과</span>의 방지인데요, AND 연산에서 하나가 False면 나머지가 뭐든 결과가 False잖아요? 그때 False인 조건이 다른 조건의 영향을 "가려버리는" 거예요. 쉽게 말하면, 여러분이 햇빛을 손으로 가리면 뒤에 달이 있는지 별이 있는지 안 보이잖아요? 그게 마스킹이에요. OR 연산에서는 반대로 하나가 True면 나머지를 마스킹해요.</p>
+
+            <p>MC/DC는 이런 마스킹이 발생하지 않는 상태에서만 각 조건의 영향을 테스트해요. <code>A AND B</code>에서 A의 독립적 영향을 보려면, B를 True로 고정해야 해요. 이 논리를 답안에 표로 정리하면 확실한 점수를 받습니다.</p>
+
+            <p>MC/DC의 큰 장점 하나 더. 효율성이에요. 조건이 N개일 때 최소 <span class="highlight">N+1</span>개의 테스트 케이스만 필요합니다. 전체 조합은 2<sup>N</sup>개인데, MC/DC는 N+1이에요. 조건이 10개면 전체 조합은 1,024개지만 MC/DC는 11개만 있으면 되는 거죠.</p>
+
+            <p>적용 사례로 <span class="highlight">Boeing 787</span>을 꼭 언급하세요. DO-178C Level A 인증을 위해 약 650만 라인 코드에 대해 MC/DC 100%를 달성했고, 테스트에만 <span class="highlight">2년, 비용 3,000억 원 이상</span> 투입되었습니다.</p>
+
+            <h3 style="color: #92400e;">결론 및 분량 배분</h3>
+            <p>결론에서는 명세 기반과 구조 기반 테스트가 상호 보완적이라는 점, Safety-Critical System에서는 MC/DC 수준의 수학적 엄밀성이 필수라는 점을 강조하세요. 연관 토픽으로 <span class="highlight">V 모델</span>을 언급하면 좋아요.</p>
+
+            <p>분량 배분은 서론 10%, 소문제 1이 25%, 소문제 2가 30%, 소문제 3이 25%, 결론 10%예요. 필수 도식은 <span class="highlight">커버리지 포함 관계도</span>, <span class="highlight">MC/DC 독립적 영향 쌍 표</span>, <span class="highlight">명세 기반 3기법 비교표</span> 이 세 가지입니다. 오늘도 수고 많으셨고, 다음 시간에 뵙겠습니다!</p>
+        </div>
+    </div>
+    <div id="quiz" class="hidden space-y-8">
+        <h2 class="text-2xl font-bold text-gray-900">퀴즈 &amp; 암기</h2>
+
+        <!-- 퀴즈 섹션 (QUIZ_TEMPLATE 그대로) -->
+        <div class="bg-white rounded-2xl shadow-sm border p-6">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
+                <div><h3 class="text-lg font-bold text-gray-900">AI 퀴즈</h3><p class="text-sm text-gray-500 mt-0.5">Gemini가 출제하는 랜덤 퀴즈로 실력을 점검하세요</p></div>
+                <button id="btn-quiz-gen" onclick="generateQuiz()" class="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-all hover:shadow-lg active:scale-95"><span>✨ 새로운 문제 생성</span></button>
+            </div>
+            <div id="quiz-placeholder" class="text-center py-8"><div class="text-4xl mb-3">🧠</div><p class="text-gray-500">위 버튼을 눌러 AI 퀴즈를 생성해보세요!</p><p class="text-xs text-gray-400 mt-1">객관식 또는 단답형이 랜덤으로 출제됩니다</p></div>
+            <div id="quiz-loading" class="hidden text-center py-8"><div class="typing-indicator inline-flex"><span></span><span></span><span></span></div><p class="text-gray-500 mt-3 text-sm">AI가 문제를 생성하고 있습니다...</p></div>
+            <div id="quiz-container" class="hidden">
+                <div class="flex items-center gap-2 mb-3"><span id="quiz-type-badge" class="px-3 py-1 rounded-full text-xs font-bold bg-indigo-100 text-indigo-700"></span></div>
+                <p id="quiz-question" class="text-gray-800 font-medium mb-4 text-base leading-relaxed"></p>
+                <div id="quiz-options" class="space-y-2 hidden"></div>
+                <div id="quiz-input-area" class="hidden"><div class="flex gap-2"><input type="text" id="quiz-answer-input" placeholder="정답을 입력하세요..." class="flex-grow border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"><button id="btn-short-submit" onclick="checkShortAnswer()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-lg font-bold text-sm">제출</button></div></div>
+                <div id="quiz-feedback" class="hidden mt-4 p-4 rounded-xl border-2"></div>
+            </div>
+        </div>
+
+        <!-- 암기 노트 1: 두문자어 -->
+        <div class="bg-white rounded-xl shadow-sm border p-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">암기 노트 ① 두문자어</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-5 text-center">
+                    <div class="text-2xl font-bold text-indigo-600 mb-2">"동경결"</div>
+                    <p class="text-sm text-indigo-800 font-bold mb-2">명세 기반 3대 기법</p>
+                    <ul class="text-sm text-indigo-700 text-left space-y-1">
+                        <li><strong>동</strong>: 동등 분할(Equivalence Partitioning)</li>
+                        <li><strong>경</strong>: 경계값 분석(Boundary Value Analysis)</li>
+                        <li><strong>결</strong>: 결정 테이블(Decision Table)</li>
+                    </ul>
+                </div>
+                <div class="bg-green-50 border border-green-200 rounded-xl p-5 text-center">
+                    <div class="text-2xl font-bold text-green-600 mb-2">"구분조MC"</div>
+                    <p class="text-sm text-green-800 font-bold mb-2">커버리지 강도 순서</p>
+                    <ul class="text-sm text-green-700 text-left space-y-1">
+                        <li><strong>구</strong>: 구문(Statement) — 문장 실행</li>
+                        <li><strong>분</strong>: 분기(Branch) — T/F 경로</li>
+                        <li><strong>조</strong>: 조건/분기 결합</li>
+                        <li><strong>MC</strong>: MC/DC — 독립적 영향 (최강)</li>
+                    </ul>
+                </div>
+                <div class="bg-amber-50 border border-amber-200 rounded-xl p-5 text-center">
+                    <div class="text-2xl font-bold text-amber-600 mb-2">"결조독"</div>
+                    <p class="text-sm text-amber-800 font-bold mb-2">MC/DC 3요건</p>
+                    <ul class="text-sm text-amber-700 text-left space-y-1">
+                        <li><strong>결</strong>: 결정(Decision) 커버리지 충족</li>
+                        <li><strong>조</strong>: 조건(Condition) 커버리지 충족</li>
+                        <li><strong>독</strong>: 독립적 영향(Independent Effect) 증명</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- 암기 노트 2: 골격 답안 -->
+        <div class="bg-white rounded-xl shadow-sm border p-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">암기 노트 ② 골격 답안</h3>
+            <table class="w-full text-sm border-collapse">
+                <thead><tr class="bg-indigo-50"><th class="border border-gray-200 px-3 py-2 text-left">구간</th><th class="border border-gray-200 px-3 py-2">비중</th><th class="border border-gray-200 px-3 py-2 text-left">핵심 내용</th></tr></thead>
+                <tbody>
+                    <tr><td class="border border-gray-200 px-3 py-2 font-medium">서론</td><td class="border border-gray-200 px-3 py-2 text-center">10%</td><td class="border border-gray-200 px-3 py-2">Safety-Critical System 배경 + DO-178C, ISO 26262 필요성</td></tr>
+                    <tr><td class="border border-gray-200 px-3 py-2 font-medium">소문제 1</td><td class="border border-gray-200 px-3 py-2 text-center">25%</td><td class="border border-gray-200 px-3 py-2">블랙박스 개요 + 동등분할·경계값·결정테이블 예시 + 3기법 비교표</td></tr>
+                    <tr><td class="border border-gray-200 px-3 py-2 font-medium">소문제 2</td><td class="border border-gray-200 px-3 py-2 text-center">30%</td><td class="border border-gray-200 px-3 py-2">화이트박스 개요 + 구문/분기/조건 공식 + <strong>포함 관계도 필수</strong> + 비교표</td></tr>
+                    <tr><td class="border border-gray-200 px-3 py-2 font-medium">소문제 3</td><td class="border border-gray-200 px-3 py-2 text-center">25%</td><td class="border border-gray-200 px-3 py-2">MC/DC 정의·3요건 + 마스킹 논리식 증명 + 충족 예시 + 적용 표준</td></tr>
+                    <tr><td class="border border-gray-200 px-3 py-2 font-medium">결론</td><td class="border border-gray-200 px-3 py-2 text-center">10%</td><td class="border border-gray-200 px-3 py-2">명세+구조 상호보완, MC/DC 수학적 엄밀성, 자율주행 시대 전망</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 암기 노트 3: 필수 도식 + 차별화 포인트 -->
+        <div class="bg-white rounded-xl shadow-sm border p-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">암기 노트 ③ 필수 도식 &amp; 차별화 포인트</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div class="bg-purple-50 border border-purple-200 rounded-xl p-4">
+                    <h4 class="font-bold text-purple-900 mb-2">📐 필수 도식 3가지</h4>
+                    <ul class="text-sm text-purple-700 space-y-1">
+                        <li>1. 커버리지 포함 관계도 — 구문 ⊂ 분기 ⊂ 조건/분기 ⊂ MC/DC</li>
+                        <li>2. MC/DC 독립적 영향 쌍 표 — 조건 T/F 변경 시 결정 결과 변화</li>
+                        <li>3. 명세 기반 3기법 비교표 — 동등 분할, 경계값, 결정 테이블</li>
+                    </ul>
+                </div>
+                <div class="bg-teal-50 border border-teal-200 rounded-xl p-4">
+                    <h4 class="font-bold text-teal-900 mb-2">⭐ 차별화 포인트</h4>
+                    <ul class="text-sm text-teal-700 space-y-1">
+                        <li>Boris Beizer 인용: 경계값에서 65~70% 결함 집중</li>
+                        <li>MC/DC 최소 TC 수: N+1 (2<sup>N</sup> 대비 효율성)</li>
+                        <li>마스킹 효과를 논리식으로 직접 증명</li>
+                        <li>Boeing 787 사례 (650만 라인, 2년, 3,000억 원)</li>
+                        <li>V 모델과 테스트 수준 매핑</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- 제2부 전체 (textbook-content) -->
+        <div class="bg-white rounded-xl shadow-sm border p-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">제2부 암기 요약 자료 (전문)</h3>
+            <div class="textbook-content">
+                <h4>한 줄 정의</h4>
+                <div class="def-box">
+                    <p>명세 기반 테스트는 요구사항으로부터, 구조 기반 테스트는 코드 구조로부터 테스트를 설계하며, MC/DC는 각 조건이 결정 결과에 독립적으로 영향을 미침을 증명하여 마스킹 효과를 방지하는 최상위 커버리지 기준이다.</p>
+                </div>
+
+                <h4>핵심 키워드 맵</h4>
+                <!-- 키워드맵 시각화 -->
+                <div class="space-y-4 mb-4">
+                    <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
+                        <h5 class="font-bold text-indigo-900 mb-2">명세 기반 테스트 — 블랙박스</h5>
+                        <ul class="text-sm text-indigo-700 space-y-1">
+                            <li>├─ 동등 분할: 입력 도메인 → 파티션 분할 → 대표값 선택</li>
+                            <li>├─ 경계값 분석: 경계에서 65~70% 결함 집중, Off-by-One 오류</li>
+                            <li>└─ 결정 테이블: 조건 조합 → 규칙 도출, 최대 2<sup>N</sup> 규칙</li>
+                        </ul>
+                    </div>
+                    <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                        <h5 class="font-bold text-green-900 mb-2">구조 기반 테스트 — 화이트박스</h5>
+                        <ul class="text-sm text-green-700 space-y-1">
+                            <li>├─ 구문 커버리지: 문장 실행 여부 (최저 수준)</li>
+                            <li>├─ 분기 커버리지: True/False 경로 (&sup; 구문)</li>
+                            <li>├─ 조건 커버리지: 개별 조건 T/F (분기 미보장 한계)</li>
+                            <li>└─ MC/DC: 독립적 영향 증명 (최상위, N+1개 TC)</li>
+                        </ul>
+                    </div>
+                    <div class="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                        <h5 class="font-bold text-amber-900 mb-2">MC/DC</h5>
+                        <ul class="text-sm text-amber-700 space-y-1">
+                            <li>├─ 정의: 각 조건이 결정에 독립적으로 영향</li>
+                            <li>├─ 마스킹 효과: AND → F가 마스킹, OR → T가 마스킹</li>
+                            <li>├─ 최소 TC: N+1개 (N=조건 수)</li>
+                            <li>└─ 적용: DO-178C Level A, ISO 26262 ASIL D</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <h4>두문자어 암기법</h4>
+                <p><strong>명세 기반 3대 기법: "동경결"</strong></p>
+                <ul>
+                    <li><strong>동</strong>: 동등 분할(Equivalence Partitioning)</li>
+                    <li><strong>경</strong>: 경계값 분석(Boundary Value Analysis)</li>
+                    <li><strong>결</strong>: 결정 테이블(Decision Table)</li>
+                </ul>
+                <p><strong>커버리지 강도 순서: "구분조MC"</strong> (약한 순 → 강한 순)</p>
+                <ul>
+                    <li><strong>구</strong>: 구문(Statement) — 문장 실행 여부</li>
+                    <li><strong>분</strong>: 분기(Branch) — True/False 경로</li>
+                    <li><strong>조</strong>: 조건/분기 결합 — 개별 조건 + 분기</li>
+                    <li><strong>MC</strong>: MC/DC — 독립적 영향 증명 (최강)</li>
+                </ul>
+                <p><strong>MC/DC 3요건: "결조독"</strong></p>
+                <ul>
+                    <li><strong>결</strong>: 결정(Decision) 커버리지 충족</li>
+                    <li><strong>조</strong>: 조건(Condition) 커버리지 충족</li>
+                    <li><strong>독</strong>: 독립적 영향(Independent Effect) 증명</li>
+                </ul>
+
+                <h4>골격 답안 구조</h4>
+                <p><strong>[서론 — 10%]</strong> Safety-Critical System에서 미세한 결함이 치명적 사고로 직결되는 배경 + 국제 기능안전 표준(DO-178C, ISO 26262)에 따른 체계적 테스트의 필요성</p>
+                <p><strong>[소문제 1 — 25%]</strong> 명세 기반 테스트 기법: 블랙박스 개요 → 동등 분할 + 예시 → 경계값 분석 + 예시 → 결정 테이블 + 예시 → 3기법 비교표</p>
+                <p><strong>[소문제 2 — 30%]</strong> 구조 기반 커버리지 비교: 화이트박스 개요 → 구문/분기/조건 커버리지 공식 → 포함 관계도 필수 → 예시 코드 → 비교표</p>
+                <p><strong>[소문제 3 — 25%]</strong> MC/DC: 정의와 3요건 → 마스킹 효과 논리식 증명 → 충족 예시 → 적용 표준 표</p>
+                <p><strong>[결론 — 10%]</strong> 명세+구조 상호 보완, MC/DC 수학적 엄밀성, 자율주행 시대 확대 전망</p>
+
+                <h4>필수 도식</h4>
+                <ul>
+                    <li>1. <strong>커버리지 포함 관계도</strong> — 구문 ⊂ 분기 ⊂ 조건/분기 ⊂ MC/DC</li>
+                    <li>2. <strong>MC/DC 독립적 영향 쌍 표</strong> — 조건 T/F 변경 시 결정 결과 변화</li>
+                    <li>3. <strong>명세 기반 3기법 비교표</strong> — 동등 분할, 경계값, 결정 테이블</li>
+                </ul>
+
+                <h4>차별화 포인트</h4>
+                <ul>
+                    <li>Boris Beizer 인용: 경계값에서 65~70% 결함 집중</li>
+                    <li>MC/DC 최소 TC 수: N+1 (2<sup>N</sup> 대비 효율성)</li>
+                    <li>마스킹 효과를 논리식으로 직접 증명</li>
+                    <li>DO-178C Level A 실무 사례 (Boeing 787, 3,000억 원)</li>
+                    <li>V 모델과 테스트 수준 매핑</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    </main>
+    <div id="chat-sidebar" class="fixed top-0 right-0 h-full w-80 sm:w-96 bg-white shadow-2xl z-50 closed flex flex-col">
+        <div class="flex items-center justify-between p-4 border-b bg-indigo-600 text-white">
+            <h3 class="font-bold">💬 AI 튜터</h3>
+            <button onclick="toggleChat()" class="text-white hover:text-indigo-200 text-xl">&times;</button>
+        </div>
+        <div id="chat-messages" class="flex-grow overflow-y-auto p-4 flex flex-col space-y-2">
+            <div class="chat-msg ai">안녕하세요! 명세 기반 테스트, 구조 기반 커버리지, MC/DC에 대해 무엇이든 물어보세요.</div>
+        </div>
+        <div class="p-3 border-t flex gap-2">
+            <input type="text" id="chat-input" placeholder="질문을 입력하세요..." class="flex-grow border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" onkeydown="if(event.key==='Enter')sendChat()">
+            <button onclick="sendChat()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-indigo-700">전송</button>
+        </div>
+    </div>
+    <button onclick="toggleChat()" id="chat-fab" class="fixed bottom-6 right-6 w-14 h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-lg flex items-center justify-center text-2xl z-40 transition-transform hover:scale-110">💬</button>
+    <div id="settings-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-gray-900">🔑 API Key 설정</h3>
+                <button onclick="toggleSettings()" class="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
+            </div>
+            <p class="text-sm text-gray-600 mb-4">Gemini API Key를 입력하면 AI 퀴즈 생성과 튜터 채팅 기능을 사용할 수 있습니다.</p>
+            <input type="password" id="api-key-input" placeholder="Gemini API Key 입력" class="w-full border border-gray-300 rounded-lg px-4 py-2 mb-3 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <div class="flex gap-2">
+                <button onclick="saveApiKey()" class="flex-grow bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg font-bold text-sm">저장</button>
+                <button onclick="clearApiKey()" class="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50">초기화</button>
+            </div>
+            <p id="api-key-status" class="text-xs text-gray-400 mt-2 text-center"></p>
+        </div>
+    </div>
+    <footer class="bg-white border-t mt-auto">
+        <div class="max-w-5xl mx-auto px-4 py-6 text-center">
+            <p class="text-sm text-gray-500">박교익PE (132회 정보관리기술사, dr.code92@gmail.com)</p>
+            <p class="text-xs text-gray-400 mt-1">Copyright &copy; KPC 정보관리기술사 ZIP-UP 심화반. All rights reserved.</p>
+        </div>
+    </footer>
+<script>
+    var sections = ['overview','spectest','coverage','mcdc','textbook','quiz'];
+    var isMentorMode = new URLSearchParams(window.location.search).get('mentor') === 'true';
+    if (isMentorMode) {
+        sections = ['overview','spectest','coverage','mcdc','textbook','script','quiz'];
+        var sn = document.getElementById('nav-script'); if(sn) sn.classList.remove('hidden');
+    }
+    var urlKey = new URLSearchParams(window.location.search).get('key') || '';
+    if (urlKey) localStorage.setItem('geminiKey', urlKey);
+
+    function navTo(id) {
+        sections.forEach(function(s) {
+            var sec = document.getElementById(s); var nav = document.getElementById('nav-' + s);
+            if (sec) sec.classList.add('hidden'); if (nav) { nav.classList.remove('active','text-gray-900'); nav.classList.add('text-gray-500'); }
+        });
+        var el = document.getElementById(id); var navEl = document.getElementById('nav-' + id);
+        if (el) { el.classList.remove('hidden'); el.classList.add('animate-fade-in'); }
+        if (navEl) { navEl.classList.add('active','text-gray-900'); navEl.classList.remove('text-gray-500'); }
+        window.scrollTo({top: 0, behavior: 'smooth'});
+    }
+    function toggleBlock(el) {
+        var detail = el.querySelector('.detail-content'); if (!detail) return;
+        var isOpen = !detail.classList.contains('hidden');
+        el.closest('.grid,.space-y-4,.space-y-3').querySelectorAll('.detail-content').forEach(function(d) { d.classList.add('hidden'); });
+        el.closest('.grid,.space-y-4,.space-y-3').querySelectorAll('.tech-block').forEach(function(b) { b.classList.remove('selected','border-indigo-500'); b.classList.add('border-gray-200'); });
+        if (!isOpen) { detail.classList.remove('hidden'); el.classList.add('selected','border-indigo-500'); el.classList.remove('border-gray-200'); }
+    }
+    function getApiKey() { return localStorage.getItem('geminiKey') || localStorage.getItem('gemini_api_key') || ''; }
+    function toggleSettings() { document.getElementById('settings-modal').classList.toggle('hidden'); var k=getApiKey(); document.getElementById('api-key-input').value=k; document.getElementById('api-key-status').textContent=k?'✅ API Key가 설정되어 있습니다.':''; }
+    function saveApiKey() { var k=document.getElementById('api-key-input').value.trim(); if(k){localStorage.setItem('geminiKey',k);document.getElementById('api-key-status').textContent='✅ 저장되었습니다.';}else{alert('API Key를 입력해주세요.');}}
+    function clearApiKey() { localStorage.removeItem('geminiKey');localStorage.removeItem('gemini_api_key');document.getElementById('api-key-input').value='';document.getElementById('api-key-status').textContent='🗑️ 초기화되었습니다.'; }
+    function toggleChat() { var s=document.getElementById('chat-sidebar'); s.classList.toggle('open'); s.classList.toggle('closed'); }
+    async function sendChat() {
+        geminiKey = (typeof getApiKey==='function')?(getApiKey()||''):(localStorage.getItem('geminiKey')||localStorage.getItem('gemini_api_key')||'');
+        if(!geminiKey){alert('API Key를 먼저 설정해주세요.');toggleSettings();return;}
+        var input=document.getElementById('chat-input'); var msg=input.value.trim(); if(!msg) return; input.value='';
+        var box=document.getElementById('chat-messages');
+        box.innerHTML+='<div class="chat-msg user">'+msg+'</div>';
+        box.innerHTML+='<div class="chat-msg ai" id="chat-loading"><div class="typing-indicator"><span></span><span></span><span></span></div></div>';
+        box.scrollTop=box.scrollHeight;
+        try {
+            var r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key='+geminiKey,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:"당신은 정보관리기술사 시험 멘토입니다. '명세 기반 테스트, 구조 기반 커버리지, MC/DC' 관련 질문에 전문적이고 명쾌하게 답변해주세요. 300자 이내로 핵심만 요약.\n\n질문: "+msg}]}],generationConfig:{maxOutputTokens:1024}})});
+            var d=await r.json(); var t=d.candidates[0].content.parts[0].text;
+            var loading=document.getElementById('chat-loading'); if(loading) loading.outerHTML='<div class="chat-msg ai prose">'+marked.parse(t)+'</div>';
+        } catch(e) { var loading=document.getElementById('chat-loading'); if(loading) loading.outerHTML='<div class="chat-msg ai text-red-500">오류: '+e.message+'</div>'; }
+        box.scrollTop=box.scrollHeight;
+    }
+
+    // ── 퀴즈 (QUIZ_TEMPLATE 그대로) ──
+    var geminiKey = (typeof getApiKey==='function')?(getApiKey()||''):(localStorage.getItem('geminiKey')||localStorage.getItem('gemini_api_key')||'');
+    var quizTypeHistory = [];
+    var currentQuizData = null;
+    var quizTopics = [
+        { category: "명세 기반 테스트 개요", keywords: "블랙박스, ISTQB, 요구사항 명세, 사용자 관점" },
+        { category: "동등 분할과 경계값 분석", keywords: "파티션, 대표값, Off-by-One, Boris Beizer, 65~70%" },
+        { category: "결정 테이블 테스트", keywords: "조건 조합, 규칙, 2^N, Don't-care" },
+        { category: "구문/분기 커버리지", keywords: "Statement Coverage, Branch Coverage, 포함 관계, True/False" },
+        { category: "조건 커버리지 한계", keywords: "Condition Coverage, 분기 미보장, 마스킹" },
+        { category: "MC/DC 개념과 3요건", keywords: "Modified Condition/Decision, 독립적 영향, N+1, DO-178C" },
+        { category: "마스킹 효과와 방지", keywords: "AND, OR, 차폐, 거짓 안전감, 논리식 증명" },
+        { category: "적용 표준과 사례", keywords: "DO-178C Level A, ISO 26262 ASIL D, Boeing 787, V 모델" }
+    ];
+
+    async function generateQuiz() {
+        geminiKey=(typeof getApiKey==='function')?(getApiKey()||''):(localStorage.getItem('geminiKey')||localStorage.getItem('gemini_api_key')||'');
+        if(!geminiKey){alert('API Key를 먼저 설정해주세요.');toggleSettings();return;}
+        var btn=document.getElementById('btn-quiz-gen'); btn.disabled=true; btn.innerHTML='<span>생성 중...</span>';
+        document.getElementById('quiz-placeholder').classList.add('hidden');
+        document.getElementById('quiz-container').classList.add('hidden');
+        document.getElementById('quiz-loading').classList.remove('hidden');
+        var isMC; var recent=quizTypeHistory.slice(-2);
+        if(recent.length>=2&&recent[0]===recent[1]){isMC=!recent[1];}else{isMC=Math.random()>0.5;}
+        quizTypeHistory.push(isMC);
+        var selected=quizTopics[Math.floor(Math.random()*quizTopics.length)];
+        var quizType=isMC?'객관식 (4지선다)':'단답형';
+        var format=isMC?'{"question":"문제","options":["A","B","C","D"],"correctIndex":0,"explanation":"해설"}':'{"question":"문제","correctAnswer":"정답","explanation":"해설"}';
+        var prompt="다음 카테고리에 대한 "+quizType+" 퀴즈 1문제를 만드세요.\n"+"카테고리: "+selected.category+"\n"+"관련 키워드: "+selected.keywords+"\n"+"규칙: 반드시 위 카테고리와 키워드에 직접 관련된 문제를 출제하세요.\n"+"JSON 형식으로 응답: "+format;
+        try {
+            var r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key='+geminiKey,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{responseMimeType:"application/json"}})});
+            var d=await r.json(); var t=d.candidates[0].content.parts[0].text;
+            t=t.replace(/```json\s*/gi,"").replace(/```\s*/g,"").trim();
+            var depth=0,start=-1,end=-1;
+            for(var i=0;i<t.length;i++){if(t[i]==='{'){if(depth===0)start=i;depth++;}else if(t[i]==='}'){depth--;if(depth===0&&start!==-1){end=i;break;}}}
+            if(start===-1||end===-1)throw new Error("No JSON found");
+            t=t.substring(start,end+1);
+            t=t.replace(/[\x00-\x1F\x7F]/g,function(c){return c==='\n'||c==='\r'||c==='\t'?' ':'';});
+            currentQuizData=JSON.parse(t); renderQuiz(isMC);
+        } catch(e) {
+            document.getElementById('quiz-loading').classList.add('hidden');
+            document.getElementById('quiz-placeholder').classList.remove('hidden');
+            document.getElementById('quiz-placeholder').innerHTML='<p class="text-red-500">퀴즈 생성 오류: '+e.message+'</p>';
+        }
+        btn.disabled=false; btn.innerHTML='<span>✨ 새로운 문제 생성</span>';
+    }
+    function renderQuiz(isMC) {
+        document.getElementById('quiz-loading').classList.add('hidden');
+        document.getElementById('quiz-feedback').classList.add('hidden');
+        document.getElementById('quiz-container').classList.remove('hidden');
+        document.getElementById('quiz-type-badge').textContent=isMC?'객관식':'단답형';
+        document.getElementById('quiz-question').textContent=currentQuizData.question;
+        var optDiv=document.getElementById('quiz-options'); var inputDiv=document.getElementById('quiz-input-area');
+        if(isMC){optDiv.classList.remove('hidden');inputDiv.classList.add('hidden');
+            var h=''; var letters=['A','B','C','D'];
+            currentQuizData.options.forEach(function(opt,i){h+='<button onclick="checkMultipleChoice('+i+', this)" class="w-full text-left p-4 rounded-lg border border-gray-200 hover:bg-indigo-50 hover:border-indigo-300 transition-all mb-2 flex items-center group"><span class="w-8 h-8 rounded-full bg-gray-100 group-hover:bg-indigo-100 flex items-center justify-center text-sm font-bold text-gray-500 group-hover:text-indigo-600 mr-3 flex-shrink-0">'+letters[i]+'</span><span class="text-sm text-gray-700">'+opt+'</span></button>';});
+            optDiv.innerHTML=h;
+        } else {optDiv.classList.add('hidden');inputDiv.classList.remove('hidden');document.getElementById('quiz-answer-input').value='';document.getElementById('quiz-answer-input').focus();}
+    }
+    function checkMultipleChoice(idx,btnEl) {
+        var correct=idx===currentQuizData.correctIndex;
+        document.querySelectorAll('#quiz-options button').forEach(function(b,i){b.disabled=true;if(i===currentQuizData.correctIndex){b.classList.add('bg-green-50','border-green-400');b.querySelector('span:first-child').classList.add('bg-green-100','text-green-700');}else if(i===idx&&!correct){b.classList.add('bg-red-50','border-red-400');b.querySelector('span:first-child').classList.add('bg-red-100','text-red-700');}});
+        showQuizFeedback(correct,currentQuizData.options[currentQuizData.correctIndex],currentQuizData.explanation);
+    }
+    async function checkShortAnswer() {
+        geminiKey=(typeof getApiKey==='function')?(getApiKey()||''):(localStorage.getItem('geminiKey')||localStorage.getItem('gemini_api_key')||'');
+        var ans=document.getElementById('quiz-answer-input').value.trim(); if(!ans){alert('답을 입력해주세요.');return;}
+        var btn=document.getElementById('btn-short-submit'); btn.disabled=true; btn.textContent='채점 중...';
+        try {
+            var gradingPrompt="당신은 정보관리기술사 시험 채점관입니다. 아래 문제에 대해 사용자의 답안이 정답으로 인정될 수 있는지 판정하세요.\n\n"+"문제: "+currentQuizData.question+"\n"+"모범 정답: "+currentQuizData.correctAnswer+"\n"+"사용자 답안: "+ans+"\n\n"+"판정 기준:\n- 핵심 의미가 동일하면 정답\n- 약어/풀네임 모두 인정\n- 영어/한글 혼용 인정\n- 띄어쓰기/조사 차이는 무시\n- 의미가 명확히 다르면 오답\n\n"+"Output JSON: {\"correct\":true/false,\"reason\":\"판정 이유\"}";
+            var r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key='+geminiKey,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:gradingPrompt}]}],generationConfig:{responseMimeType:"application/json"}})});
+            var d=await r.json(); var gt=d.candidates[0].content.parts[0].text;
+            gt=gt.replace(/```json\s*/gi,"").replace(/```\s*/g,"").trim();
+            var gd=0,gs=-1,ge=-1;for(var i=0;i<gt.length;i++){if(gt[i]==='{'){if(gd===0)gs=i;gd++;}else if(gt[i]==='}'){gd--;if(gd===0&&gs!==-1){ge=i;break;}}}
+            if(gs===-1||ge===-1)throw new Error("No JSON");
+            gt=gt.substring(gs,ge+1);gt=gt.replace(/[\x00-\x1F\x7F]/g,function(c){return c==='\n'||c==='\r'||c==='\t'?' ':'';});
+            var result=JSON.parse(gt);
+            showQuizFeedback(result.correct,currentQuizData.correctAnswer,currentQuizData.explanation+(result.reason?' (AI: '+result.reason+')':''));
+        } catch(e) {
+            var normalize=function(s){return s.replace(/\s/g,'').toLowerCase();};
+            var correct=normalize(currentQuizData.correctAnswer).includes(normalize(ans))||normalize(ans).includes(normalize(currentQuizData.correctAnswer));
+            showQuizFeedback(correct,currentQuizData.correctAnswer,currentQuizData.explanation+' (로컬 채점)');
+        }
+        btn.disabled=false; btn.textContent='제출';
+    }
+    function showQuizFeedback(correct,answer,explanation) {
+        var fb=document.getElementById('quiz-feedback'); fb.classList.remove('hidden','border-green-500','bg-green-50','border-red-500','bg-red-50');
+        if(correct){fb.classList.add('border-green-500','bg-green-50');fb.innerHTML='<p class="font-bold text-green-700 mb-1">✅ 정답입니다!</p><p class="text-sm text-green-600">'+explanation+'</p>';}
+        else{fb.classList.add('border-red-500','bg-red-50');fb.innerHTML='<p class="font-bold text-red-700 mb-1">❌ 오답입니다.</p><p class="text-sm text-red-700 mb-1">정답: '+answer+'</p><p class="text-sm text-red-600">'+explanation+'</p>';}
+    }
+    document.addEventListener('keydown',function(e){if(e.key==='Enter'&&document.getElementById('quiz-answer-input')===document.activeElement){checkShortAnswer();}});
+
+    // ── 차트 ──
+    document.addEventListener('DOMContentLoaded', function() {
+        var ctx = document.getElementById('coverageChart');
+        if (ctx) {
+            new Chart(ctx.getContext('2d'), {
+                type: 'radar',
+                data: {
+                    labels: ['결함 탐지력', '테스트 효율', '마스킹 방지', '표준 요구', '실무 활용도'],
+                    datasets: [
+                        { label: '구문 커버리지', data: [30, 90, 10, 30, 90], borderColor: '#94a3b8', backgroundColor: 'rgba(148,163,184,0.1)', borderWidth: 2 },
+                        { label: '분기 커버리지', data: [55, 75, 25, 50, 80], borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,0.1)', borderWidth: 2 },
+                        { label: '조건/분기', data: [70, 55, 50, 70, 50], borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.1)', borderWidth: 2 },
+                        { label: 'MC/DC', data: [95, 40, 95, 95, 30], borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.1)', borderWidth: 2 }
+                    ]
+                },
+                options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{position:'bottom'} }, scales:{ r:{beginAtZero:true,max:100,ticks:{stepSize:20}} } }
+            });
+        }
+    });
+</script>
+</body></html>

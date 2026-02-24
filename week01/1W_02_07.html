@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>페이징 주소 변환, 페이지 부재 처리, 스레싱과 워킹셋</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+        body { font-family: 'Noto Sans KR', sans-serif; background-color: #f5f5f4; color: #1f2937; }
+        .chart-container { position: relative; width: 100%; max-width: 600px; margin-left: auto; margin-right: auto; height: 350px; max-height: 400px; }
+        .nav-item.active { border-bottom: 2px solid #4f46e5; color: #4f46e5; font-weight: 700; }
+        .tech-block { transition: all 0.3s ease; cursor: pointer; }
+        .tech-block:hover { transform: translateY(-2px); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        .tech-block.selected { ring: 2px; ring-color: #4f46e5; background-color: #eef2ff; border-color: #4f46e5; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        #chat-sidebar { transition: transform 0.3s ease-in-out; }
+        #chat-sidebar.closed { transform: translateX(100%); }
+        #chat-sidebar.open { transform: translateX(0); }
+        .typing-indicator span { display: inline-block; width: 6px; height: 6px; background-color: #4f46e5; border-radius: 50%; animation: typing 1.4s infinite ease-in-out both; margin: 0 2px; }
+        .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+        .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes typing { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+        .prose h1,.prose h2,.prose h3 { font-weight: bold; margin-top: 1em; margin-bottom: 0.5em; color: #312e81; font-size: 1.1em; }
+        .prose ul { list-style-type: disc; padding-left: 1.5em; margin-bottom: 1em; }
+        .prose strong { color: #4338ca; }
+        .prose p { margin-bottom: 0.8em; }
+        .chat-msg { border-radius: 12px; padding: 10px 14px; margin-bottom: 10px; max-width: 85%; font-size: 0.95rem; }
+        .chat-msg.user { background-color: #4f46e5; color: white; align-self: flex-end; margin-left: auto; }
+        .chat-msg.ai { background-color: #f3f4f6; color: #1f2937; align-self: flex-start; border: 1px solid #e5e7eb; }
+        .textbook-content h3 { font-size: 1.25rem; font-weight: 700; color: #1e3a8a; margin-top: 1.5rem; margin-bottom: 0.75rem; border-left: 4px solid #4f46e5; padding-left: 0.75rem; }
+        .textbook-content h4 { font-size: 1.1rem; font-weight: 600; color: #374151; margin-top: 1rem; margin-bottom: 0.5rem; }
+        .textbook-content p { margin-bottom: 1rem; line-height: 1.8; color: #4b5563; }
+        .textbook-content ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 1rem; color: #4b5563; }
+        .textbook-content li { margin-bottom: 0.5rem; line-height: 1.7; }
+        .textbook-content table { width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; font-size: 0.95rem; }
+        .textbook-content th,.textbook-content td { border: 1px solid #e5e7eb; padding: 0.75rem; text-align: left; }
+        .textbook-content th { background-color: #f9fafb; font-weight: 600; color: #1f2937; }
+        .textbook-content .highlight { background-color: #eef2ff; color: #4338ca; font-weight: 600; padding: 0 4px; border-radius: 4px; }
+        .textbook-content pre { background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem; overflow-x: auto; margin-bottom: 1rem; font-size: 0.85rem; line-height: 1.6; }
+        .textbook-content code { font-family: 'Courier New', monospace; }
+        .def-box { background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%); border-left: 4px solid #4f46e5; border-radius: 8px; padding: 1.25rem; margin-bottom: 1rem; }
+        .def-box p { color: #312e81; font-weight: 500; margin: 0; line-height: 1.8; }
+        .insight-box { background-color: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 1rem; margin: 1rem 0; }
+    </style>
+</head><body class="bg-gray-50 font-sans">
+    <header class="bg-white shadow-sm border-b sticky top-0 z-30">
+        <div class="max-w-5xl mx-auto px-4 sm:px-6">
+            <div class="flex items-center justify-between h-14">
+                <div>
+                    <p class="text-xs text-indigo-600 font-medium tracking-wide">KPC 정보관리기술사 ZIP-UP 심화반</p>
+                    <h1 class="text-lg font-bold text-gray-900 leading-tight">페이징 주소 변환, 페이지 부재 처리, 스레싱과 워킹셋</h1>
+                </div>
+                <span class="bg-indigo-600 text-white text-xs font-bold px-2.5 py-1 rounded-full">2026</span>
+            </div>
+            <nav class="flex items-center gap-1 overflow-x-auto no-scrollbar -mb-px">
+                <button id="nav-overview" onclick="navTo('overview')" class="nav-item active text-sm px-3 py-2 whitespace-nowrap transition-colors">개요 및 개념</button>
+                <button id="nav-addressing" onclick="navTo('addressing')" class="nav-item text-gray-500 text-sm px-3 py-2 whitespace-nowrap transition-colors">주소 변환</button>
+                <button id="nav-pagefault" onclick="navTo('pagefault')" class="nav-item text-gray-500 text-sm px-3 py-2 whitespace-nowrap transition-colors">페이지 부재</button>
+                <button id="nav-thrashing" onclick="navTo('thrashing')" class="nav-item text-gray-500 text-sm px-3 py-2 whitespace-nowrap transition-colors">스레싱/워킹셋</button>
+                <button id="nav-textbook" onclick="navTo('textbook')" class="nav-item text-gray-500 text-sm px-3 py-2 whitespace-nowrap transition-colors">원문 학습</button>
+                <button id="nav-script" onclick="navTo('script')" class="nav-item text-gray-500 text-sm px-3 py-2 whitespace-nowrap transition-colors" style="display:none;">🎬 강의</button>
+                <button id="nav-quiz" onclick="navTo('quiz')" class="nav-item text-gray-500 text-sm px-3 py-2 whitespace-nowrap transition-colors">퀴즈 & 암기</button>
+                <span class="w-px h-4 bg-gray-300 flex-shrink-0"></span>
+                <button onclick="toggleSettings()" class="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium text-indigo-600 hover:bg-indigo-50 border border-indigo-200 hover:border-indigo-400 transition-all whitespace-nowrap flex-shrink-0" title="API Key 설정">&#128273; API</button>
+            </nav>
+        </div>
+    </header>
+    <main class="flex-grow max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12 pb-24">
+    <div id="overview" class="space-y-8">
+        <div class="max-w-4xl mx-auto">
+        <!-- 정의 박스 -->
+        <div class="def-box mb-6">
+          <p><strong>페이징(Paging)</strong>은 가상 메모리 구현의 대표적 방식으로, 가상 주소 공간과 물리 메모리를 동일 크기의 블록(페이지/프레임)으로 분할하여 관리하며, <strong>TLB</strong>와 <strong>페이지 테이블</strong>을 통해 가상→물리 주소 변환을 수행한다. 페이지 부재 시 커널이 디스크 I/O로 페이지를 적재하며, 스레싱은 <strong>워킹셋</strong> 기반 프레임 할당으로 예방한다.</p>
+        </div>
+
+        <!-- 개념 해설 -->
+        <div class="bg-white rounded-xl border p-5 mb-6">
+          <h3 class="text-lg font-bold text-gray-900 mb-3">개념 해설</h3>
+          <p class="text-gray-600 leading-relaxed mb-3">가상 메모리는 물리 메모리의 용량 한계를 극복하기 위해 <strong>디스크를 메모리의 확장</strong>으로 활용하는 기법입니다. 프로그램은 실제 물리 메모리 크기에 관계없이 넓은 가상 주소 공간을 사용할 수 있으며, OS가 필요한 페이지만 물리 메모리에 적재하여 효율적으로 관리합니다.</p>
+          <p class="text-gray-600 leading-relaxed">TLB(Translation Lookaside Buffer)는 <strong>주소 변환의 고속 캐시</strong>로, 적중률 95~99%를 달성하여 대부분의 주소 변환을 1~2 사이클에 완료합니다. TLB Miss 시 페이지 테이블을 참조하고, 페이지가 메모리에 없으면 Page Fault가 발생하여 디스크에서 적재합니다.</p>
+        </div>
+
+        <!-- 문제 구조 도식 -->
+        <div class="bg-white rounded-xl border p-5 mb-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">문제 구조: 정상 동작 → 예외 처리 → 성능 병목 해결</h3>
+            <div class="flex flex-col md:flex-row items-center justify-center gap-3">
+                <div class="bg-green-100 border-2 border-green-400 rounded-lg px-6 py-4 text-center min-w-[180px]">
+                    <div class="text-xs text-green-500 font-bold mb-1">소문제 1 — 정상</div>
+                    <div class="font-bold text-green-900">주소 변환</div>
+                    <div class="text-xs text-green-600 mt-1">TLB · 페이지 테이블 · VPN→PFN</div>
+                </div>
+                <div class="text-2xl text-gray-400 rotate-90 md:rotate-0">→</div>
+                <div class="bg-amber-100 border-2 border-amber-400 rounded-lg px-6 py-4 text-center min-w-[180px]">
+                    <div class="text-xs text-amber-500 font-bold mb-1">소문제 2 — 예외</div>
+                    <div class="font-bold text-amber-900">페이지 부재 처리</div>
+                    <div class="text-xs text-amber-600 mt-1">트랩 · 디스크I/O · 교체 알고리즘</div>
+                </div>
+                <div class="text-2xl text-gray-400 rotate-90 md:rotate-0">→</div>
+                <div class="bg-red-100 border-2 border-red-400 rounded-lg px-6 py-4 text-center min-w-[180px]">
+                    <div class="text-xs text-red-500 font-bold mb-1">소문제 3 — 병목</div>
+                    <div class="font-bold text-red-900">스레싱/워킹셋</div>
+                    <div class="text-xs text-red-600 mt-1">MPD · 악순환 · W(t,Δ) · PFF</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 배경 카드 -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-green-50 border border-green-200 rounded-xl p-5">
+                <div class="text-2xl mb-2">⚡</div>
+                <h4 class="font-bold text-green-900 mb-2">TLB 고속 변환</h4>
+                <p class="text-sm text-green-700">적중률 95~99%, 1~2 사이클 접근. 전체 주소 변환 성능의 핵심. TLB Miss 시 10~100 사이클 추가 소요.</p>
+            </div>
+            <div class="bg-amber-50 border border-amber-200 rounded-xl p-5">
+                <div class="text-2xl mb-2">⚠️</div>
+                <h4 class="font-bold text-amber-900 mb-2">Page Fault "트유빈디페재"</h4>
+                <p class="text-sm text-amber-700">6단계 처리: 트랩→유효성→빈프레임→디스크I/O(~10ms)→페이지테이블갱신→재실행. 디스크 I/O가 최대 병목.</p>
+            </div>
+            <div class="bg-red-50 border border-red-200 rounded-xl p-5">
+                <div class="text-2xl mb-2">🔥</div>
+                <h4 class="font-bold text-red-900 mb-2">스레싱 악순환</h4>
+                <p class="text-sm text-red-700">MPD 과다→부재율 급증→CPU 유휴→OS가 더 투입→악화. Peter Denning의 워킹셋으로 예방.</p>
+            </div>
+        </div>
+        </div>
+    </div>
+    <div id="addressing" class="space-y-8 hidden">
+      <div class="max-w-4xl mx-auto">
+        <h2 class="text-xl font-bold text-gray-900 mb-6">주소 변환 메커니즘</h2>
+
+        <!-- 가상 주소 구조 시각화 -->
+        <div class="bg-white rounded-xl border p-5 mb-6">
+          <h3 class="font-bold text-gray-800 mb-3">가상 주소 구조 (32비트, 4KB 페이지)</h3>
+          <div class="flex items-center justify-center gap-0 my-4">
+            <div class="bg-indigo-100 border-2 border-indigo-400 rounded-l-lg px-6 py-4 text-center flex-1">
+              <div class="text-xs text-indigo-500 font-bold">VPN (20비트)</div>
+              <div class="font-bold text-indigo-900">가상 페이지 번호</div>
+              <div class="text-xs text-indigo-600 mt-1">2²⁰ = 1,048,576개 페이지</div>
+            </div>
+            <div class="bg-green-100 border-2 border-green-400 rounded-r-lg px-6 py-4 text-center" style="min-width:160px;">
+              <div class="text-xs text-green-500 font-bold">Offset (12비트)</div>
+              <div class="font-bold text-green-900">페이지 내 위치</div>
+              <div class="text-xs text-green-600 mt-1">2¹² = 4,096 (4KB)</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TLB 카드 -->
+        <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-5 mb-6">
+          <h3 class="font-bold text-indigo-900 mb-3">TLB (Translation Lookaside Buffer)</h3>
+          <div class="grid grid-cols-2 md:grid-cols-5 gap-3 text-center text-sm">
+            <div class="bg-white rounded-lg p-3 border"><div class="text-gray-500 text-xs">위치</div><div class="font-bold text-indigo-700">MMU 내부</div></div>
+            <div class="bg-white rounded-lg p-3 border"><div class="text-gray-500 text-xs">용량</div><div class="font-bold text-indigo-700">64~1,024 엔트리</div></div>
+            <div class="bg-white rounded-lg p-3 border"><div class="text-gray-500 text-xs">접근 시간</div><div class="font-bold text-indigo-700">1~2 사이클</div></div>
+            <div class="bg-white rounded-lg p-3 border"><div class="text-gray-500 text-xs">적중률</div><div class="font-bold text-indigo-700">95~99%</div></div>
+            <div class="bg-white rounded-lg p-3 border"><div class="text-gray-500 text-xs">구조</div><div class="font-bold text-indigo-700">완전/세트 연관</div></div>
+          </div>
+        </div>
+
+        <!-- 주소 변환 흐름도 - HTML/CSS 시각화 -->
+        <div class="bg-white rounded-xl border p-5 mb-6">
+          <h3 class="font-bold text-gray-800 mb-4">페이징 주소 변환 전체 과정</h3>
+          <div class="flex flex-col items-center gap-2">
+            <div class="bg-indigo-600 text-white rounded-lg px-6 py-2 font-bold text-sm">CPU: 가상 주소 발생</div>
+            <div class="w-px h-4 bg-gray-400"></div>
+            <div class="bg-indigo-100 border-2 border-indigo-400 rounded-lg px-6 py-2 font-bold text-indigo-800 text-sm">① TLB 탐색</div>
+            <div class="flex items-start gap-8 mt-2">
+              <!-- TLB Hit -->
+              <div class="flex flex-col items-center gap-2">
+                <span class="bg-green-100 text-green-700 text-xs font-bold px-3 py-1 rounded-full">TLB Hit (95~99%)</span>
+                <div class="w-px h-4 bg-green-400"></div>
+                <div class="bg-green-50 border border-green-300 rounded-lg px-4 py-2 text-sm text-center">PFN 즉시 획득<br><span class="text-xs text-green-600">1~2 사이클</span></div>
+              </div>
+              <!-- TLB Miss -->
+              <div class="flex flex-col items-center gap-2">
+                <span class="bg-red-100 text-red-700 text-xs font-bold px-3 py-1 rounded-full">TLB Miss</span>
+                <div class="w-px h-4 bg-red-400"></div>
+                <div class="bg-amber-50 border border-amber-300 rounded-lg px-4 py-2 text-sm text-center">② 페이지 테이블 탐색</div>
+                <div class="flex items-start gap-6 mt-1">
+                  <div class="flex flex-col items-center gap-1">
+                    <span class="text-xs text-green-600 font-bold">Valid=1</span>
+                    <div class="bg-green-50 border border-green-300 rounded px-3 py-1 text-xs">PFN 획득 + TLB 갱신</div>
+                  </div>
+                  <div class="flex flex-col items-center gap-1">
+                    <span class="text-xs text-red-600 font-bold">Valid=0</span>
+                    <div class="bg-red-50 border border-red-300 rounded px-3 py-1 text-xs font-bold text-red-700">Page Fault 트랩!</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="w-px h-4 bg-gray-400 mt-2"></div>
+            <div class="bg-indigo-600 text-white rounded-lg px-6 py-2 font-bold text-sm">물리주소 = PFN × 4KB + Offset → 메모리 접근</div>
+          </div>
+        </div>
+
+        <!-- 다단계 페이지 테이블 -->
+        <div class="bg-white rounded-xl border p-5">
+          <h3 class="font-bold text-gray-800 mb-3">다단계 페이지 테이블</h3>
+          <table class="w-full text-sm">
+            <thead><tr class="bg-gray-50"><th class="border p-2">단계</th><th class="border p-2">장점</th><th class="border p-2">단점</th><th class="border p-2">적용 OS</th></tr></thead>
+            <tbody>
+              <tr><td class="border p-2 font-bold">1단계</td><td class="border p-2">구조 단순, 빠른 접근</td><td class="border p-2">메모리 낭비 큼</td><td class="border p-2">임베디드 OS</td></tr>
+              <tr><td class="border p-2 font-bold">2단계</td><td class="border p-2">메모리 절약</td><td class="border p-2">2회 메모리 참조</td><td class="border p-2">Linux (32비트)</td></tr>
+              <tr><td class="border p-2 font-bold">4단계</td><td class="border p-2">대규모 주소 공간 지원</td><td class="border p-2">4회 메모리 참조</td><td class="border p-2">Linux (64비트, x86-64)</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div id="pagefault" class="space-y-8 hidden">
+      <div class="max-w-4xl mx-auto">
+        <h2 class="text-xl font-bold text-gray-900 mb-6">페이지 부재(Page Fault) 처리</h2>
+
+        <!-- 6단계 처리 절차 시각화 -->
+        <div class="bg-white rounded-xl border p-5 mb-6">
+          <h3 class="font-bold text-gray-800 mb-4">페이지 부재 처리 6단계 "트유빈디페재"</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+              <div class="flex items-center gap-2 mb-2"><span class="bg-red-500 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center">1</span><span class="font-bold text-red-800 text-sm">트랩 발생</span></div>
+              <p class="text-xs text-red-700">MMU가 Valid=0 감지 → CPU에 Page Fault 트랩 발생. 커널 모드로 전환.</p>
+              <span class="text-xs text-red-500 mt-1 inline-block">HW (MMU → CPU)</span>
+            </div>
+            <div class="bg-amber-50 border border-amber-200 rounded-lg p-4">
+              <div class="flex items-center gap-2 mb-2"><span class="bg-amber-500 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center">2</span><span class="font-bold text-amber-800 text-sm">유효성 검사</span></div>
+              <p class="text-xs text-amber-700">주소 범위 + 접근 권한 확인. 위반 시 Segmentation Fault → 프로세스 종료.</p>
+              <span class="text-xs text-amber-500 mt-1 inline-block">SW (커널)</span>
+            </div>
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <div class="flex items-center gap-2 mb-2"><span class="bg-yellow-500 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center">3</span><span class="font-bold text-yellow-800 text-sm">빈 프레임 확보</span></div>
+              <p class="text-xs text-yellow-700">빈 프레임 있으면 사용, 없으면 교체 알고리즘(LRU/Clock). Dirty면 Write-back.</p>
+              <span class="text-xs text-yellow-500 mt-1 inline-block">SW (커널)</span>
+            </div>
+            <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
+              <div class="flex items-center gap-2 mb-2"><span class="bg-indigo-500 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center">4</span><span class="font-bold text-indigo-800 text-sm">디스크 I/O</span></div>
+              <p class="text-xs text-indigo-700">스왑 영역에서 페이지 읽기. <strong>~10ms (최대 병목)</strong>. 프로세스는 Blocked 상태.</p>
+              <span class="text-xs text-indigo-500 mt-1 inline-block">HW+SW (디스크 컨트롤러)</span>
+            </div>
+            <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+              <div class="flex items-center gap-2 mb-2"><span class="bg-green-500 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center">5</span><span class="font-bold text-green-800 text-sm">페이지 테이블 갱신</span></div>
+              <p class="text-xs text-green-700">PTE 갱신: PFN 설정, Valid=1. TLB 엔트리 추가.</p>
+              <span class="text-xs text-green-500 mt-1 inline-block">SW (커널)</span>
+            </div>
+            <div class="bg-teal-50 border border-teal-200 rounded-lg p-4">
+              <div class="flex items-center gap-2 mb-2"><span class="bg-teal-500 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center">6</span><span class="font-bold text-teal-800 text-sm">재실행</span></div>
+              <p class="text-xs text-teal-700">Blocked→Ready→Running. Page Fault 발생 명령어 Re-execute. TLB Hit 정상 처리.</p>
+              <span class="text-xs text-teal-500 mt-1 inline-block">HW+SW</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 페이지 교체 알고리즘 -->
+        <div class="bg-white rounded-xl border p-5 mb-6">
+          <h3 class="font-bold text-gray-800 mb-3">페이지 교체 알고리즘 "오피엘클"</h3>
+          <div class="space-y-3">
+            <div class="tech-block bg-gray-50 rounded-lg border p-4" onclick="toggleExpand(this)">
+              <div class="flex items-center justify-between"><div class="flex items-center gap-3"><span class="bg-purple-100 text-purple-700 text-xs font-bold px-2 py-1 rounded">OPT</span><span class="font-bold text-sm">Optimal (이론적 최적)</span></div><span class="expand-icon text-gray-400 text-sm">▼</span></div>
+            </div>
+            <div class="hidden bg-purple-50 rounded-lg p-4 text-sm text-purple-800">가장 오랫동안 사용되지 않을 페이지를 교체. 미래를 예측할 수 없어 비현실적이나, 성능 비교의 이론적 하한(Baseline)으로 활용.</div>
+
+            <div class="tech-block bg-gray-50 rounded-lg border p-4" onclick="toggleExpand(this)">
+              <div class="flex items-center justify-between"><div class="flex items-center gap-3"><span class="bg-amber-100 text-amber-700 text-xs font-bold px-2 py-1 rounded">FIFO</span><span class="font-bold text-sm">First-In First-Out</span></div><span class="expand-icon text-gray-400 text-sm">▼</span></div>
+            </div>
+            <div class="hidden bg-amber-50 rounded-lg p-4 text-sm text-amber-800">가장 먼저 적재된 페이지를 교체. 구현 간단하지만 <strong>Belady의 모순</strong>(프레임 증가 시 부재율 오히려 증가) 발생 가능.</div>
+
+            <div class="tech-block bg-gray-50 rounded-lg border p-4" onclick="toggleExpand(this)">
+              <div class="flex items-center justify-between"><div class="flex items-center gap-3"><span class="bg-indigo-100 text-indigo-700 text-xs font-bold px-2 py-1 rounded">LRU</span><span class="font-bold text-sm">Least Recently Used</span></div><span class="expand-icon text-gray-400 text-sm">▼</span></div>
+            </div>
+            <div class="hidden bg-indigo-50 rounded-lg p-4 text-sm text-indigo-800">가장 오래 사용되지 않은 페이지를 교체. OPT에 근접한 성능을 보이나, 타임스탬프/스택 유지를 위한 하드웨어 오버헤드 존재.</div>
+
+            <div class="tech-block bg-gray-50 rounded-lg border p-4" onclick="toggleExpand(this)">
+              <div class="flex items-center justify-between"><div class="flex items-center gap-3"><span class="bg-green-100 text-green-700 text-xs font-bold px-2 py-1 rounded">Clock</span><span class="font-bold text-sm">Second Chance</span></div><span class="expand-icon text-gray-400 text-sm">▼</span></div>
+            </div>
+            <div class="hidden bg-green-50 rounded-lg p-4 text-sm text-green-800">참조 비트 기반 순환 탐색. LRU를 근사하면서도 구현이 효율적. <strong>실무에서 가장 많이 사용</strong>. Enhanced Clock은 수정 비트까지 활용.</div>
+          </div>
+        </div>
+
+        <!-- EAT 계산 -->
+        <div class="bg-white rounded-xl border p-5">
+          <h3 class="font-bold text-gray-800 mb-3">유효 접근 시간(EAT) 분석</h3>
+          <div class="insight-box mb-3">
+            <p class="text-sm"><strong>EAT = (1 - p) × 메모리 접근 시간 + p × 페이지 부재 처리 시간</strong></p>
+            <p class="text-xs text-gray-600 mt-1">메모리 접근 = 100ns, 페이지 부재 처리 = 10ms = 10,000,000ns</p>
+          </div>
+          <table class="w-full text-sm">
+            <thead><tr class="bg-gray-50"><th class="border p-2">부재율 (p)</th><th class="border p-2">EAT</th><th class="border p-2">성능 저하</th></tr></thead>
+            <tbody>
+              <tr><td class="border p-2">0 (부재 없음)</td><td class="border p-2">100ns</td><td class="border p-2">없음</td></tr>
+              <tr class="bg-red-50"><td class="border p-2 font-bold">1/1,000</td><td class="border p-2 font-bold">10,100ns</td><td class="border p-2 font-bold text-red-600">101배</td></tr>
+              <tr><td class="border p-2">1/10,000</td><td class="border p-2">1,100ns</td><td class="border p-2">11배</td></tr>
+              <tr><td class="border p-2">1/100,000</td><td class="border p-2">200ns</td><td class="border p-2">2배</td></tr>
+              <tr><td class="border p-2">1/1,000,000</td><td class="border p-2">110ns</td><td class="border p-2">1.1배</td></tr>
+            </tbody>
+          </table>
+          <div class="insight-box mt-3">
+            <p class="text-sm text-amber-800">부재율이 <strong>1/1,000만 되어도 성능이 100배 이상 저하</strong>된다. 이것이 페이지 교체 알고리즘 최적화와 스레싱 방지가 중요한 이유이다.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="thrashing" class="space-y-8 hidden">
+      <div class="max-w-4xl mx-auto">
+        <h2 class="text-xl font-bold text-gray-900 mb-6">스레싱과 워킹셋</h2>
+
+        <!-- 스레싱 악순환 시각화 -->
+        <div class="bg-white rounded-xl border p-5 mb-6">
+          <h3 class="font-bold text-gray-800 mb-4">스레싱 발생 악순환 "프페디씨프"</h3>
+          <div class="flex flex-col items-center gap-2">
+            <div class="bg-red-100 border-2 border-red-400 rounded-lg px-5 py-2 text-sm font-bold text-red-800">MPD 과다 → 프레임 부족</div>
+            <div class="text-red-400 font-bold">↓</div>
+            <div class="bg-amber-100 border-2 border-amber-400 rounded-lg px-5 py-2 text-sm font-bold text-amber-800">페이지 부재율 급증</div>
+            <div class="text-amber-400 font-bold">↓</div>
+            <div class="bg-yellow-100 border-2 border-yellow-400 rounded-lg px-5 py-2 text-sm font-bold text-yellow-800">디스크 I/O 대기 증가</div>
+            <div class="text-yellow-400 font-bold">↓</div>
+            <div class="bg-indigo-100 border-2 border-indigo-400 rounded-lg px-5 py-2 text-sm font-bold text-indigo-800">CPU 유휴(Idle) 시간 증가</div>
+            <div class="text-indigo-400 font-bold">↓</div>
+            <div class="bg-purple-100 border-2 border-purple-400 rounded-lg px-5 py-2 text-sm font-bold text-purple-800">OS: "CPU 놀고 있다" → MPD 더 증가</div>
+            <div class="text-purple-400 font-bold">↓ (악순환 반복!)</div>
+            <div class="bg-red-600 text-white rounded-lg px-5 py-2 text-sm font-bold">★ 스레싱(Thrashing) — CPU 이용률 급락, 시스템 마비</div>
+          </div>
+        </div>
+
+        <!-- CPU 이용률 차트 -->
+        <div class="bg-white rounded-xl border p-5 mb-6">
+          <h3 class="font-bold text-gray-800 mb-3">MPD 대 CPU 이용률 그래프</h3>
+          <div class="chart-container">
+            <canvas id="thrashingChart"></canvas>
+          </div>
+          <div class="flex justify-center gap-4 mt-2 text-xs">
+            <span class="flex items-center gap-1"><span class="w-3 h-3 bg-amber-500 rounded-full inline-block"></span> 최적점 (Sweet Spot)</span>
+            <span class="flex items-center gap-1"><span class="w-3 h-3 bg-red-500 rounded-full inline-block"></span> 스레싱 구간</span>
+          </div>
+        </div>
+
+        <!-- 워킹셋 모델 -->
+        <div class="bg-white rounded-xl border p-5 mb-6">
+          <h3 class="font-bold text-gray-800 mb-3">워킹셋(Working Set) 모델 — Peter Denning(1968)</h3>
+          <div class="def-box mb-4">
+            <p>시간 t에서의 워킹셋 <strong>W(t, Δ)</strong>은 최근 Δ시간 동안 참조된 페이지들의 집합이다. 각 프로세스에 워킹셋 크기 이상의 프레임을 할당하면 스레싱을 예방할 수 있다.</p>
+          </div>
+          <div class="bg-gray-50 rounded-lg p-4 mb-4 text-sm">
+            <p class="font-bold text-gray-800 mb-2">예시 (Δ = 5):</p>
+            <p class="text-gray-600">참조 문자열: 1 2 3 2 1 4 5 4 3 2 1</p>
+            <p class="text-gray-600">시간 t=11에서 워킹셋: W = {1, 2, 3, 4} → |W| = 4</p>
+            <p class="text-indigo-700 font-bold mt-1">→ 이 프로세스에 최소 4개 프레임을 할당해야 함</p>
+          </div>
+          <div class="insight-box">
+            <p class="text-sm"><strong>D = Σ |W_i(t, Δ)|</strong> (전체 워킹셋 합) vs <strong>m</strong> (가용 프레임 수)</p>
+          </div>
+          <table class="w-full text-sm mt-3">
+            <thead><tr class="bg-gray-50"><th class="border p-2">조건</th><th class="border p-2">상태</th><th class="border p-2">조치</th></tr></thead>
+            <tbody>
+              <tr><td class="border p-2">D &lt; m</td><td class="border p-2 text-green-600 font-bold">여유 프레임 존재</td><td class="border p-2">새 프로세스 적재 가능 (MPD 증가)</td></tr>
+              <tr><td class="border p-2">D ≈ m</td><td class="border p-2 text-indigo-600 font-bold">최적 상태</td><td class="border p-2">현상 유지</td></tr>
+              <tr class="bg-red-50"><td class="border p-2">D &gt; m</td><td class="border p-2 text-red-600 font-bold">스레싱 위험</td><td class="border p-2">프로세스 일부 중단(Suspend)</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- PFF 기법 -->
+        <div class="bg-white rounded-xl border p-5">
+          <h3 class="font-bold text-gray-800 mb-3">PFF(Page Fault Frequency) 기법</h3>
+          <p class="text-sm text-gray-600 mb-3">워킹셋의 대안적 접근. 페이지 부재 빈도를 직접 모니터링하여 프레임 할당 조절.</p>
+          <table class="w-full text-sm">
+            <thead><tr class="bg-gray-50"><th class="border p-2">상황</th><th class="border p-2">조치</th></tr></thead>
+            <tbody>
+              <tr><td class="border p-2">부재율 &gt; 상한 임계값</td><td class="border p-2">해당 프로세스에 프레임 추가 할당</td></tr>
+              <tr><td class="border p-2">부재율 &lt; 하한 임계값</td><td class="border p-2">해당 프로세스의 잉여 프레임 회수</td></tr>
+              <tr class="bg-red-50"><td class="border p-2">추가 프레임 확보 불가</td><td class="border p-2 font-bold text-red-600">프로세스 중단(Suspend)</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div id="textbook" class="tab-content hidden">
+      <div class="max-w-4xl mx-auto textbook-content">
+        <h3>제1장 페이징 주소 변환 과정 (소문제 1)</h3>
+        <h4>1.1 가상 메모리와 페이징 개요</h4>
+        <div class="def-box">
+          <p>가상 메모리(Virtual Memory)란, 물리 메모리(Physical Memory)의 용량 한계를 극복하기 위해 <strong>보조 기억장치(디스크)를 물리 메모리의 확장으로 활용</strong>하는 메모리 관리 기법이다.</p>
+        </div>
+        <p>1961년 Manchester Atlas 컴퓨터에서 최초로 구현되었으며, 현대 모든 범용 OS(Windows, Linux, macOS)의 필수 메커니즘이다. <strong>페이징(Paging)</strong>은 가상 메모리 구현의 대표적 방식으로, 가상 주소 공간과 물리 메모리를 동일 크기의 블록(페이지/프레임)으로 분할하여 관리한다.</p>
+        <table>
+          <thead><tr><th>구분</th><th>가상 메모리 측</th><th>물리 메모리 측</th></tr></thead>
+          <tbody>
+            <tr><td>블록 명칭</td><td>페이지(Page)</td><td>프레임(Frame)</td></tr>
+            <tr><td>크기</td><td>일반적으로 4KB</td><td>페이지와 동일(4KB)</td></tr>
+            <tr><td>번호 체계</td><td>가상 페이지 번호(VPN)</td><td>물리 프레임 번호(PFN)</td></tr>
+          </tbody>
+        </table>
+
+        <h4>1.2 가상 주소 구조</h4>
+        <p>가상 주소(Virtual Address)는 <strong>가상 페이지 번호(VPN)</strong>와 <strong>오프셋(Offset)</strong>으로 구성된다.</p>
+        <div class="bg-white rounded-lg border p-4 my-4">
+          <div class="flex items-center justify-center gap-0">
+            <div class="bg-indigo-100 border-2 border-indigo-400 rounded-l-lg px-4 py-3 text-center flex-1">
+              <div class="text-xs text-indigo-500 font-bold">VPN (20비트)</div>
+              <div class="text-xs text-indigo-600">2²⁰ = 1,048,576개 페이지</div>
+            </div>
+            <div class="bg-green-100 border-2 border-green-400 rounded-r-lg px-4 py-3 text-center" style="min-width:140px;">
+              <div class="text-xs text-green-500 font-bold">Offset (12비트)</div>
+              <div class="text-xs text-green-600">2¹² = 4,096 (4KB)</div>
+            </div>
+          </div>
+        </div>
+
+        <h4>1.3 TLB(Translation Lookaside Buffer)</h4>
+        <p>TLB는 <strong>최근 사용된 페이지 테이블 항목을 캐싱하는 하드웨어 고속 버퍼</strong>이다. CPU의 MMU(Memory Management Unit) 내부에 위치하며, 전체 주소 변환 성능의 핵심이다.</p>
+        <table>
+          <thead><tr><th>TLB 특성</th><th>값</th></tr></thead>
+          <tbody>
+            <tr><td>위치</td><td>MMU 내부 (CPU 칩 내)</td></tr>
+            <tr><td>용량</td><td>일반적으로 64~1,024 엔트리</td></tr>
+            <tr><td>접근 시간</td><td>1~2 클럭 사이클</td></tr>
+            <tr><td>적중률(Hit Rate)</td><td>일반적으로 95~99%</td></tr>
+            <tr><td>구조</td><td>완전 연관(Fully Associative) 또는 세트 연관(Set Associative)</td></tr>
+          </tbody>
+        </table>
+        <p><strong>TLB 적중률의 중요성</strong>: TLB 적중 시 1~2 사이클, 미스 시 10~100 사이클이 추가로 소요되므로, TLB 적중률 1%의 차이가 전체 메모리 접근 성능에 큰 영향을 미친다.</p>
+
+        <h4>1.4 페이징 주소 변환 전체 과정</h4>
+        <p><strong>[1단계] TLB 탐색</strong>: CPU가 가상 주소를 발생시키면, MMU는 먼저 TLB에서 해당 VPN에 대응하는 PFN을 검색한다.</p>
+        <p><strong>[2단계] TLB Hit</strong>: TLB에서 VPN이 발견되면(적중률 95~99%), 저장된 PFN과 오프셋을 결합하여 물리 주소를 즉시 계산한다. 추가적인 메모리 접근 없이 1~2 사이클에 완료된다.</p>
+        <p><strong>[3단계] TLB Miss → 페이지 테이블 탐색</strong>: TLB에서 해당 VPN을 찾지 못하면, 메인 메모리에 있는 <strong>페이지 테이블(Page Table)</strong>을 탐색한다. PTE(Page Table Entry)에서 Valid 비트, PFN, 보호 비트 등을 확인한다.</p>
+        <p><strong>[4단계] 유효 비트(Valid Bit) 확인</strong>:</p>
+        <ul>
+          <li><strong>Valid = 1</strong>: 해당 페이지가 물리 메모리에 적재되어 있음. PFN을 얻고, TLB에 새 항목을 추가한 후 물리 주소를 계산한다.</li>
+          <li><strong>Valid = 0</strong>: 해당 페이지가 물리 메모리에 없음. <strong>페이지 부재(Page Fault)</strong> 트랩이 발생하여 커널에 제어가 넘어간다.</li>
+        </ul>
+        <p><strong>[5단계] 물리 주소 계산 및 메모리 접근</strong>: 물리 주소 = PFN × 페이지 크기 + Offset.</p>
+
+        <h4>1.5 다단계 페이지 테이블</h4>
+        <p>32비트 주소 공간에서 4KB 페이지를 사용하면 페이지 테이블 엔트리가 약 100만 개 필요하며, 엔트리당 4바이트이면 <strong>4MB의 연속 메모리</strong>가 필요하다. 프로세스마다 4MB는 부담이 크므로, 현대 OS는 <strong>다단계 페이지 테이블</strong>을 사용한다.</p>
+        <table>
+          <thead><tr><th>단계</th><th>장점</th><th>단점</th><th>적용 OS</th></tr></thead>
+          <tbody>
+            <tr><td>1단계</td><td>구조 단순, 빠른 접근</td><td>메모리 낭비 큼</td><td>임베디드 OS</td></tr>
+            <tr><td>2단계</td><td>메모리 절약</td><td>2회 메모리 참조</td><td>Linux (32비트)</td></tr>
+            <tr><td>4단계</td><td>대규모 주소 공간 지원</td><td>4회 메모리 참조</td><td>Linux (64비트, x86-64)</td></tr>
+          </tbody>
+        </table>
+
+        <h3>제2장 페이지 부재 발생 시 커널의 처리 절차 (소문제 2)</h3>
+        <h4>2.1 페이지 부재 개요</h4>
+        <div class="def-box">
+          <p>페이지 부재(Page Fault)란, CPU가 접근하려는 가상 페이지가 물리 메모리에 적재되어 있지 않을 때 발생하는 <strong>트랩(Trap)</strong>이다. 하드웨어(MMU)가 감지하여 OS 커널에 제어를 넘기며, 커널이 해당 페이지를 디스크에서 메모리로 적재한다.</p>
+        </div>
+
+        <h4>2.2 페이지 부재 처리 절차 (6단계)</h4>
+        <p><strong>[1단계] 트랩 발생</strong>: MMU가 페이지 테이블 조회 시 Valid 비트가 0임을 감지하고, CPU에 Page Fault 트랩을 발생시킨다. CPU는 현재 명령어를 중단하고, PC를 저장한 후 커널 모드로 전환한다.</p>
+        <p><strong>[2단계] 유효성 검사</strong>: 커널의 Page Fault 핸들러는 접근이 유효한지 검사한다. ① 가상 주소가 유효 범위 내인지 ② 접근 권한이 적절한지 확인. 위반 시 <strong>세그멘테이션 폴트(Segmentation Fault)</strong>를 발생시키고 프로세스를 종료한다.</p>
+        <p><strong>[3단계] 빈 프레임 확보</strong>: 빈 프레임이 존재하면 바로 사용. 없으면 <strong>페이지 교체 알고리즘(LRU, Clock 등)</strong>으로 Victim 페이지를 선정. Dirty Bit = 1이면 디스크에 Write-back 후 프레임 회수.</p>
+        <p><strong>[4단계] 디스크 I/O</strong>: 스왑 영역에서 요청된 페이지를 확보된 프레임으로 읽어들인다. 이 단계가 <strong>가장 오래 걸리며(~10ms)</strong>, 해당 프로세스는 <strong>Blocked 상태</strong>로 전환된다.</p>
+        <p><strong>[5단계] 페이지 테이블 갱신</strong>: PTE의 PFN을 새로 적재된 프레임 번호로 설정하고, Valid 비트를 1로 변경. TLB에도 새 매핑을 추가한다.</p>
+        <p><strong>[6단계] 프로세스 재개</strong>: 프로세스를 Ready 큐에 삽입하고, CPU 할당 시 <strong>Page Fault를 발생시킨 명령어를 재실행(Re-execute)</strong>한다.</p>
+
+        <h4>2.3 주요 페이지 교체 알고리즘</h4>
+        <table>
+          <thead><tr><th>알고리즘</th><th>원리</th><th>장점</th><th>단점</th></tr></thead>
+          <tbody>
+            <tr><td><strong>OPT</strong></td><td>가장 오랫동안 사용되지 않을 페이지 교체</td><td>최적 (이론적 하한)</td><td>미래 예측 불가 (비현실적)</td></tr>
+            <tr><td><strong>FIFO</strong></td><td>가장 먼저 적재된 페이지 교체</td><td>구현 간단</td><td>Belady의 모순 발생 가능</td></tr>
+            <tr><td><strong>LRU</strong></td><td>가장 오래 사용되지 않은 페이지 교체</td><td>OPT에 근접한 성능</td><td>하드웨어 오버헤드</td></tr>
+            <tr><td><strong>Clock</strong></td><td>참조 비트 기반 순환 탐색</td><td>LRU 근사, 효율적 구현</td><td>완벽한 LRU 대비 약간 성능 저하</td></tr>
+            <tr><td><strong>Enhanced Clock</strong></td><td>참조 비트 + 수정 비트</td><td>Dirty 페이지 교체 최소화</td><td>구현 복잡도 증가</td></tr>
+          </tbody>
+        </table>
+
+        <h4>2.4 유효 접근 시간(EAT) 분석</h4>
+        <p>페이지 부재율(p)에 따른 EAT:</p>
+        <pre><code>EAT = (1 - p) × 메모리 접근 시간 + p × 페이지 부재 처리 시간</code></pre>
+        <table>
+          <thead><tr><th>p (부재율)</th><th>EAT</th><th>성능 저하</th></tr></thead>
+          <tbody>
+            <tr><td>0</td><td>100ns</td><td>없음</td></tr>
+            <tr><td>1/1,000</td><td>10,100ns</td><td><strong>101배</strong></td></tr>
+            <tr><td>1/10,000</td><td>1,100ns</td><td><strong>11배</strong></td></tr>
+            <tr><td>1/100,000</td><td>200ns</td><td><strong>2배</strong></td></tr>
+            <tr><td>1/1,000,000</td><td>110ns</td><td><strong>1.1배</strong></td></tr>
+          </tbody>
+        </table>
+        <div class="insight-box">
+          <p>페이지 부재율이 <strong>1/1,000만 되어도 성능이 100배 이상 저하</strong>된다. 이것이 페이지 교체 알고리즘의 최적화와 스레싱 방지가 중요한 이유이다.</p>
+        </div>
+        <h3>제3장 스레싱 발생 원인 분석 및 워킹셋 예방 방안 (소문제 3)</h3>
+        <h4>3.1 스레싱(Thrashing) 개념</h4>
+        <div class="def-box">
+          <p>스레싱이란, 프로세스의 페이지 부재율이 극단적으로 높아져 <strong>CPU가 실제 작업 수행보다 페이지 교체에 더 많은 시간을 소비</strong>하는 상태이다. 결과적으로 CPU 이용률이 급격히 하락하고, 시스템 처리량이 거의 0에 수렴한다.</p>
+        </div>
+
+        <h4>3.2 스레싱 발생 메커니즘</h4>
+        <p><strong>핵심 원인</strong>: OS의 CPU 이용률 기반 MPD 조절 정책이 <strong>양의 피드백(Positive Feedback) 루프</strong>를 형성하여 악순환을 초래한다.</p>
+        <p>MPD 증가 → 각 프로세스 프레임 부족 → 부재율 급증 → 디스크 I/O 대기 증가 → CPU 유휴 → OS가 MPD를 더 증가 → 더 악화 (악순환)</p>
+
+        <h4>3.3 워킹셋(Working Set) 모델</h4>
+        <p><strong>Peter Denning(1968)</strong>이 제안한 워킹셋 모델은 스레싱을 예방하기 위한 이론적 프레임워크이다.</p>
+        <p><strong>워킹셋 정의</strong>: 시간 t에서의 워킹셋 W(t, Δ)은 <strong>최근 Δ시간 동안 참조된 페이지들의 집합</strong>이다.</p>
+
+        <h4>3.4 워킹셋 기반 스레싱 예방 원리</h4>
+        <p><strong>원칙</strong>: 각 프로세스에 워킹셋 크기 이상의 프레임을 할당한다.</p>
+        <p><strong>전체 시스템 관점</strong>: D = Σ |W_i(t, Δ)| (모든 프로세스의 워킹셋 합)</p>
+        <table>
+          <thead><tr><th>조건</th><th>상태</th><th>조치</th></tr></thead>
+          <tbody>
+            <tr><td>D &lt; m</td><td>여유 프레임 존재</td><td>새 프로세스 적재 가능</td></tr>
+            <tr><td>D ≈ m</td><td>최적 상태</td><td>현상 유지</td></tr>
+            <tr><td>D &gt; m</td><td>프레임 부족, 스레싱 위험</td><td>프로세스 일부 중단(Suspend)</td></tr>
+          </tbody>
+        </table>
+
+        <h4>3.5 PFF(Page Fault Frequency) 기법</h4>
+        <p>PFF는 워킹셋의 대안적 접근으로, 페이지 부재 빈도를 직접 모니터링하여 프레임 할당을 조절한다.</p>
+        <table>
+          <thead><tr><th>상황</th><th>조치</th></tr></thead>
+          <tbody>
+            <tr><td>부재율 &gt; 상한 임계값</td><td>해당 프로세스에 프레임 추가 할당</td></tr>
+            <tr><td>부재율 &lt; 하한 임계값</td><td>해당 프로세스의 잉여 프레임 회수</td></tr>
+            <tr><td>추가 프레임 확보 불가</td><td>프로세스 중단(Suspend)</td></tr>
+          </tbody>
+        </table>
+
+        <h4>3.6 실무 적용 사례</h4>
+        <p><strong>Linux 커널의 메모리 관리</strong>: kswapd 데몬이 빈 프레임 수를 모니터링하고, 임계값(watermark) 이하로 떨어지면 페이지 회수를 시작. OOM Killer는 메모리가 극도로 부족할 때 프로세스를 강제 종료하는 최후의 수단이다.</p>
+
+        <h4>3.7 연관 이론 연결</h4>
+        <p><strong>지역성 원리(Principle of Locality)</strong>: 워킹셋 모델의 이론적 기반은 시간적 지역성(Temporal Locality)과 공간적 지역성(Spatial Locality)이다.</p>
+        <p><strong>암달의 법칙(Amdahl's Law)</strong>: 메모리 시스템의 성능 병목은 암달의 법칙으로 설명 가능. 페이지 부재 처리 시간(순차 부분)이 전체 성능의 상한을 결정한다.</p>
+
+        <h3>소문제 간 통합 분석</h3>
+        <table>
+          <thead><tr><th>관점</th><th>소문제 1</th><th>소문제 2</th><th>소문제 3</th></tr></thead>
+          <tbody>
+            <tr><td>상태</td><td>정상(TLB Hit)</td><td>예외(Page Fault)</td><td>병목(Thrashing)</td></tr>
+            <tr><td>핵심 질문</td><td>가상→물리 변환은 어떻게?</td><td>페이지 부재 시 어떻게 처리?</td><td>과다 부재를 어떻게 예방?</td></tr>
+            <tr><td>HW/SW 역할</td><td>MMU+TLB (하드웨어)</td><td>커널 Page Fault Handler (소프트웨어)</td><td>워킹셋/PFF (OS 정책)</td></tr>
+            <tr><td>핵심 지표</td><td>TLB 적중률</td><td>유효 접근 시간(EAT)</td><td>CPU 이용률, 부재율</td></tr>
+          </tbody>
+        </table>
+        <div class="insight-box">
+          <p>가상 메모리 시스템은 <strong>TLB(소문제 1)</strong>로 주소 변환을 가속화하고, <strong>Page Fault 처리(소문제 2)</strong>로 투명한 메모리 확장을 제공하며, <strong>워킹셋(소문제 3)</strong>으로 스레싱을 예방하여 최적의 메모리 운영을 달성한다.</p>
+        </div>
+      </div>
+    </div>
+    <div id="script" class="tab-content hidden">
+      <div class="max-w-4xl mx-auto">
+        <div class="bg-amber-50 border border-amber-200 rounded-xl p-6">
+          <div class="flex items-center gap-2 mb-4">
+            <span class="text-2xl">🎬</span>
+            <h3 class="text-xl font-bold text-amber-800">강의 스크립트 (멘토 전용)</h3>
+            <span class="bg-amber-200 text-amber-800 text-xs px-2 py-1 rounded-full font-bold">20분 강의용</span>
+          </div>
+          <div class="prose text-gray-700 leading-relaxed space-y-4 text-[0.97rem]">
+            <p>안녕하세요, 여러분. 오늘은 CA/OS의 핵심 토픽, 가상 메모리와 페이징을 다뤄볼 겁니다. 이 토픽은 기술사 시험에서 정말 단골로 나와요. 최근 10년간 거의 매 회차에서 가상 메모리 관련 개념이 직간접적으로 출제되었어요.</p>
+
+            <p>문제 구조를 먼저 볼게요. 소문제 1은 "정상 동작", 소문제 2는 "예외 상황", 소문제 3은 "성능 병목"이에요. <span class="highlight">"정상 → 예외 → 병목"</span>의 계단식 구조입니다.</p>
+
+            <p>소문제 1, 페이징 주소 변환. 핵심은 <span class="highlight">TLB(Translation Lookaside Buffer)</span>예요. 쉽게 말해서 <strong>주소록 즐겨찾기</strong>입니다. 페이지 테이블이 전체 연락처 목록이고, TLB는 즐겨찾기인 거죠. 적중률 95~99%, 접근 시간 1~2 사이클.</p>
+
+            <p>가상 주소는 <span class="highlight">VPN</span>(가상 페이지 번호)과 Offset(페이지 내 위치)으로 나뉘어요. 32비트 주소에서 4KB 페이지를 쓰면 VPN이 20비트, Offset이 12비트예요. 그리고 주소 변환 흐름도를 반드시 그려야 합니다. TLB Hit/Miss 분기 구조가 핵심인데, 이 그림 하나가 소문제 1의 50% 이상이에요.</p>
+
+            <p>소문제 2, 페이지 부재 처리 절차. 6단계로 정리하면 깔끔해요. <span class="highlight">"트유빈디페재"</span>로 외우세요. 트랩 발생 → 유효성 검사 → 빈 프레임 확보 → 디스크 I/O → 페이지 테이블 갱신 → 재실행.</p>
+
+            <p>4단계 디스크 I/O가 약 10ms 걸리는데, 메모리 접근이 100ns인 것과 비교하면 <strong>10만 배나 느린</strong> 거예요. EAT 계산을 넣으면 확실한 차별화가 됩니다. 부재율 p가 1/1,000이면 EAT = 10,100ns로 정상 대비 <strong>101배</strong> 느려져요.</p>
+
+            <p>페이지 교체 알고리즘은 <span class="highlight">"오피엘클"</span>로 외우세요. OPT, FIFO, LRU, Clock. 특히 FIFO의 <span class="highlight">Belady의 모순</span>을 답안에 넣으면 추가 점수를 받을 수 있어요.</p>
+
+            <p>소문제 3, 스레싱과 워킹셋. 비유를 하나 드릴게요. 고속도로에 차가 너무 많으면 정체가 시작돼요. 근데 도로 관리자가 더 많은 차를 넣어버리면 더 막히겠죠. 이게 바로 스레싱이에요. 이 <strong>양의 피드백 루프</strong>가 스레싱의 본질이에요.</p>
+
+            <p>워킹셋은 1968년 <span class="highlight">Peter Denning</span>이 제안한 이론인데, 핵심은 <strong>"각 프로세스에 최근에 쓴 페이지만큼의 프레임을 보장해줘라"</strong>는 거예요. D = Σ|W_i| &gt; m이 되면 일부 프로세스를 Suspend시켜서 프레임을 확보하는 게 정석이에요.</p>
+
+            <p>분량 배분은 서론 10%, 소문제 1이 25%, 소문제 2가 30%, 소문제 3이 25%, 결론 10%입니다. 필수 도식 세 가지: 주소 변환 흐름도, 페이지 부재 6단계 순서도, 스레싱 CPU 이용률 그래프. 두문자어 세 개: <span class="highlight">"트유빈디페재"</span>, <span class="highlight">"오피엘클"</span>, <span class="highlight">"프페디씨프"</span>. 오늘도 수고 많으셨습니다!</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="quiz" class="tab-content hidden">
+      <div class="max-w-4xl mx-auto">
+            <!-- AI 실전 퀴즈 영역 -->
+            <div class="bg-indigo-50 rounded-xl p-6 border border-indigo-100 mb-8">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-bold text-indigo-900 text-lg flex items-center"><span class="mr-2">🧠</span> AI 실전 문제 생성</h3>
+                    <button onclick="generateQuiz()" id="btn-quiz-gen" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm transition-colors flex items-center gap-2"><span>✨ 새로운 문제 생성</span></button>
+                </div>
+                <div id="quiz-loading" class="hidden py-8 text-center">
+                    <div class="typing-indicator flex justify-center mb-2"><span></span><span></span><span></span></div>
+                    <p class="text-indigo-600 text-sm">AI가 문제를 출제하고 있습니다...</p>
+                </div>
+                <div id="quiz-container" class="hidden space-y-4">
+                    <div class="bg-white p-5 rounded-lg shadow-sm border border-indigo-100">
+                        <div class="flex items-start gap-2 mb-4">
+                            <span id="quiz-type-badge" class="bg-indigo-100 text-indigo-800 text-xs font-bold px-2 py-1 rounded whitespace-nowrap mt-1">객관식</span>
+                            <p id="quiz-question" class="font-bold text-gray-800 text-lg"></p>
+                        </div>
+                        <div id="quiz-options" class="space-y-2"></div>
+                        <div id="quiz-input-area" class="hidden mt-4">
+                            <div class="flex gap-2">
+                                <input type="text" id="quiz-answer-input" placeholder="정답을 입력하세요" class="flex-grow border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <button onclick="checkShortAnswer()" id="btn-short-submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-bold">제출</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="quiz-feedback" class="hidden bg-white p-5 rounded-lg border-l-4"></div>
+                </div>
+                <div id="quiz-placeholder" class="text-center py-8 text-gray-500 border-2 border-dashed border-indigo-200 rounded-lg">
+                    <p>&#39;새로운 문제 생성&#39; 버튼을 눌러 실력을 점검해보세요.</p>
+                </div>
+            </div>
+
+        <!-- 암기 노트 ① 두문자어 -->
+        <div class="mb-8">
+          <h3 class="font-bold text-lg text-indigo-900 mb-4">📝 암기 노트 ① 두문자어</h3>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-4">
+              <div class="text-center mb-2"><span class="text-2xl font-black text-indigo-700">트유빈디페재</span></div>
+              <p class="text-sm text-indigo-600 font-medium mb-2">페이지 부재 6단계</p>
+              <ul class="text-sm text-gray-700 space-y-1">
+                <li><strong>트</strong>: 트랩 발생 (MMU→CPU)</li>
+                <li><strong>유</strong>: 유효성 검사</li>
+                <li><strong>빈</strong>: 빈 프레임 확보</li>
+                <li><strong>디</strong>: 디스크 I/O (~10ms)</li>
+                <li><strong>페</strong>: 페이지 테이블+TLB 갱신</li>
+                <li><strong>재</strong>: 재실행</li>
+              </ul>
+            </div>
+            <div class="bg-green-50 border border-green-200 rounded-xl p-4">
+              <div class="text-center mb-2"><span class="text-2xl font-black text-green-700">오피엘클</span></div>
+              <p class="text-sm text-green-600 font-medium mb-2">페이지 교체 알고리즘</p>
+              <ul class="text-sm text-gray-700 space-y-1">
+                <li><strong>오</strong>: OPT (이론적 최적)</li>
+                <li><strong>피</strong>: FIFO (단순, Belady 모순)</li>
+                <li><strong>엘</strong>: LRU (OPT 근사, 실용적)</li>
+                <li><strong>클</strong>: Clock (LRU 근사, 효율적)</li>
+              </ul>
+            </div>
+            <div class="bg-purple-50 border border-purple-200 rounded-xl p-4">
+              <div class="text-center mb-2"><span class="text-2xl font-black text-purple-700">프페디씨프</span></div>
+              <p class="text-sm text-purple-600 font-medium mb-2">스레싱 악순환 (순환)</p>
+              <ul class="text-sm text-gray-700 space-y-1">
+                <li><strong>프</strong>: 프레임 부족</li>
+                <li><strong>페</strong>: 페이지 부재 증가</li>
+                <li><strong>디</strong>: 디스크 I/O 증가</li>
+                <li><strong>씨</strong>: CPU 유휴</li>
+                <li><strong>프</strong>: 프로세스 추가(OS 판단) → 반복</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- 암기 노트 ② 골격 답안 -->
+        <div class="mb-8">
+          <h3 class="font-bold text-lg text-indigo-900 mb-4">📝 암기 노트 ② 골격 답안</h3>
+          <div class="bg-white rounded-xl border p-5 overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead><tr class="bg-gray-50"><th class="border p-2 text-left">구간</th><th class="border p-2 text-left">비중</th><th class="border p-2 text-left">핵심 내용</th></tr></thead>
+              <tbody>
+                <tr><td class="border p-2 font-bold">서론</td><td class="border p-2">10%</td><td class="border p-2">가상 메모리 필요성 + 페이징 핵심 역할</td></tr>
+                <tr><td class="border p-2 font-bold">소문제 1</td><td class="border p-2">25%</td><td class="border p-2">VPN+Offset 구조 + TLB 특성 + 주소변환 흐름도 + 다단계 페이지테이블</td></tr>
+                <tr><td class="border p-2 font-bold">소문제 2</td><td class="border p-2">30%</td><td class="border p-2">6단계 처리(트유빈디페재) + 교체 알고리즘 비교표 + EAT 계산</td></tr>
+                <tr><td class="border p-2 font-bold">소문제 3</td><td class="border p-2">25%</td><td class="border p-2">악순환 도식 + CPU이용률 그래프 + 워킹셋 W(t,Δ) + D&gt;m 판정 + PFF</td></tr>
+                <tr><td class="border p-2 font-bold">결론</td><td class="border p-2">10%</td><td class="border p-2">HW(TLB)+OS(핸들러,워킹셋) 협업 + 클라우드 메모리 관리 전망</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 암기 노트 ③ 필수 도식 + 차별화 -->
+        <div class="mb-8">
+          <h3 class="font-bold text-lg text-indigo-900 mb-4">📝 암기 노트 ③ 필수 도식 + 차별화 포인트</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-amber-50 border border-amber-200 rounded-xl p-4">
+              <p class="font-bold text-amber-800 mb-2">📊 필수 도식 3가지</p>
+              <ul class="text-sm text-gray-700 space-y-2">
+                <li>1. <strong>주소 변환 흐름도</strong> — TLB Hit/Miss 분기 포함</li>
+                <li>2. <strong>페이지 부재 처리 절차도</strong> — 6단계 순차 흐름</li>
+                <li>3. <strong>스레싱 CPU 이용률 그래프</strong> — MPD 대 CPU 이용률 곡선</li>
+              </ul>
+            </div>
+            <div class="bg-teal-50 border border-teal-200 rounded-xl p-4">
+              <p class="font-bold text-teal-800 mb-2">💎 차별화 포인트</p>
+              <ul class="text-sm text-gray-700 space-y-2">
+                <li>• TLB 적중률 구체 수치 (95~99%, 1~2 사이클)</li>
+                <li>• EAT 계산 예시 (1/1,000 → 101배 성능 저하)</li>
+                <li>• Peter Denning(1968) 인용: 워킹셋 이론 창시자</li>
+                <li>• Belady의 모순 (FIFO 한계) 언급</li>
+                <li>• Linux kswapd, OOM Killer 실무 메커니즘</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- 제2부 전체 암기 요약 -->
+        <div class="mb-8">
+          <h3 class="font-bold text-lg text-indigo-900 mb-4">📖 제2부 암기 요약 자료 (전체)</h3>
+          <div class="bg-white rounded-xl border p-6 textbook-content">
+            <h4>한 줄 정의</h4>
+            <div class="def-box">
+              <p>페이징은 TLB와 페이지 테이블을 통해 가상→물리 주소 변환을 수행하고, 페이지 부재 시 커널이 디스크 I/O로 페이지를 적재하며, 스레싱은 워킹셋 기반 프레임 할당으로 예방한다.</p>
+            </div>
+
+            <h4>핵심 키워드 맵</h4>
+            <div class="space-y-4 my-4">
+              <div class="bg-green-50 rounded-lg p-4">
+                <p class="font-bold text-green-700 mb-2">[페이징 주소 변환]</p>
+                <div class="pl-4 border-l-2 border-green-300 space-y-1 text-sm text-gray-700">
+                  <p>├─ <strong>가상 주소</strong>: VPN + Offset</p>
+                  <p>├─ <strong>TLB</strong>: MMU 내 고속 캐시, 적중률 95~99%</p>
+                  <p>├─ <strong>페이지 테이블</strong>: VPN → PFN 매핑 (Valid 비트)</p>
+                  <p>└─ <strong>다단계</strong>: 2단계(32비트), 4단계(64비트)</p>
+                </div>
+              </div>
+              <div class="bg-amber-50 rounded-lg p-4">
+                <p class="font-bold text-amber-700 mb-2">[페이지 부재 처리]</p>
+                <div class="pl-4 border-l-2 border-amber-300 space-y-1 text-sm text-gray-700">
+                  <p>├─ <strong>트랩 발생</strong> → 유효성 검사 → 빈 프레임 확보</p>
+                  <p>├─ <strong>디스크 I/O</strong>(~10ms, 최대 병목)</p>
+                  <p>├─ PT 갱신 + TLB 갱신 → 명령어 재실행</p>
+                  <p>└─ <strong>교체 알고리즘</strong>: OPT/FIFO/LRU/Clock</p>
+                </div>
+              </div>
+              <div class="bg-red-50 rounded-lg p-4">
+                <p class="font-bold text-red-700 mb-2">[스레싱/워킹셋]</p>
+                <div class="pl-4 border-l-2 border-red-300 space-y-1 text-sm text-gray-700">
+                  <p>├─ <strong>스레싱</strong>: MPD 과다 → 부재율 급증 → CPU 이용률 급락</p>
+                  <p>├─ <strong>워킹셋 W(t,Δ)</strong>: 최근 Δ시간 참조 페이지 집합</p>
+                  <p>├─ <strong>D = Σ|W_i| &gt; m</strong> → 스레싱 발생</p>
+                  <p>└─ <strong>PFF</strong>: 부재율 상/하한 임계값 기반 조절</p>
+                </div>
+              </div>
+            </div>
+
+            <h4>두문자어 암기법</h4>
+            <p><strong>페이지 부재 6단계</strong>: <span class="highlight">"트유빈디페재"</span> — 트랩·유효성·빈프레임·디스크I/O·페이지테이블갱신·재실행</p>
+            <p><strong>페이지 교체 알고리즘</strong>: <span class="highlight">"오피엘클"</span> — OPT·FIFO·LRU·Clock</p>
+            <p><strong>스레싱 악순환</strong>: <span class="highlight">"프페디씨프"</span> — 프레임부족→페이지부재→디스크I/O→CPU유휴→프로세스추가(순환)</p>
+
+            <h4>골격 답안 구조</h4>
+            <p><strong>[서론 — 10%]</strong> 가상 메모리의 필요성 + 페이징의 핵심 역할</p>
+            <p><strong>[소문제 1 — 25%]</strong> VPN+Offset 구조 + TLB + 주소변환 흐름도 + 다단계</p>
+            <p><strong>[소문제 2 — 30%]</strong> 6단계 처리 + 교체 알고리즘 비교표 + EAT 계산</p>
+            <p><strong>[소문제 3 — 25%]</strong> 악순환 도식 + CPU 이용률 그래프 + 워킹셋 + D&gt;m + PFF</p>
+            <p><strong>[결론 — 10%]</strong> HW+OS 협업 + 클라우드 환경 메모리 관리 전망</p>
+
+            <h4>필수 도식</h4>
+            <ul>
+              <li><strong>주소 변환 흐름도</strong> — TLB Hit/Miss 분기 포함</li>
+              <li><strong>페이지 부재 처리 절차도</strong> — 6단계 순차 흐름</li>
+              <li><strong>스레싱 CPU 이용률 그래프</strong> — MPD 증가에 따른 CPU 이용률 곡선</li>
+            </ul>
+
+            <h4>차별화 포인트</h4>
+            <ul>
+              <li>TLB 적중률 구체 수치 (95~99%, 1~2 사이클)</li>
+              <li>EAT 계산 예시 (부재율 1/1,000 → 101배 성능 저하)</li>
+              <li>Peter Denning(1968) 인용: 워킹셋 이론 창시자</li>
+              <li>Belady의 모순(FIFO 한계) 언급</li>
+              <li>Linux kswapd, OOM Killer 실무 메커니즘</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+    </main>
+    <div id="chat-sidebar" class="fixed top-0 right-0 h-full w-80 sm:w-96 bg-white shadow-2xl z-50 closed flex flex-col">
+        <div class="flex items-center justify-between p-4 border-b bg-indigo-600 text-white">
+            <h3 class="font-bold">💬 AI 튜터</h3>
+            <button onclick="toggleChat()" class="text-white hover:text-indigo-200 text-xl">&times;</button>
+        </div>
+        <div id="chat-messages" class="flex-grow overflow-y-auto p-4 flex flex-col space-y-2">
+            <div class="chat-msg ai">안녕하세요! 페이징, 페이지 부재, 스레싱과 워킹셋에 대해 무엇이든 물어보세요.</div>
+        </div>
+        <div class="p-3 border-t flex gap-2">
+            <input type="text" id="chat-input" placeholder="질문을 입력하세요..." class="flex-grow border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" onkeydown="if(event.key==='Enter')sendChat()">
+            <button onclick="sendChat()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-indigo-700">전송</button>
+        </div>
+    </div>
+    <button onclick="toggleChat()" id="chat-fab" class="fixed bottom-6 right-6 w-14 h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-lg flex items-center justify-center text-2xl z-40 transition-transform hover:scale-110">💬</button>
+    <div id="api-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4">
+            <div class="flex justify-between items-center"><h3 class="text-lg font-bold text-gray-900">🔑 Gemini API Key 설정</h3><button onclick="toggleSettings()" class="text-gray-400 hover:text-gray-600 text-xl">&times;</button></div>
+            <p class="text-sm text-gray-500">AI 퀴즈 생성과 AI 튜터 기능을 사용하려면 Gemini API Key가 필요합니다.</p>
+            <input type="password" id="api-key-input" placeholder="Gemini API Key 입력" class="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            <div class="flex gap-2">
+                <button onclick="saveApiKey()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-lg font-bold text-sm">저장</button>
+                <button onclick="toggleSettings()" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2.5 rounded-lg font-bold text-sm">취소</button>
+            </div>
+            <p class="text-xs text-gray-400 text-center">Key는 브라우저 localStorage에만 저장됩니다.</p>
+        </div>
+    </div>
+    <footer class="bg-gray-800 text-gray-400 py-8 mt-16">
+        <div class="max-w-5xl mx-auto px-4 text-center text-sm space-y-1">
+            <p>박교익PE (132회 정보관리기술사, dr.code92@gmail.com)</p>
+            <p>Copyright &copy; KPC 정보관리기술사 ZIP-UP 심화반. All rights reserved.</p>
+        </div>
+    </footer>
+<script>
+    // ── 탭 ──
+    var sections = ['overview','addressing','pagefault','thrashing','textbook','quiz'];
+    var isMentorMode = new URLSearchParams(window.location.search).get('mentor') === 'true';
+    if (isMentorMode) {
+        sections.splice(sections.indexOf('quiz'), 0, 'script');
+        var sn = document.getElementById('nav-script'); if(sn) sn.style.display = '';
+    }
+    function navTo(id) {
+        sections.forEach(function(s) {
+            var sec = document.getElementById(s); var nav = document.getElementById('nav-' + s);
+            if (sec) sec.classList.add('hidden'); if (nav) { nav.classList.remove('active','text-gray-900'); nav.classList.add('text-gray-500'); }
+        });
+        var el = document.getElementById(id); var navEl = document.getElementById('nav-' + id);
+        if (el) { el.classList.remove('hidden'); el.classList.add('animate-fade-in'); }
+        if (navEl) { navEl.classList.add('active','text-gray-900'); navEl.classList.remove('text-gray-500'); }
+        window.scrollTo({top: 0, behavior: 'smooth'});
+    }
+
+    // ── 클릭 확장 ──
+    function toggleExpand(el) {
+        var content = el.nextElementSibling;
+        var icon = el.querySelector('.expand-icon');
+        if (!content) return;
+        if (content.classList.contains('hidden')) { content.classList.remove('hidden'); if(icon) icon.textContent = '▲'; el.classList.add('selected'); }
+        else { content.classList.add('hidden'); if(icon) icon.textContent = '▼'; el.classList.remove('selected'); }
+    }
+
+    // ── API Key ──
+    function getApiKey() { return localStorage.getItem('geminiKey') || localStorage.getItem('gemini_api_key') || new URLSearchParams(window.location.search).get('key') || ''; }
+    function toggleSettings() { document.getElementById('api-modal').classList.toggle('hidden'); var k=getApiKey(); if(k) document.getElementById('api-key-input').value=k; }
+    function saveApiKey() { var k=document.getElementById('api-key-input').value.trim(); if(k){localStorage.setItem('geminiKey',k);localStorage.setItem('gemini_api_key',k);toggleSettings();alert('API Key가 저장되었습니다.');} else alert('Key를 입력하세요.'); }
+
+    // ── 채팅 ──
+    function toggleChat() { var sb=document.getElementById('chat-sidebar'); sb.classList.toggle('closed'); sb.classList.toggle('open'); }
+    async function sendChat() {
+        var k = getApiKey(); if(!k){alert('API Key를 먼저 설정해주세요.');toggleSettings();return;}
+        var input=document.getElementById('chat-input'); var msg=input.value.trim(); if(!msg)return; input.value='';
+        var box=document.getElementById('chat-messages');
+        box.innerHTML+='<div class="chat-msg user">'+msg+'</div>';
+        box.innerHTML+='<div id="typing" class="chat-msg ai"><div class="typing-indicator"><span></span><span></span><span></span></div></div>';
+        box.scrollTop=box.scrollHeight;
+        try{
+            var r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key='+k,
+                {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:"당신은 정보관리기술사 시험 멘토입니다. '페이징, 페이지 부재, 스레싱과 워킹셋' 관련 질문에 전문적이고 명쾌하게 답변해주세요. 300자 이내로 핵심만 요약.\n\n질문: "+msg}]}]})});
+            var d=await r.json(); var t=d.candidates[0].content.parts[0].text;
+            var el=document.getElementById('typing'); if(el) el.remove();
+            var parsed=marked.parse(t);
+            box.innerHTML+='<div class="chat-msg ai prose">'+parsed+'</div>';
+        }catch(e){var el=document.getElementById('typing');if(el)el.remove();box.innerHTML+='<div class="chat-msg ai text-red-500">오류: '+e.message+'</div>';}
+        box.scrollTop=box.scrollHeight;
+    }
+
+    // ── 퀴즈 ──
+    var geminiKey = (typeof getApiKey === 'function') ? (getApiKey() || '') : (localStorage.getItem('geminiKey') || localStorage.getItem('gemini_api_key') || '');
+    var quizTypeHistory = [];
+    var currentQuizData = null;
+    var quizTopics = [
+        { category: "가상 메모리와 페이징 개요", keywords: "가상 메모리, 페이징, 페이지, 프레임, VPN, PFN, 4KB" },
+        { category: "TLB와 주소 변환", keywords: "TLB, Translation Lookaside Buffer, MMU, VPN, PFN, Offset, TLB Hit, TLB Miss, 적중률" },
+        { category: "다단계 페이지 테이블", keywords: "페이지 테이블, PTE, Valid 비트, 다단계, 2단계, 4단계, x86-64" },
+        { category: "페이지 부재 처리 절차", keywords: "Page Fault, 트랩, 유효성 검사, 빈 프레임, 디스크 I/O, 페이지 테이블 갱신, 재실행, 트유빈디페재" },
+        { category: "페이지 교체 알고리즘", keywords: "OPT, FIFO, LRU, Clock, Belady 모순, Second Chance, 오피엘클" },
+        { category: "유효 접근 시간(EAT)", keywords: "EAT, 부재율, 메모리 접근 시간, 10ms, 성능 저하" },
+        { category: "스레싱 발생 메커니즘", keywords: "스레싱, Thrashing, MPD, 다중 프로그래밍, CPU 이용률, 양의 피드백, 악순환, 프페디씨프" },
+        { category: "워킹셋과 PFF", keywords: "워킹셋, Working Set, Peter Denning, W(t,Δ), PFF, Page Fault Frequency, 프레임 할당" }
+    ];
+
+    async function generateQuiz() {
+        geminiKey = (typeof getApiKey === 'function') ? (getApiKey() || '') : (localStorage.getItem('geminiKey') || localStorage.getItem('gemini_api_key') || '');
+        if (!geminiKey) { alert('API Key를 먼저 설정해주세요.'); toggleSettings(); return; }
+        var btn = document.getElementById('btn-quiz-gen');
+        btn.disabled = true; btn.innerHTML = '<span>생성 중...</span>';
+        document.getElementById('quiz-placeholder').classList.add('hidden');
+        document.getElementById('quiz-container').classList.add('hidden');
+        document.getElementById('quiz-loading').classList.remove('hidden');
+        var isMC;
+        var recent = quizTypeHistory.slice(-2);
+        if (recent.length >= 2 && recent[0] === recent[1]) { isMC = !recent[1]; }
+        else { isMC = Math.random() > 0.5; }
+        quizTypeHistory.push(isMC);
+        var selected = quizTopics[Math.floor(Math.random() * quizTopics.length)];
+        var quizType = isMC ? '객관식 (4지선다)' : '단답형';
+        var format = isMC
+            ? '{"question":"문제","options":["A","B","C","D"],"correctIndex":0,"explanation":"해설"}'
+            : '{"question":"문제","correctAnswer":"정답","explanation":"해설"}';
+        var prompt = "다음 카테고리에 대한 " + quizType + " 퀴즈 1문제를 만드세요.\n"
+            + "카테고리: " + selected.category + "\n"
+            + "관련 키워드: " + selected.keywords + "\n"
+            + "규칙: 반드시 위 카테고리와 키워드에 직접 관련된 문제를 출제하세요.\n"
+            + "JSON 형식으로 응답: " + format;
+        try {
+            var r = await fetch(
+                'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=' + geminiKey,
+                { method:'POST', headers:{'Content-Type':'application/json'},
+                  body: JSON.stringify({ contents:[{parts:[{text:prompt}]}], generationConfig:{responseMimeType:"application/json"} })
+                }
+            );
+            var d = await r.json();
+            var t = d.candidates[0].content.parts[0].text;
+            t = t.replace(/```json\s*/gi,"").replace(/```\s*/g,"").trim();
+            var depth=0, start=-1, end=-1;
+            for (var i=0;i<t.length;i++) {
+                if (t[i]==='{') { if(depth===0) start=i; depth++; }
+                else if (t[i]==='}') { depth--; if(depth===0 && start!==-1) { end=i; break; } }
+            }
+            if (start===-1||end===-1) throw new Error("No JSON found");
+            t = t.substring(start, end+1);
+            t = t.replace(/[\x00-\x1F\x7F]/g, function(c) { return c==='\n'||c==='\r'||c==='\t' ? ' ' : ''; });
+            currentQuizData = JSON.parse(t);
+            renderQuiz(isMC);
+        } catch(e) {
+            document.getElementById('quiz-loading').classList.add('hidden');
+            document.getElementById('quiz-placeholder').classList.remove('hidden');
+            document.getElementById('quiz-placeholder').innerHTML = '<p class="text-red-500">퀴즈 생성 오류: ' + e.message + '</p>';
+        }
+        btn.disabled = false; btn.innerHTML = '<span>✨ 새로운 문제 생성</span>';
+    }
+    function renderQuiz(isMC) {
+        document.getElementById('quiz-loading').classList.add('hidden');
+        document.getElementById('quiz-feedback').classList.add('hidden');
+        document.getElementById('quiz-container').classList.remove('hidden');
+        document.getElementById('quiz-type-badge').textContent = isMC ? '객관식' : '단답형';
+        document.getElementById('quiz-question').textContent = currentQuizData.question;
+        var optDiv = document.getElementById('quiz-options');
+        var inputDiv = document.getElementById('quiz-input-area');
+        if (isMC) {
+            optDiv.classList.remove('hidden');
+            inputDiv.classList.add('hidden');
+            var h = '';
+            var letters = ['A','B','C','D'];
+            currentQuizData.options.forEach(function(opt, i) {
+                h += '<button onclick="checkMultipleChoice(' + i + ', this)" class="w-full text-left p-4 rounded-lg border border-gray-200 hover:bg-indigo-50 hover:border-indigo-300 transition-all mb-2 flex items-center group">'
+                    + '<span class="w-8 h-8 rounded-full bg-gray-100 group-hover:bg-indigo-100 flex items-center justify-center text-sm font-bold text-gray-500 group-hover:text-indigo-600 mr-3 flex-shrink-0">' + letters[i] + '</span>'
+                    + '<span class="text-sm text-gray-700">' + opt + '</span></button>';
+            });
+            optDiv.innerHTML = h;
+        } else {
+            optDiv.classList.add('hidden');
+            inputDiv.classList.remove('hidden');
+            document.getElementById('quiz-answer-input').value = '';
+            document.getElementById('quiz-answer-input').focus();
+        }
+    }
+    function checkMultipleChoice(idx, btnEl) {
+        var correct = idx === currentQuizData.correctIndex;
+        document.querySelectorAll('#quiz-options button').forEach(function(b, i) {
+            b.disabled = true;
+            if (i === currentQuizData.correctIndex) { b.classList.add('bg-green-50','border-green-400'); b.querySelector('span:first-child').classList.add('bg-green-100','text-green-700'); }
+            else if (i === idx && !correct) { b.classList.add('bg-red-50','border-red-400'); b.querySelector('span:first-child').classList.add('bg-red-100','text-red-700'); }
+        });
+        showQuizFeedback(correct, currentQuizData.options[currentQuizData.correctIndex], currentQuizData.explanation);
+    }
+    async function checkShortAnswer() {
+        geminiKey = (typeof getApiKey === 'function') ? (getApiKey() || '') : (localStorage.getItem('geminiKey') || localStorage.getItem('gemini_api_key') || '');
+        var ans = document.getElementById('quiz-answer-input').value.trim();
+        if (!ans) { alert('답을 입력해주세요.'); return; }
+        var btn = document.getElementById('btn-short-submit');
+        btn.disabled = true; btn.textContent = '채점 중...';
+        try {
+            var gradingPrompt = "당신은 정보관리기술사 시험 채점관입니다. 아래 문제에 대해 사용자의 답안이 정답으로 인정될 수 있는지 판정하세요.\n\n"
+                + "문제: " + currentQuizData.question + "\n"
+                + "모범 정답: " + currentQuizData.correctAnswer + "\n"
+                + "사용자 답안: " + ans + "\n\n"
+                + "판정 기준:\n- 핵심 의미가 동일하면 정답\n- 약어/풀네임 모두 인정\n- 영어/한글 혼용 인정\n- 띄어쓰기/조사 차이는 무시\n- 의미가 명확히 다르면 오답\n\n"
+                + "Output JSON: {\"correct\":true/false,\"reason\":\"판정 이유\"}";
+            var r = await fetch(
+                'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=' + geminiKey,
+                { method:'POST', headers:{'Content-Type':'application/json'},
+                  body: JSON.stringify({ contents:[{parts:[{text:gradingPrompt}]}], generationConfig:{responseMimeType:"application/json"} })
+                }
+            );
+            var d = await r.json();
+            var gt = d.candidates[0].content.parts[0].text;
+            gt = gt.replace(/```json\s*/gi,"").replace(/```\s*/g,"").trim();
+            var gd=0,gs=-1,ge=-1;
+            for(var i=0;i<gt.length;i++){if(gt[i]==='{'){if(gd===0)gs=i;gd++;}else if(gt[i]==='}'){gd--;if(gd===0&&gs!==-1){ge=i;break;}}}
+            if(gs===-1||ge===-1) throw new Error("No JSON");
+            gt=gt.substring(gs,ge+1);
+            gt=gt.replace(/[\x00-\x1F\x7F]/g,function(c){return c==='\n'||c==='\r'||c==='\t'?' ':'';});
+            var result = JSON.parse(gt);
+            showQuizFeedback(result.correct, currentQuizData.correctAnswer, currentQuizData.explanation + (result.reason ? ' (AI: ' + result.reason + ')' : ''));
+        } catch(e) {
+            var normalize = function(s){return s.replace(/\s/g,'').toLowerCase();};
+            var correct = normalize(currentQuizData.correctAnswer).includes(normalize(ans)) || normalize(ans).includes(normalize(currentQuizData.correctAnswer));
+            showQuizFeedback(correct, currentQuizData.correctAnswer, currentQuizData.explanation + ' (로컬 채점)');
+        }
+        btn.disabled = false; btn.textContent = '제출';
+    }
+    function showQuizFeedback(correct, answer, explanation) {
+        var fb = document.getElementById('quiz-feedback');
+        fb.classList.remove('hidden','border-green-500','bg-green-50','border-red-500','bg-red-50');
+        if (correct) {
+            fb.classList.add('border-green-500','bg-green-50');
+            fb.innerHTML = '<p class="font-bold text-green-700 mb-1">✅ 정답입니다!</p><p class="text-sm text-green-600">' + explanation + '</p>';
+        } else {
+            fb.classList.add('border-red-500','bg-red-50');
+            fb.innerHTML = '<p class="font-bold text-red-700 mb-1">❌ 오답입니다.</p><p class="text-sm text-red-700 mb-1">정답: ' + answer + '</p><p class="text-sm text-red-600">' + explanation + '</p>';
+        }
+    }
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && document.getElementById('quiz-answer-input') === document.activeElement) { checkShortAnswer(); }
+    });
+
+    // ── 차트 ──
+    document.addEventListener('DOMContentLoaded', function() {
+        // 스레싱 CPU 이용률 차트
+        var ctx = document.getElementById('thrashingChart');
+        if (ctx) {
+            new Chart(ctx.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: ['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15'],
+                    datasets: [{
+                        label: 'CPU 이용률 (%)',
+                        data: [15, 30, 45, 58, 68, 75, 80, 82, 78, 65, 45, 25, 15, 10, 8],
+                        borderColor: '#4f46e5',
+                        backgroundColor: 'rgba(79,70,229,0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 4,
+                        pointBackgroundColor: function(context) {
+                            var index = context.dataIndex;
+                            return index === 7 ? '#f59e0b' : index >= 9 ? '#ef4444' : '#4f46e5';
+                        },
+                        pointRadius: function(context) {
+                            return context.dataIndex === 7 ? 8 : 4;
+                        }
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        title: { display: true, text: 'MPD 증가에 따른 CPU 이용률 변화', font: { size: 14 } },
+                        annotation: {}
+                    },
+                    scales: {
+                        x: { title: { display: true, text: '다중 프로그래밍 정도(MPD)' } },
+                        y: { title: { display: true, text: 'CPU 이용률 (%)' }, min: 0, max: 100 }
+                    }
+                }
+            });
+        }
+    });
+</script>
+</body></html>

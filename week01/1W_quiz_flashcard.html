@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZIP-UP 1주차 주간퀴즈 플래시카드</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  * { font-family: 'Noto Sans KR', sans-serif; }
+  body { background: #f8f9fa; margin: 0; min-height: 100vh; }
+  .top-bar { background: #1e1b4b; padding: 10px 0; }
+  .main-header { background: linear-gradient(135deg, #312e81 0%, #4338ca 60%, #6366f1 100%); }
+  .dash-tab {
+    padding: 12px 24px; font-size: 0.875rem; font-weight: 500;
+    cursor: pointer; transition: all 0.2s; white-space: nowrap;
+    border-bottom: 3px solid transparent; color: rgba(255,255,255,0.55);
+  }
+  .dash-tab:hover { color: rgba(255,255,255,0.9); }
+  .dash-tab.active { color: white; border-bottom-color: #fbbf24; font-weight: 700; }
+  .filter-btn { transition: all 0.15s; cursor: pointer; }
+  .quiz-card {
+    background: white; border-radius: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    transition: all 0.25s ease; overflow: hidden; cursor: pointer;
+  }
+  .quiz-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.1); }
+  .quiz-card .card-accent { height: 4px; width: 100%; }
+  .accent-def { background: linear-gradient(90deg, #4338ca, #6366f1); }
+  .accent-kw { background: linear-gradient(90deg, #d97706, #f59e0b); }
+  .subject-tag { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 0.7rem; font-weight: 600; }
+  .tag-sw { background: #dbeafe; color: #1e40af; }
+  .tag-db { background: #d1fae5; color: #065f46; }
+  .tag-os { background: #fce7f3; color: #9d174d; }
+  .tag-ds { background: #fef3c7; color: #92400e; }
+  .type-badge-def { background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; }
+  .type-badge-kw { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
+  .list-row {
+    display: grid; grid-template-columns: 44px 1fr 90px 90px 60px;
+    align-items: center; padding: 14px 20px;
+    border-bottom: 1px solid #f3f4f6; transition: background 0.15s; cursor: pointer;
+  }
+  .list-row:hover { background: #f9fafb; }
+  .list-header {
+    display: grid; grid-template-columns: 44px 1fr 90px 90px 60px;
+    padding: 10px 20px; font-size: 0.7rem; font-weight: 600; color: #9ca3af; letter-spacing: 0.5px;
+  }
+  .card-wrapper { perspective: 1200px; height: 440px; cursor: pointer; }
+  .card-inner {
+    position: relative; width: 100%; height: 100%;
+    transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    transform-style: preserve-3d;
+  }
+  .card-inner.flipped { transform: rotateY(180deg); }
+  .card-face {
+    position: absolute; width: 100%; height: 100%;
+    backface-visibility: hidden; border-radius: 16px;
+    overflow-y: auto; box-shadow: 0 4px 24px rgba(0,0,0,0.08); background: white;
+  }
+  .card-back { transform: rotateY(180deg); }
+  .def-quote { background: #eef2ff; border-left: 3px solid #4338ca; padding: 10px 14px; border-radius: 0 8px 8px 0; }
+  .kw-summary { background: #fffbeb; border-left: 3px solid #f59e0b; padding: 10px 14px; border-radius: 0 8px 8px 0; }
+  .keypoint-box { background: #d1fae5; border-left: 3px solid #10b981; padding: 10px 14px; border-radius: 0 8px 8px 0; }
+  .tip-box { background: #fdf4ff; border-left: 3px solid #a855f7; padding: 10px 14px; border-radius: 0 8px 8px 0; }
+  .kw-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+  .kw-table th { background: #f3f4f6; padding: 8px 10px; text-align: left; font-weight: 600; color: #6b7280; border-bottom: 2px solid #e5e7eb; }
+  .kw-table th:first-child { width: 36px; text-align: center; }
+  .kw-table th:nth-child(2) { width: 140px; }
+  .kw-table td { padding: 8px 10px; border-bottom: 1px solid #f3f4f6; line-height: 1.5; vertical-align: top; }
+  .kw-table td:first-child { text-align: center; font-weight: 600; color: #4338ca; }
+  .kw-table td:nth-child(2) { font-weight: 600; color: #111827; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: #e5e7eb; cursor: pointer; transition: all 0.2s; }
+  .dot.active { background: #4338ca; transform: scale(1.3); }
+  .dot.know { background: #10b981; }
+  .dot.dontknow { background: #ef4444; }
+  .result-screen { display: none; text-align: center; padding: 60px 24px; }
+  .result-screen.show { display: block; }
+  .card-back::-webkit-scrollbar { width: 4px; }
+  .card-back::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 2px; }
+  @keyframes fadeInUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  .fade-in { animation: fadeInUp 0.35s ease forwards; }
+  @media (max-width: 640px) {
+    .card-wrapper { height: 400px; }
+    .list-row { grid-template-columns: 36px 1fr 70px 70px 50px; padding: 10px 12px; font-size: 0.8rem; }
+    .list-header { grid-template-columns: 36px 1fr 70px 70px 50px; font-size: 0.6rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <div class="max-w-7xl mx-auto px-6 flex items-center justify-between">
+    <div class="flex items-center gap-2.5">
+      <div class="w-7 h-7 bg-indigo-500 rounded-lg flex items-center justify-center flex-shrink-0">
+        <span class="text-white text-xs font-black">Z</span>
+      </div>
+      <span class="text-white/80 text-sm font-medium">KPC 정보관리기술사 ZIP-UP 심화반</span>
+      <span class="bg-amber-400 text-indigo-950 text-[10px] font-extrabold px-2 py-0.5 rounded ml-1">2026</span>
+    </div>
+    <div class="text-white/40 text-xs">주간퀴즈 · 플래시카드</div>
+  </div>
+</div>
+
+<header class="main-header text-white">
+  <div class="max-w-7xl mx-auto px-6 pt-5 pb-0">
+    <div class="flex items-end justify-between mb-5">
+      <div>
+        <h1 class="text-[1.65rem] font-extrabold tracking-tight leading-tight">1주차 주간퀴즈 플래시카드</h1>
+        <p class="text-indigo-200/80 text-sm mt-1">정의형 15문제 · 핵심키워드형 15문제 · 총 30문제</p>
+      </div>
+      <div class="flex items-center gap-2 mb-1">
+        <div class="bg-white/10 rounded-xl px-3.5 py-2 text-sm">
+          <span class="text-white/60 text-xs">진행</span>
+          <span class="text-white font-bold ml-1" id="hdr-progress">0/30</span>
+        </div>
+      </div>
+    </div>
+    <div class="flex gap-0">
+      <div class="dash-tab active" onclick="switchTab('list')">📋 문제 목록</div>
+      <div class="dash-tab" onclick="switchTab('flash')">🃏 플래시카드</div>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-6 py-6">
+  <div id="section-list">
+    <div class="flex items-center justify-between mb-5 flex-wrap gap-3">
+      <div class="flex items-center gap-2 flex-wrap" id="filter-buttons"></div>
+      <div class="flex items-center gap-2">
+        <button onclick="toggleListView()" class="flex items-center gap-1.5 bg-white hover:bg-gray-50 text-gray-600 text-sm px-3.5 py-2 rounded-xl border border-gray-200 transition">
+          <span id="listViewIcon">📋</span><span id="listViewLabel" class="text-xs font-medium">리스트</span>
+        </button>
+        <button onclick="startFlashAll()" class="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm px-4 py-2 rounded-xl transition">
+          🃏 <span class="text-xs font-semibold">전체 학습 시작</span>
+        </button>
+      </div>
+    </div>
+    <div id="card-view" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+    <div id="list-view" class="bg-white rounded-2xl shadow-sm overflow-hidden" style="display:none">
+      <div class="list-header"><span>#</span><span>문제</span><span>유형</span><span>출제영역</span><span>학습</span></div>
+      <div id="list-rows"></div>
+    </div>
+  </div>
+
+  <div id="section-flash" style="display:none">
+    <div class="max-w-2xl mx-auto">
+      <div class="text-center mb-4" id="fc-counter-area">
+        <span class="text-2xl font-extrabold text-indigo-600" id="fc-current">1</span>
+        <span class="text-gray-400 font-medium"> / </span>
+        <span class="text-gray-500 font-semibold" id="fc-total">0</span>
+      </div>
+      <div class="card-wrapper" id="card-wrapper" onclick="flipCard()">
+        <div class="card-inner" id="card-inner">
+          <div class="card-face card-front" id="fc-front"></div>
+          <div class="card-face card-back" id="fc-back"></div>
+        </div>
+      </div>
+      <div class="flex justify-center items-center gap-4 mt-5" id="fc-controls">
+        <button onclick="event.stopPropagation();fcPrev()" id="fc-btn-prev" class="w-11 h-11 rounded-full border-2 border-gray-200 bg-white flex items-center justify-center text-gray-600 hover:border-indigo-400 hover:text-indigo-600 transition disabled:opacity-30" disabled>◀</button>
+        <button onclick="event.stopPropagation();markCard('dontknow')" class="flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-red-50 text-red-700 font-semibold text-sm hover:bg-red-500 hover:text-white transition">❌ 모르겠어요</button>
+        <button onclick="event.stopPropagation();markCard('know')" class="flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-emerald-50 text-emerald-700 font-semibold text-sm hover:bg-emerald-500 hover:text-white transition">✅ 알고있어요</button>
+        <button onclick="event.stopPropagation();fcNext()" id="fc-btn-next" class="w-11 h-11 rounded-full border-2 border-gray-200 bg-white flex items-center justify-center text-gray-600 hover:border-indigo-400 hover:text-indigo-600 transition disabled:opacity-30">▶</button>
+      </div>
+      <div class="flex justify-center gap-1.5 mt-5 flex-wrap" id="fc-dots"></div>
+      <div class="result-screen" id="result-screen">
+        <div class="text-6xl mb-4">🎉</div>
+        <div class="text-2xl font-extrabold text-gray-900 mb-2">학습 완료!</div>
+        <div class="text-sm text-gray-500 mb-8">모든 카드를 확인했습니다</div>
+        <div class="flex justify-center gap-10 mb-8">
+          <div class="text-center"><div class="text-3xl font-extrabold text-emerald-500" id="res-know">0</div><div class="text-xs text-gray-500 mt-1">알고 있어요</div></div>
+          <div class="text-center"><div class="text-3xl font-extrabold text-red-500" id="res-dontknow">0</div><div class="text-xs text-gray-500 mt-1">모르겠어요</div></div>
+        </div>
+        <div class="flex justify-center gap-3 flex-wrap">
+          <button onclick="resetFlash()" class="px-6 py-2.5 rounded-full bg-indigo-600 text-white font-semibold text-sm hover:bg-indigo-700 transition">전체 다시 학습</button>
+          <button onclick="retryWrong()" id="btn-retry-wrong" class="px-6 py-2.5 rounded-full border-2 border-red-400 text-red-600 font-semibold text-sm hover:bg-red-500 hover:text-white transition">틀린 문제만 다시</button>
+          <button onclick="switchTab('list')" class="px-6 py-2.5 rounded-full border-2 border-gray-300 text-gray-600 font-semibold text-sm hover:bg-gray-100 transition">목록으로 돌아가기</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="mt-10">
+  <div class="bg-gray-900">
+    <div class="max-w-7xl mx-auto px-6 py-8">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div>
+          <div class="flex items-center gap-2.5 mb-3">
+            <div class="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center"><span class="text-white text-sm font-black">Z</span></div>
+            <div><div class="text-white font-bold text-sm">ZIP-UP 심화반</div><div class="text-xs text-gray-500">정보관리기술사 시험 대비</div></div>
+          </div>
+          <p class="text-xs text-gray-600 leading-relaxed mt-3">KPC 정보관리기술사 ZIP-UP 심화반은<br>실전 중심 멘토링으로 합격을 지원합니다.</p>
+        </div>
+        <div>
+          <div class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-3">멘토</div>
+          <div class="text-sm font-medium text-white">박교익PE</div>
+          <div class="text-xs text-gray-500 mt-1">132회 정보관리기술사</div>
+          <a href="mailto:dr.code92@gmail.com" class="text-xs text-gray-600 hover:text-indigo-400 transition mt-2 inline-block">dr.code92@gmail.com</a>
+        </div>
+        <div>
+          <div class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-3">학습 자료</div>
+          <div class="space-y-2.5">
+            <div class="text-sm text-gray-500 hover:text-white transition cursor-pointer">📚 주간 토픽 교재</div>
+            <div class="text-sm text-gray-500 hover:text-white transition cursor-pointer">🃏 주간퀴즈 플래시카드</div>
+            <div class="text-sm text-gray-500 hover:text-white transition cursor-pointer">💬 AI 튜터 상담</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="bg-gray-950">
+    <div class="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
+      <span class="text-[11px] text-gray-600">Copyright &copy; 2026 KPC 정보관리기술사 ZIP-UP 심화반. All rights reserved.</span>
+      <span class="text-[11px] text-gray-700">Powered by AI-Enhanced Learning</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+const CARDS = [
+  {
+    "id": "1W_Q01_01",
+    "type": "def",
+    "area": "SW공학",
+    "areaClass": "tag-sw",
+    "topic": "나선형(Spiral) 모델",
+    "question": "나선형 모델(Spiral Model)은 계획수립 → 위험분석 → 개발 → 고객평가의 4단계를 반복적으로 수행하며, 각 반복 주기마다 위험 분석을...",
+    "definition": "나선형 모델(Spiral Model)은 계획수립 → 위험분석 → 개발 → 고객평가의 4단계를 반복적으로 수행하며, 각 반복 주기마다 위험 분석을 핵심 활동으로 포함하는 진화적 소프트웨어 개발 프로세스 모델이다.",
+    "overview": "<b>배경:</b> 폭포수 모델의 순차적 한계와 프로토타이핑 모델의 비체계성을 보완하기 위해 Barry Boehm이 1988년 제안하였다.<br><b>필요성:</b> 대규모 프로젝트에서 요구사항 변경과 기술적 위험이 불가피하므로, 개발 초기부터 위험을 식별·대응할 수 있는 체계적 프레임워크가 필요하다.<br><b>핵심 특징:</b><br>각 반복(Iteration)마다 위험 분석 단계를 필수로 수행하여 프로젝트 실패 가능성을 조기에 차단한다<br>점진적·반복적으로 시스템을 확장하므로 대규모·고위험 프로젝트에 적합하다<br>고객 평가를 매 주기마다 수행하여 요구사항 변경에 유연하게 대응한다",
+    "keypoint": "나선형 모델은 계획수립, 위험분석, 개발, 고객평가의 4사분면을 반복 수행하는 진화적 모델로, 매 반복 주기마다 위험 분석을 핵심 활동으로 포함한다. 대규모 프로젝트에서 기술적·관리적 위험을 조기에 식별·완화할 수 있어, 요구사항 불확실성이 높은 환경에서 프로젝트 실패율을 낮추는 데 효과적이다."
+  },
+  {
+    "id": "1W_Q01_02",
+    "type": "def",
+    "area": "SW공학",
+    "areaClass": "tag-sw",
+    "topic": "결합도(Coupling)와 응집도(Cohesion)",
+    "question": "결합도(Coupling)는 모듈 간 상호 의존성의 정도를 나타내는 척도이며, 응집도(Cohesion)는 하나의 모듈 내부 구성 요소들이 하나의 ...",
+    "definition": "결합도(Coupling)는 모듈 간 상호 의존성의 정도를 나타내는 척도이며, 응집도(Cohesion)는 하나의 모듈 내부 구성 요소들이 하나의 기능을 수행하기 위해 관련된 정도를 나타내는 척도이다.",
+    "overview": "<b>배경:</b> 소프트웨어 규모가 커지면서 모듈화를 통한 복잡성 관리가 필수가 되었고, 모듈 품질을 정량적으로 평가할 기준이 필요해졌다.<br><b>필요성:</b> 유지보수성, 재사용성, 테스트 용이성을 확보하려면 모듈 간 의존성은 최소화하고 모듈 내부의 기능적 집중도는 최대화해야 한다.<br><b>핵심 특징:</b><br>결합도는 자료 결합도(Data) → 내용 결합도(Content) 순으로 높아지며, 낮을수록 좋다<br>응집도는 기능적 응집도(Functional) → 우연적 응집도(Coincidental) 순으로 낮아지며, 높을수록 좋다<br>\"낮은 결합도, 높은 응집도(Low Coupling, High Cohesion)\"가 이상적인 모듈 설계 원칙이다",
+    "keypoint": "결합도는 모듈 간 상호 의존 정도, 응집도는 모듈 내부 요소의 기능적 관련 정도를 측정하는 소프트웨어 설계 품질 척도이다. 이상적인 설계는 낮은 결합도와 높은 응집도를 추구하며, 이를 통해 변경 영향 범위를 최소화하고 모듈의 독립성·재사용성·유지보수성을 극대화할 수 있다."
+  },
+  {
+    "id": "1W_Q01_03",
+    "type": "def",
+    "area": "SW공학",
+    "areaClass": "tag-sw",
+    "topic": "TDD(테스트 주도 개발)",
+    "question": "TDD(Test-Driven Development)는 실제 코드를 작성하기 전에 테스트 케이스를 먼저 작성하고, 테스트를 통과하는 최소한의 코드...",
+    "definition": "TDD(Test-Driven Development)는 실제 코드를 작성하기 전에 테스트 케이스를 먼저 작성하고, 테스트를 통과하는 최소한의 코드를 구현한 뒤 리팩토링하는 Red-Green-Refactor 사이클 기반의 소프트웨어 개발 방법론이다.",
+    "overview": "<b>배경:</b> 전통적 개발 방식에서 테스트가 개발 후반부에 집중되면서 결함 발견이 늦어지고 수정 비용이 급증하는 문제가 반복되었다.<br><b>필요성:</b> 설계 단계부터 테스트를 반영하면 결함을 조기에 발견하고, 깔끔한 인터페이스 설계와 높은 코드 커버리지를 자연스럽게 확보할 수 있다.<br><b>핵심 특징:</b><br>Red(실패하는 테스트 작성) → Green(테스트 통과하는 최소 코드 구현) → Refactor(코드 정리)의 짧은 사이클을 반복한다<br>테스트 자체가 요구사항 명세 역할을 하여 설계 품질이 향상된다<br>XP(eXtreme Programming)의 핵심 실천법 중 하나로 애자일 개발에서 널리 활용된다",
+    "keypoint": "TDD는 테스트 코드를 먼저 작성하고 이를 통과시키는 방식으로 개발하는 방법론으로, Red-Green-Refactor라는 짧은 반복 사이클을 통해 결함을 조기에 발견하고 설계 품질을 높인다. 테스트가 곧 요구사항 명세가 되어 코드 커버리지와 유지보수성을 자연스럽게 확보하는 애자일 실천법이다."
+  },
+  {
+    "id": "1W_Q01_04",
+    "type": "def",
+    "area": "SW공학",
+    "areaClass": "tag-sw",
+    "topic": "기능점수(FP, Function Point)",
+    "question": "기능점수(Function Point, FP)는 사용자가 요구한 소프트웨어 기능의 양과 복잡도를 기반으로 소프트웨어 규모를 정량적으로 산정하는 사...",
+    "definition": "기능점수(Function Point, FP)는 사용자가 요구한 소프트웨어 기능의 양과 복잡도를 기반으로 소프트웨어 규모를 정량적으로 산정하는 사용자 관점의 규모 측정 기법이다.",
+    "overview": "<b>배경:</b> 코드 라인 수(LOC) 기반 산정은 개발 언어에 종속되고 개발 전에는 측정이 불가능하여, 언어 독립적이고 요구사항 단계에서 산정 가능한 기법이 필요해졌다.<br><b>필요성:</b> 사용자가 인식하는 기능 단위로 규모를 측정하면 개발 초기(요구분석 단계)부터 비용·일정 산정이 가능하고, 프로그래밍 언어나 기술 플랫폼에 무관하게 일관된 측정이 가능하다.<br><b>핵심 특징:</b><br>5가지 기능 유형(외부입력 EI, 외부출력 EO, 외부조회 EQ, 내부논리파일 ILF, 외부연계파일 EIF)을 기반으로 측정한다<br>기술적 복잡도 조정 인자(TCF)를 적용하여 보정된 기능점수(AFP)를 산출한다<br>ISO/IEC 20926(IFPUG) 표준으로 국제적으로 인정받는 측정 방법이다",
+    "keypoint": "기능점수(FP)는 사용자 요구 기능의 양과 복잡도를 기반으로 소프트웨어 규모를 산정하는 기법으로, LOC 방식과 달리 프로그래밍 언어에 독립적이며 요구분석 단계부터 측정이 가능하다. EI, EO, EQ, ILF, EIF 5가지 기능 유형을 식별하고 기술적 복잡도 조정 인자를 적용하여 객관적인 규모 산출이 가능한 ISO 표준 기법이다."
+  },
+  {
+    "id": "1W_Q01_05",
+    "type": "def",
+    "area": "SW공학",
+    "areaClass": "tag-sw",
+    "topic": "기술 부채(Technical Debt)",
+    "question": "기술 부채(Technical Debt)는 빠른 출시를 위해 단기적으로 선택한 비최적 기술적 결정이 향후 유지보수 및 확장 시 추가 비용으로 누적...",
+    "definition": "기술 부채(Technical Debt)는 빠른 출시를 위해 단기적으로 선택한 비최적 기술적 결정이 향후 유지보수 및 확장 시 추가 비용으로 누적되는 현상을 금융의 부채에 비유한 소프트웨어 공학 개념이다.",
+    "overview": "<b>배경:</b> 시장 출시 압박(Time-to-Market)으로 인해 설계 원칙을 우회하거나 임시방편적 코드를 작성하는 사례가 빈번하게 발생하였다.<br><b>필요성:</b> 기술 부채가 누적되면 코드 복잡도가 기하급수적으로 증가하여, 새로운 기능 추가와 결함 수정에 소요되는 비용과 시간이 급격히 늘어나므로 체계적 관리가 필수이다.<br><b>핵심 특징:</b><br>Ward Cunningham이 1992년 최초 제안한 개념으로, 의도적(Deliberate) 부채와 비의도적(Inadvertent) 부채로 구분된다<br>부채를 방치하면 이자(Interest)처럼 유지보수 비용이 복리로 증가한다<br>리팩토링, 코드 리뷰, 정적 분석 도구(SonarQube 등)를 통해 부채를 상환(Repayment)한다",
+    "keypoint": "기술 부채는 빠른 출시를 위해 선택한 비최적 기술적 결정이 향후 추가 비용으로 누적되는 현상으로, 방치 시 유지보수 비용이 금융 이자처럼 복리로 증가한다. 의도적·비의도적 부채를 식별하고 리팩토링과 코드 리뷰를 통해 체계적으로 상환하지 않으면 소프트웨어의 진화 가능성이 급격히 저하된다."
+  },
+  {
+    "id": "1W_Q01_06",
+    "type": "def",
+    "area": "SW공학",
+    "areaClass": "tag-sw",
+    "topic": "ATAM(Architecture Trade-off Analysis Method)",
+    "question": "ATAM(Architecture Trade-off Analysis Method)은 소프트웨어 아키텍처가 다수의 품질 속성(성능, 보안, 가용성 ...",
+    "definition": "ATAM(Architecture Trade-off Analysis Method)은 소프트웨어 아키텍처가 다수의 품질 속성(성능, 보안, 가용성 등) 요구사항을 충족하는지 평가하고, 품질 속성 간 상충관계(Trade-off)를 분석하여 최적의 아키텍처 결정을 지원하는 시나리오 기반 아키텍처 평가 방법론이다.",
+    "overview": "<b>배경:</b> 소프트웨어 시스템의 품질은 아키텍처 수준에서 결정되므로, 개발 착수 전에 아키텍처가 품질 목표를 달성할 수 있는지 사전 검증할 필요가 있다.<br><b>필요성:</b> 성능을 높이면 보안이 약화되는 것처럼 품질 속성 간 상충관계가 존재하므로, 이해관계자의 우선순위에 따라 최적의 균형점을 찾는 체계적 분석 기법이 필요하다.<br><b>핵심 특징:</b><br>이해관계자가 제시한 품질 속성 시나리오를 기반으로 아키텍처 접근법의 민감점(Sensitivity Point)과 상충점(Trade-off Point)을 도출한다<br>Carnegie Mellon SEI에서 개발한 대표적인 아키텍처 평가 방법론이다<br>위험(Risk), 비위험(Non-risk), 민감점, 상충점의 4가지 산출물을 도출한다",
+    "keypoint": "ATAM은 품질 속성 시나리오 기반으로 아키텍처를 평가하는 방법론으로, 성능·보안·가용성 등 품질 속성 간 상충관계를 분석하여 최적의 아키텍처 결정을 지원한다. 민감점과 상충점을 식별함으로써 아키텍처 위험을 조기에 발견하고, 이해관계자 간 합의된 품질 우선순위에 따른 설계 의사결정을 가능하게 한다."
+  },
+  {
+    "id": "1W_Q01_07",
+    "type": "def",
+    "area": "CA/OS",
+    "areaClass": "tag-os",
+    "topic": "멀티스레딩(Multi-threading)",
+    "question": "멀티스레딩(Multi-threading)은 하나의 프로세스 내에서 둘 이상의 스레드(Thread)를 동시에 실행하여, 프로세스의 코드·데이터·힙...",
+    "definition": "멀티스레딩(Multi-threading)은 하나의 프로세스 내에서 둘 이상의 스레드(Thread)를 동시에 실행하여, 프로세스의 코드·데이터·힙 영역을 공유하면서 병렬 처리를 수행하는 실행 모델이다.",
+    "overview": "<b>배경:</b> 단일 스레드 프로세스 방식은 CPU 유휴 시간이 발생하고, 다중 프로세스 방식은 프로세스 간 문맥 교환(Context Switching) 오버헤드가 크다는 한계가 있었다.<br><b>필요성:</b> 동일 프로세스 내에서 자원을 공유하면서 병렬 처리를 수행하면 문맥 교환 비용을 줄이고 CPU 활용률과 응답성을 극대화할 수 있다.<br><b>핵심 특징:</b><br>스레드는 프로세스의 코드·데이터·힙 영역을 공유하되, 스택과 레지스터는 독립적으로 유지한다<br>프로세스 간 전환보다 스레드 간 전환의 오버헤드가 현저히 낮다 (경량 프로세스)<br>공유 자원 접근 시 동기화(Synchronization) 문제(경쟁 조건, 교착 상태)가 발생할 수 있다",
+    "keypoint": "멀티스레딩은 하나의 프로세스 내에서 복수의 스레드가 코드·데이터·힙 영역을 공유하면서 병렬 실행하는 모델로, 프로세스 간 문맥 교환 대비 오버헤드가 현저히 낮아 시스템 성능과 응답성을 향상시킨다. 다만 공유 자원 접근 시 동기화 메커니즘(뮤텍스, 세마포어)을 적용하지 않으면 경쟁 조건과 교착 상태가 발생할 수 있다."
+  },
+  {
+    "id": "1W_Q01_08",
+    "type": "def",
+    "area": "CA/OS",
+    "areaClass": "tag-os",
+    "topic": "TLB(Translation Lookaside Buffer)",
+    "question": "TLB(Translation Lookaside Buffer)는 가상 메모리 시스템에서 최근 접근한 페이지 테이블 엔트리를 캐싱하여, 가상 주소에...",
+    "definition": "TLB(Translation Lookaside Buffer)는 가상 메모리 시스템에서 최근 접근한 페이지 테이블 엔트리를 캐싱하여, 가상 주소에서 물리 주소로의 변환 속도를 획기적으로 향상시키는 고속 하드웨어 캐시이다.",
+    "overview": "<b>배경:</b> 가상 메모리 시스템에서 모든 메모리 접근은 페이지 테이블 참조를 수반하므로, 페이지 테이블이 메모리에 있으면 실질적으로 메모리 접근이 2배로 증가하는 문제가 있었다.<br><b>필요성:</b> 지역성(Locality) 원리에 따라 최근 접근한 페이지의 매핑 정보를 고속 캐시에 저장하면, 대부분의 주소 변환을 메모리 접근 없이 처리하여 성능 저하를 방지할 수 있다.<br><b>핵심 특징:</b><br>TLB 적중(Hit) 시 페이지 테이블 접근 없이 즉시 물리 주소를 반환한다 (1~2 클럭 사이클)<br>일반적으로 TLB 적중률(Hit Ratio)은 95~99%에 달하여 실질적 성능 저하가 거의 없다<br>TLB 미스(Miss) 시 페이지 테이블을 참조한 후 TLB에 새 엔트리를 적재한다",
+    "keypoint": "TLB는 페이지 테이블 엔트리를 캐싱하는 고속 하드웨어 버퍼로, 가상 주소-물리 주소 변환을 1~2 클럭 사이클 내에 처리하여 가상 메모리의 성능 오버헤드를 최소화한다. 시간적·공간적 지역성(Locality)에 기반하여 95~99%의 높은 적중률을 보이며, 가상 메모리 시스템의 실용성을 보장하는 핵심 하드웨어 컴포넌트이다."
+  },
+  {
+    "id": "1W_Q01_09",
+    "type": "def",
+    "area": "CA/OS",
+    "areaClass": "tag-os",
+    "topic": "스플릿 브레인(Split Brain)",
+    "question": "스플릿 브레인(Split Brain)은 고가용성(HA) 클러스터 환경에서 노드 간 통신(Heartbeat)이 단절되어 각 노드가 자신을 마스터로...",
+    "definition": "스플릿 브레인(Split Brain)은 고가용성(HA) 클러스터 환경에서 노드 간 통신(Heartbeat)이 단절되어 각 노드가 자신을 마스터로 인식하고 독립적으로 동작함으로써 데이터 불일치와 서비스 충돌이 발생하는 장애 현상이다.",
+    "overview": "<b>배경:</b> HA 클러스터는 Heartbeat 신호로 노드 간 생존을 확인하는데, 네트워크 분할(Network Partition)이 발생하면 상대 노드의 장애를 오인하게 된다.<br><b>필요성:</b> 스플릿 브레인이 발생하면 양쪽 노드가 동시에 데이터를 변경하여 복구 불가능한 데이터 손상(Data Corruption)이 발생할 수 있으므로, 사전 방지 및 탐지 메커니즘이 필수이다.<br><b>핵심 특징:</b><br>두 노드가 동시에 Active 상태로 전환되어 같은 자원에 대해 동시 쓰기가 발생한다<br>쿼럼(Quorum) 메커니즘, STONITH(Shoot The Other Node In The Head), 펜싱(Fencing) 기법으로 방지한다<br>분산 데이터베이스, 클러스터 파일시스템 등 공유 스토리지 환경에서 특히 치명적이다",
+    "keypoint": "스플릿 브레인은 HA 클러스터에서 Heartbeat 통신 단절로 인해 복수의 노드가 동시에 마스터 역할을 수행하며 데이터 불일치가 발생하는 장애 현상이다. 쿼럼 기반 투표, STONITH, 펜싱 등의 메커니즘으로 방지하며, 방치 시 양쪽 노드의 동시 쓰기로 인해 복구 불가능한 데이터 손상이 초래될 수 있다."
+  },
+  {
+    "id": "1W_Q01_10",
+    "type": "def",
+    "area": "DB",
+    "areaClass": "tag-db",
+    "topic": "카디널리티(Cardinality)",
+    "question": "카디널리티(Cardinality)는 데이터베이스 특정 컬럼에 포함된 고유한(Unique) 값의 수를 나타내는 지표로, 인덱스 설계 시 검색 효율...",
+    "definition": "카디널리티(Cardinality)는 데이터베이스 특정 컬럼에 포함된 고유한(Unique) 값의 수를 나타내는 지표로, 인덱스 설계 시 검색 효율을 판단하는 핵심 기준이다.",
+    "overview": "<b>배경:</b> 인덱스를 무분별하게 생성하면 저장 공간 낭비와 DML 성능 저하가 발생하므로, 인덱스 생성 대상 컬럼을 합리적으로 선택할 기준이 필요했다.<br><b>필요성:</b> 카디널리티가 높은(고유 값이 많은) 컬럼에 인덱스를 생성해야 소수의 레코드를 빠르게 필터링할 수 있어 검색 효율이 극대화된다.<br><b>핵심 특징:</b><br>높은 카디널리티: 주민등록번호, 이메일 등 고유 값이 많은 컬럼 → 인덱스 효과 높음<br>낮은 카디널리티: 성별(남/여), 부서코드 등 중복 값이 많은 컬럼 → 인덱스 효과 낮음<br>선택도(Selectivity) = 1 / 카디널리티로, 선택도가 낮을수록(카디널리티가 높을수록) 인덱스 효과가 크다",
+    "keypoint": "카디널리티는 컬럼 내 고유 값의 수를 의미하며, 인덱스 설계의 핵심 판단 기준이다. 카디널리티가 높은 컬럼에 인덱스를 생성하면 소수의 레코드로 빠르게 필터링되어 검색 효율이 극대화되고, 카디널리티가 낮은 컬럼은 인덱스를 생성해도 대부분의 레코드를 읽어야 하므로 Full Scan 대비 이점이 거의 없다."
+  },
+  {
+    "id": "1W_Q01_11",
+    "type": "def",
+    "area": "DB",
+    "areaClass": "tag-db",
+    "topic": "ACID",
+    "question": "ACID는 데이터베이스 트랜잭션이 신뢰성 있게 처리되기 위해 보장해야 하는 4가지 핵심 속성인 원자성(Atomicity), 일관성(Consist...",
+    "definition": "ACID는 데이터베이스 트랜잭션이 신뢰성 있게 처리되기 위해 보장해야 하는 4가지 핵심 속성인 원자성(Atomicity), 일관성(Consistency), 격리성(Isolation), 지속성(Durability)의 앞 글자를 딴 약어이다.",
+    "overview": "<b>배경:</b> 다중 사용자 환경에서 동시에 수행되는 트랜잭션이 데이터 무결성을 해치지 않도록 보장하는 표준적 기준이 필요했다.<br><b>필요성:</b> ACID 속성이 보장되지 않으면 동시 트랜잭션 간 간섭으로 데이터 손실, 불일치, 유령 데이터 등이 발생하여 시스템 신뢰성이 훼손된다.<br><b>핵심 특징:</b><br>원자성(Atomicity): 트랜잭션의 연산은 모두 수행되거나 모두 취소된다 (All or Nothing)<br>일관성(Consistency): 트랜잭션 전후로 데이터베이스는 일관된 상태를 유지한다<br>격리성(Isolation): 동시 실행 중인 트랜잭션은 상호 간섭하지 않는다<br>지속성(Durability): 성공적으로 완료된 트랜잭션의 결과는 영구적으로 보존된다",
+    "keypoint": "ACID는 트랜잭션의 신뢰성을 보장하는 4대 속성으로, 원자성은 All-or-Nothing 실행을, 일관성은 데이터 무결성 유지를, 격리성은 동시 트랜잭션 간 비간섭을, 지속성은 완료된 결과의 영구 보존을 보장한다. 이 네 속성의 조합으로 다중 사용자 환경에서도 데이터 무결성과 시스템 신뢰성을 확보할 수 있다."
+  },
+  {
+    "id": "1W_Q01_12",
+    "type": "def",
+    "area": "DB",
+    "areaClass": "tag-db",
+    "topic": "BASE 속성",
+    "question": "BASE는 대용량 분산 시스템에서 ACID의 엄격한 일관성 대신 가용성과 확장성을 우선하는 설계 원칙으로, Basically Available(...",
+    "definition": "BASE는 대용량 분산 시스템에서 ACID의 엄격한 일관성 대신 가용성과 확장성을 우선하는 설계 원칙으로, Basically Available(기본적 가용성), Soft state(유연한 상태), Eventually consistent(최종적 일관성)의 약어이다.",
+    "overview": "<b>배경:</b> 대규모 분산 환경에서 ACID의 강한 일관성(Strong Consistency)을 보장하려면 가용성과 성능이 크게 저하되는 문제가 있었다.<br><b>필요성:</b> NoSQL 데이터베이스나 마이크로서비스 아키텍처에서는 엄격한 일관성보다 고가용성과 수평 확장성이 더 중요하므로, 일관성을 완화하는 대신 시스템의 반응성을 확보하는 설계 원칙이 필요하다.<br><b>핵심 특징:</b><br>Basically Available: 부분 장애가 발생해도 시스템 전체는 가용 상태를 유지한다<br>Soft state: 데이터 상태는 외부 입력 없이도 시간에 따라 변할 수 있다 (복제 지연 허용)<br>Eventually consistent: 일정 시간이 지나면 모든 복제본이 최종적으로 일관된 상태에 도달한다",
+    "keypoint": "BASE는 ACID의 강한 일관성 대신 가용성과 확장성을 우선하는 분산 시스템 설계 원칙으로, 기본적 가용성을 유지하면서 일시적 불일치를 허용하되 최종적으로 일관성에 수렴한다. CAP 이론에서 가용성(A)과 분할 수용성(P)을 선택하는 AP 시스템(NoSQL, DynamoDB 등)의 이론적 기반이다."
+  },
+  {
+    "id": "1W_Q01_13",
+    "type": "def",
+    "area": "디지털서비스",
+    "areaClass": "tag-ds",
+    "topic": "마이데이터(MyData)",
+    "question": "마이데이터(MyData)는 정보 주체인 개인이 자신의 데이터에 대한 전송 요구권(Right to Data Portability)을 행사하여, 흩...",
+    "definition": "마이데이터(MyData)는 정보 주체인 개인이 자신의 데이터에 대한 전송 요구권(Right to Data Portability)을 행사하여, 흩어져 있는 개인 데이터를 표준 API를 통해 한곳에서 통합 조회·활용할 수 있게 하는 데이터 이동권 기반 개인 데이터 관리 체계이다.",
+    "overview": "<b>배경:</b> 개인 데이터가 금융·통신·의료 등 다수 기관에 분산 저장되어 있어, 정보 주체 스스로가 자신의 데이터 현황을 파악하기 어려웠다.<br><b>필요성:</b> 스크래핑 방식의 보안 취약성을 해소하고, 개인이 데이터 주권을 행사하여 맞춤형 금융·헬스케어 등 혁신 서비스를 이용할 수 있는 안전한 데이터 연계 인프라가 필요하다.<br><b>핵심 특징:</b><br>스크래핑이 아닌 표준 API(오픈뱅킹 등)를 통해 안전하게 데이터를 전송한다<br>한국은 2022년 금융 분야 마이데이터 시행, EU GDPR 제20조의 정보 이동권이 법적 근거이다<br>정보 주체의 동의 기반으로 데이터가 이동하므로 개인정보 자기결정권이 강화된다",
+    "keypoint": "마이데이터는 개인이 정보 이동권(전송 요구권)을 행사하여 여러 기관에 분산된 자신의 데이터를 표준 API로 통합 조회·활용하는 체계로, 스크래핑의 보안 취약성을 해소하고 개인정보 자기결정권을 강화한다. 금융·의료·공공 분야로 확산되며 맞춤형 서비스 혁신의 데이터 인프라 역할을 수행한다."
+  },
+  {
+    "id": "1W_Q01_14",
+    "type": "def",
+    "area": "디지털서비스",
+    "areaClass": "tag-ds",
+    "topic": "옴니채널(Omni-Channel)",
+    "question": "옴니채널(Omni-Channel)은 온라인·오프라인·모바일 등 모든 판매·서비스 채널을 유기적으로 연결하여, 고객이 어떤 채널을 이용하든 끊김 ...",
+    "definition": "옴니채널(Omni-Channel)은 온라인·오프라인·모바일 등 모든 판매·서비스 채널을 유기적으로 연결하여, 고객이 어떤 채널을 이용하든 끊김 없는(Seamless) 일관된 경험을 제공하는 통합 채널 전략이다.",
+    "overview": "<b>배경:</b> 멀티채널(Multi-Channel) 전략은 여러 채널을 운영하지만 채널 간 데이터와 경험이 단절되어, 고객이 채널을 전환할 때 이전 맥락이 유실되는 문제가 있었다.<br><b>필요성:</b> 고객이 온라인에서 조회한 상품을 오프라인 매장에서 바로 수령하거나, 모바일에서 시작한 상담을 콜센터에서 이어받는 등 채널 간 연속적 경험을 기대하는 소비 패턴이 확산되었다.<br><b>핵심 특징:</b><br>채널 간 고객 데이터(구매 이력, 장바구니, 상담 내역)가 실시간으로 동기화된다<br>멀티채널이 \"채널 병렬 운영\"이라면, 옴니채널은 \"채널 간 유기적 통합\"이다<br>BOPIS(Buy Online Pick-up In Store), 통합 CRM 등이 대표적 구현 사례이다",
+    "keypoint": "옴니채널은 모든 판매·서비스 채널을 유기적으로 통합하여 끊김 없는 고객 경험을 제공하는 전략으로, 채널 간 고객 데이터가 실시간 동기화되어 채널 전환 시에도 맥락이 유지된다. 단순히 다수 채널을 운영하는 멀티채널과 달리, 채널 간 경계를 허물어 일관된 고객 여정(Customer Journey)을 실현하는 것이 핵심 차별점이다."
+  },
+  {
+    "id": "1W_Q01_15",
+    "type": "def",
+    "area": "디지털서비스",
+    "areaClass": "tag-ds",
+    "topic": "인프라 코드화(IaC, Infrastructure as Code)",
+    "question": "IaC(Infrastructure as Code)는 서버, 네트워크, 스토리지 등 IT 인프라를 수동 설정이 아닌 코드(선언적 또는 명령적 스크...",
+    "definition": "IaC(Infrastructure as Code)는 서버, 네트워크, 스토리지 등 IT 인프라를 수동 설정이 아닌 코드(선언적 또는 명령적 스크립트)로 정의하고, 버전 관리 및 자동화된 프로비저닝을 통해 일관된 환경을 반복 구축하는 인프라 관리 방식이다.",
+    "overview": "<b>배경:</b> 수동 서버 설정(ClickOps)은 환경 간 구성 차이(Configuration Drift)가 발생하고, 장애 복구 시 수작업 재현이 어려워 운영 안정성이 저하되었다.<br><b>필요성:</b> 클라우드 네이티브 환경에서 수백~수천 대의 서버를 일관되게 프로비저닝하고, DevOps CI/CD 파이프라인에 인프라 변경을 통합하려면 코드 기반의 자동화가 필수이다.<br><b>핵심 특징:</b><br>불변 인프라(Immutable Infrastructure): 변경 시 기존 서버를 수정하지 않고 새 서버를 생성한다<br>Terraform(선언적), Ansible(절차적) 등이 대표적 IaC 도구이다<br>Git 등 VCS로 인프라 변경 이력을 추적하고, 코드 리뷰와 테스트가 가능하다",
+    "keypoint": "IaC는 인프라를 코드로 정의하여 자동화된 프로비저닝과 버전 관리를 수행하는 방식으로, 수동 설정으로 인한 Configuration Drift를 방지하고 일관된 환경을 반복 구축한다. 불변 인프라(Immutable Infrastructure) 원칙과 결합하여 변경 시 기존 환경을 수정하지 않고 새로 생성함으로써, 롤백이 용이하고 환경의 재현성이 보장된다."
+  },
+  {
+    "id": "1W_Q02_01",
+    "type": "kw",
+    "area": "SW공학",
+    "areaClass": "tag-sw",
+    "topic": "GoF 디자인 패턴 3가지 대분류",
+    "question": "GoF 디자인 패턴의 3가지 분류(생성·구조·행위)와 각 분류의 대표 패턴 2개를 이해하고 있는지 확인하는 문제이다.",
+    "summary": "GoF 디자인 패턴의 3가지 분류(생성·구조·행위)와 각 분류의 대표 패턴 2개를 이해하고 있는지 확인하는 문제이다.",
+    "keywords": [
+      [
+        "생성 패턴(Creational)",
+        "객체 생성 과정을 캡슐화하여 시스템과 객체 생성 방식 간의 결합도를 낮추는 패턴군이다."
+      ],
+      [
+        "Singleton",
+        "클래스의 인스턴스를 오직 하나만 생성하고 전역 접근점을 제공하는 생성 패턴이다."
+      ],
+      [
+        "Factory Method",
+        "객체 생성을 서브클래스에 위임하여 생성할 객체의 타입을 런타임에 결정하는 생성 패턴이다."
+      ],
+      [
+        "구조 패턴(Structural)",
+        "클래스나 객체를 조합하여 더 큰 구조를 형성하고, 인터페이스 호환성을 확보하는 패턴군이다."
+      ],
+      [
+        "Adapter",
+        "호환되지 않는 인터페이스를 가진 클래스를 함께 동작할 수 있도록 중간 변환 역할을 수행하는 구조 패턴이다."
+      ],
+      [
+        "Composite",
+        "객체들을 트리 구조로 구성하여 개별 객체와 복합 객체를 동일하게 다룰 수 있게 하는 구조 패턴이다."
+      ],
+      [
+        "행위 패턴(Behavioral)",
+        "객체 간 책임 분배와 상호작용 방식을 정의하여 알고리즘과 흐름 제어를 캡슐화하는 패턴군이다."
+      ],
+      [
+        "Observer",
+        "객체 상태 변화 시 의존 객체들에 자동 통지하여 일대다 의존 관계를 느슨하게 유지하는 행위 패턴이다."
+      ],
+      [
+        "Strategy",
+        "알고리즘 군을 정의하고 캡슐화하여 클라이언트가 런타임에 알고리즘을 교체할 수 있게 하는 행위 패턴이다."
+      ]
+    ],
+    "tip": "<b>생·구·행</b> (생성-구조-행위)으로 3분류를 기억한다.<br>생성 = \"객체를 어떻게 만들까\", 구조 = \"객체를 어떻게 조합할까\", 행위 = \"객체가 어떻게 협력할까\"로 구분하면 직관적이다."
+  },
+  {
+    "id": "1W_Q02_02",
+    "type": "kw",
+    "area": "SW공학",
+    "areaClass": "tag-sw",
+    "topic": "PMBOK 프로젝트 위험 관리 4단계",
+    "question": "PMBOK 기반 프로젝트 위험 관리 프로세스의 4단계 절차를 순서대로 나열하고 각 단계의 핵심 활동을 설명하는 문제이다.",
+    "summary": "PMBOK 기반 프로젝트 위험 관리 프로세스의 4단계 절차를 순서대로 나열하고 각 단계의 핵심 활동을 설명하는 문제이다.",
+    "keywords": [
+      [
+        "위험 식별(Risk Identification)",
+        "프로젝트에 영향을 줄 수 있는 위험 요인을 브레인스토밍, 체크리스트, SWOT 분석 등을 통해 도출하는 단계이다."
+      ],
+      [
+        "위험 분석(Risk Analysis)",
+        "식별된 위험의 발생 확률과 영향도를 정성적·정량적으로 평가하여 우선순위를 결정하는 단계이다. 확률-영향 매트릭스(P-I Matrix)가 대표 기법이다."
+      ],
+      [
+        "위험 대응 계획(Risk Response Planning)",
+        "우선순위가 높은 위험에 대해 회피(Avoid), 전가(Transfer), 완화(Mitigate), 수용(Accept) 등의 대응 전략을 수립하는 단계이다."
+      ],
+      [
+        "위험 감시·통제(Risk Monitoring & Control)",
+        "프로젝트 수행 중 위험 상태를 지속적으로 추적하고, 새로운 위험을 식별하며, 대응 계획의 효과를 평가하는 단계이다."
+      ]
+    ],
+    "tip": "<b>식·분·대·감</b> (식별-분석-대응-감시)으로 순서를 기억한다.<br>대응 전략 4가지는 <b>회·전·완·수</b> (회피-전가-완화-수용)로 암기한다."
+  },
+  {
+    "id": "1W_Q02_03",
+    "type": "kw",
+    "area": "SW공학",
+    "areaClass": "tag-sw",
+    "topic": "소프트웨어 형상 관리(SCM) 4대 핵심 활동",
+    "question": "소프트웨어 형상 관리(SCM)의 4대 핵심 활동(식별, 통제, 감사, 기록/보고)을 나열하고 각 활동의 목적을 설명하는 문제이다.",
+    "summary": "소프트웨어 형상 관리(SCM)의 4대 핵심 활동(식별, 통제, 감사, 기록/보고)을 나열하고 각 활동의 목적을 설명하는 문제이다.",
+    "keywords": [
+      [
+        "형상 식별(Configuration Identification)",
+        "관리 대상이 되는 형상 항목(CI: Configuration Item)을 선정하고, 고유한 식별 체계(베이스라인 포함)를 부여하는 활동이다."
+      ],
+      [
+        "형상 통제(Configuration Control)",
+        "형상 항목의 변경 요청을 접수·심사·승인하여 무분별한 변경을 방지하고, CCB(형상통제위원회)를 통해 변경을 관리하는 활동이다."
+      ],
+      [
+        "형상 감사(Configuration Audit)",
+        "형상 항목이 승인된 요구사항과 베이스라인에 부합하는지 무결성을 검증하는 활동으로, 기능 감사와 물리적 감사로 구분된다."
+      ],
+      [
+        "형상 기록/보고(Configuration Status Accounting)",
+        "형상 항목의 현재 상태와 변경 이력을 기록하고 이해관계자에게 보고하여 가시성을 확보하는 활동이다."
+      ]
+    ],
+    "tip": "<b>식·통·감·기</b> (식별-통제-감사-기록)로 순서를 기억한다.<br>핵심은 \"무엇을 관리할지 정하고(식별) → 변경을 통제하고(통제) → 올바른지 검증하고(감사) → 기록으로 남긴다(기록)\"는 흐름이다."
+  },
+  {
+    "id": "1W_Q02_04",
+    "type": "kw",
+    "area": "SW공학",
+    "areaClass": "tag-sw",
+    "topic": "ISTQB 소프트웨어 테스트 7대 원칙",
+    "question": "ISTQB 기반 소프트웨어 테스트 7대 원칙 중 5가지를 선택하여 각 원칙의 핵심 의미를 설명하는 문제이다.",
+    "summary": "ISTQB 기반 소프트웨어 테스트 7대 원칙 중 5가지를 선택하여 각 원칙의 핵심 의미를 설명하는 문제이다.",
+    "keywords": [
+      [
+        "결함 존재 증명(Testing shows presence of defects)",
+        "테스트는 결함이 있음을 보여줄 수 있지만, 결함이 없음을 증명할 수는 없다."
+      ],
+      [
+        "완벽한 테스트 불가능(Exhaustive testing is impossible)",
+        "모든 입력 조합을 테스트하는 것은 불가능하므로, 위험 기반 우선순위에 따라 테스트 범위를 결정해야 한다."
+      ],
+      [
+        "조기 테스트(Early testing)",
+        "테스트 활동을 개발 수명 주기 초기에 시작할수록 결함 수정 비용이 낮아진다."
+      ],
+      [
+        "결함 집중(Defect clustering)",
+        "전체 결함의 대부분은 소수의 모듈에 집중되어 발생한다 (파레토 법칙 80:20)."
+      ],
+      [
+        "살충제 패러독스(Pesticide paradox)",
+        "동일한 테스트 케이스를 반복 수행하면 새로운 결함을 발견하지 못하므로, 테스트 케이스를 주기적으로 갱신해야 한다."
+      ]
+    ],
+    "tip": "<b>존·완·조·집·살·정·오</b> (존재증명-완벽불가-조기-집중-살충제-정황-오류부재궤변)로 7대 원칙 전체를 기억한다.<br>나머지 2개: 정황 의존성(Testing is context dependent), 오류 부재의 궤변(Absence-of-errors fallacy)."
+  },
+  {
+    "id": "1W_Q02_05",
+    "type": "kw",
+    "area": "SW공학",
+    "areaClass": "tag-sw",
+    "topic": "ISO/IEC 25010 제품 품질 8대 주특성",
+    "question": "ISO/IEC 25010 표준의 소프트웨어 제품 품질 모델에서 정의한 8대 주특성을 모두 나열하고 핵심 의미를 설명하는 문제이다.",
+    "summary": "ISO/IEC 25010 표준의 소프트웨어 제품 품질 모델에서 정의한 8대 주특성을 모두 나열하고 핵심 의미를 설명하는 문제이다.",
+    "keywords": [
+      [
+        "기능 적합성(Functional Suitability)",
+        "명시된·묵시적 요구사항을 만족하는 기능을 제공하는 정도이다."
+      ],
+      [
+        "성능 효율성(Performance Efficiency)",
+        "주어진 자원(시간, 메모리) 하에서 적절한 성능을 발휘하는 정도이다."
+      ],
+      [
+        "호환성(Compatibility)",
+        "다른 시스템 또는 컴포넌트와 정보를 교환하고 공존할 수 있는 정도이다."
+      ],
+      [
+        "사용성(Usability)",
+        "사용자가 효과적·효율적으로 목표를 달성하고 만족할 수 있는 정도이다."
+      ],
+      [
+        "신뢰성(Reliability)",
+        "지정된 조건과 기간 동안 장애 없이 기능을 수행하는 정도이다."
+      ],
+      [
+        "보안성(Security)",
+        "정보와 데이터를 비인가 접근으로부터 보호하는 정도이다."
+      ],
+      [
+        "유지보수성(Maintainability)",
+        "결함 수정, 개선, 환경 적응을 위해 수정될 수 있는 용이성의 정도이다."
+      ],
+      [
+        "이식성(Portability)",
+        "다른 하드웨어·소프트웨어 환경으로 이전될 수 있는 용이성의 정도이다."
+      ]
+    ],
+    "tip": "<b>기성호사 신보유이</b> (기능-성능-호환-사용 / 신뢰-보안-유지보수-이식)로 8개 주특성을 기억한다.<br>ISO 9126(6개)에서 25010(8개)으로 진화 시 호환성과 보안성이 추가되었다."
+  },
+  {
+    "id": "1W_Q02_06",
+    "type": "kw",
+    "area": "SW공학",
+    "areaClass": "tag-sw",
+    "topic": "스크럼(Scrum) 5대 주요 이벤트",
+    "question": "애자일 방법론 중 스크럼 프레임워크에서 수행되는 5가지 이벤트(미팅)를 순서대로 나열하고 목적을 설명하는 문제이다.",
+    "summary": "애자일 방법론 중 스크럼 프레임워크에서 수행되는 5가지 이벤트(미팅)를 순서대로 나열하고 목적을 설명하는 문제이다.",
+    "keywords": [
+      [
+        "스프린트(Sprint)",
+        "1~4주의 고정된 시간 박스(Time-box) 안에서 \"완료(Done)\" 상태의 인크리먼트를 산출하는 반복 주기이다."
+      ],
+      [
+        "스프린트 계획 회의(Sprint Planning)",
+        "스프린트 목표와 스프린트 백로그를 결정하는 회의로, \"무엇을(What)\" 과 \"어떻게(How)\" 구현할지 합의한다."
+      ],
+      [
+        "일일 스크럼(Daily Scrum)",
+        "매일 15분 이내로 진행하는 개발팀의 동기화 미팅으로, 어제 한 일·오늘 할 일·장애물을 공유한다."
+      ],
+      [
+        "스프린트 리뷰(Sprint Review)",
+        "스프린트 종료 시 이해관계자에게 인크리먼트를 시연하고 피드백을 수집하여 제품 백로그를 갱신하는 회의이다."
+      ],
+      [
+        "스프린트 회고(Sprint Retrospective)",
+        "팀이 프로세스 개선 사항을 논의하고 다음 스프린트에 반영할 액션 아이템을 도출하는 자기 성찰 회의이다."
+      ]
+    ],
+    "tip": "<b>스프린트 → 계획 → 일일 → 리뷰 → 회고</b> 순으로 진행된다.<br>스프린트가 \"컨테이너 이벤트\"이고, 나머지 4개가 그 안에서 수행되는 이벤트이다."
+  },
+  {
+    "id": "1W_Q02_07",
+    "type": "kw",
+    "area": "CA/OS",
+    "areaClass": "tag-os",
+    "topic": "교착상태(Deadlock) 4가지 필요충분조건",
+    "question": "다중 프로그래밍 환경에서 교착상태가 발생하기 위해 동시에 충족되어야 하는 4가지 필요충분조건(Coffman 조건)을 나열하는 문제이다.",
+    "summary": "다중 프로그래밍 환경에서 교착상태가 발생하기 위해 동시에 충족되어야 하는 4가지 필요충분조건(Coffman 조건)을 나열하는 문제이다.",
+    "keywords": [
+      [
+        "상호 배제(Mutual Exclusion)",
+        "자원은 한 번에 하나의 프로세스만 사용할 수 있으며, 다른 프로세스의 접근을 배제한다."
+      ],
+      [
+        "점유 대기(Hold and Wait)",
+        "프로세스가 이미 자원을 점유한 상태에서 추가 자원을 요청하며 대기한다."
+      ],
+      [
+        "비선점(No Preemption)",
+        "프로세스가 점유한 자원을 강제로 빼앗을 수 없으며, 프로세스가 자발적으로 해제해야 한다."
+      ],
+      [
+        "환형 대기(Circular Wait)",
+        "프로세스들이 자원 요청 관계에서 원형(환형) 사슬을 형성하여 서로의 자원을 기다린다."
+      ]
+    ],
+    "tip": "<b>상·점·비·환</b> (상호배제-점유대기-비선점-환형대기)으로 기억한다.<br>4가지 조건 중 하나라도 깨뜨리면 교착상태를 예방할 수 있다 (예: 환형 대기 → 자원 순서 부여)."
+  },
+  {
+    "id": "1W_Q02_08",
+    "type": "kw",
+    "area": "CA/OS",
+    "areaClass": "tag-os",
+    "topic": "RAID 레벨 0, 1, 5, 6 비교",
+    "question": "스토리지 신뢰성과 성능 확보를 위한 RAID 0, 1, 5, 6의 데이터 분산·복구 특징을 비교하는 문제이다.",
+    "summary": "스토리지 신뢰성과 성능 확보를 위한 RAID 0, 1, 5, 6의 데이터 분산·복구 특징을 비교하는 문제이다.",
+    "keywords": [
+      [
+        "RAID 0 (스트라이핑)",
+        "데이터를 여러 디스크에 분산 저장하여 읽기/쓰기 성능을 극대화하지만, 중복 저장이 없어 디스크 하나만 고장나도 전체 데이터가 손실된다."
+      ],
+      [
+        "RAID 1 (미러링)",
+        "동일한 데이터를 두 디스크에 완전히 복제하여 높은 가용성을 제공하지만, 저장 공간 효율이 50%에 불과하다."
+      ],
+      [
+        "RAID 5 (단일 패리티)",
+        "데이터와 패리티 정보를 모든 디스크에 분산 저장하여, 디스크 1개 장애까지 복구 가능하며 저장 효율이 (N-1)/N이다."
+      ],
+      [
+        "RAID 6 (이중 패리티)",
+        "2개의 독립된 패리티를 분산 저장하여, 동시에 2개 디스크 장애까지 복구 가능하지만 쓰기 성능이 RAID 5 대비 저하된다."
+      ]
+    ],
+    "tip": "<b>0=성능, 1=안전, 5=균형, 6=초안전</b> 으로 각 레벨의 핵심 가치를 기억한다.<br>허용 장애 디스크 수: RAID 0(0개) → RAID 1(1개) → RAID 5(1개) → RAID 6(2개)."
+  },
+  {
+    "id": "1W_Q02_09",
+    "type": "kw",
+    "area": "CA/OS",
+    "areaClass": "tag-os",
+    "topic": "운영체제 듀얼 모드와 모드 전환 요소",
+    "question": "커널 보호를 위한 운영체제의 듀얼 모드(사용자 모드/커널 모드) 구조와 두 모드 간 전환을 유발하는 요소를 나열하는 문제이다.",
+    "summary": "커널 보호를 위한 운영체제의 듀얼 모드(사용자 모드/커널 모드) 구조와 두 모드 간 전환을 유발하는 요소를 나열하는 문제이다.",
+    "keywords": [
+      [
+        "사용자 모드(User Mode)",
+        "응용 프로그램이 실행되는 제한된 권한의 모드로, 하드웨어 직접 접근이나 특권 명령어 실행이 금지된다."
+      ],
+      [
+        "커널 모드(Kernel Mode)",
+        "운영체제 커널이 실행되는 모드로, 모든 하드웨어 자원과 특권 명령어에 대한 완전한 접근 권한을 가진다."
+      ],
+      [
+        "시스템 콜(System Call)",
+        "사용자 프로세스가 커널 서비스(파일 I/O, 프로세스 생성 등)를 요청하기 위해 트랩(Trap)을 발생시켜 커널 모드로 전환하는 인터페이스이다."
+      ],
+      [
+        "인터럽트(Interrupt)",
+        "하드웨어 장치(타이머, I/O)가 CPU에 신호를 보내 현재 실행을 중단시키고 커널 모드에서 인터럽트 핸들러를 실행하게 하는 메커니즘이다."
+      ],
+      [
+        "예외(Exception)",
+        "0으로 나누기, 페이지 폴트 등 프로그램 실행 중 발생하는 비정상 상황으로, 커널 모드로 전환하여 예외 처리 루틴을 실행한다."
+      ]
+    ],
+    "tip": "모드 전환 3대 요인: <b>시·인·예</b> (시스템콜-인터럽트-예외).<br>사용자 모드 → 커널 모드 전환은 \"Mode Bit를 0으로 변경\"하고, 복귀 시 \"Mode Bit를 1로 변경\"한다."
+  },
+  {
+    "id": "1W_Q02_10",
+    "type": "kw",
+    "area": "DB",
+    "areaClass": "tag-db",
+    "topic": "트랜잭션 읽기 이상 현상(Read Phenomena) 3가지",
+    "question": "낮은 트랜잭션 격리수준으로 인해 발생할 수 있는 3가지 읽기 이상 현상의 유형과 발생 조건을 설명하는 문제이다.",
+    "summary": "낮은 트랜잭션 격리수준으로 인해 발생할 수 있는 3가지 읽기 이상 현상의 유형과 발생 조건을 설명하는 문제이다.",
+    "keywords": [
+      [
+        "Dirty Read (오손 읽기)",
+        "다른 트랜잭션이 커밋하지 않은 변경 데이터를 읽는 현상으로, 해당 트랜잭션이 롤백되면 무효한 데이터를 참조하게 된다."
+      ],
+      [
+        "Non-Repeatable Read (비반복 읽기)",
+        "한 트랜잭션 내에서 동일 데이터를 두 번 읽을 때, 다른 트랜잭션의 UPDATE/DELETE로 인해 결과가 달라지는 현상이다."
+      ],
+      [
+        "Phantom Read (유령 읽기)",
+        "한 트랜잭션 내에서 동일 조건으로 조회할 때, 다른 트랜잭션의 INSERT로 인해 이전에 없던 새로운 행이 나타나는 현상이다."
+      ]
+    ],
+    "tip": "<b>Dirty → Non-Repeatable → Phantom</b> 순으로 심각도가 낮아진다.<br>격리수준: Read Uncommitted(3개 허용) → Read Committed(Dirty 차단) → Repeatable Read(Phantom만 허용) → Serializable(모두 차단)."
+  },
+  {
+    "id": "1W_Q02_11",
+    "type": "kw",
+    "area": "DB",
+    "areaClass": "tag-db",
+    "topic": "데이터베이스 이상현상(Anomaly) 3가지 유형",
+    "question": "정규화되지 않은 데이터베이스에서 테이블 조작 시 발생하는 3가지 이상현상의 유형과 원인을 설명하는 문제이다.",
+    "summary": "정규화되지 않은 데이터베이스에서 테이블 조작 시 발생하는 3가지 이상현상의 유형과 원인을 설명하는 문제이다.",
+    "keywords": [
+      [
+        "삽입 이상(Insertion Anomaly)",
+        "새로운 데이터를 삽입할 때 불필요한 데이터까지 함께 삽입해야 하거나, 관련 정보가 없으면 삽입 자체가 불가능한 현상이다."
+      ],
+      [
+        "삭제 이상(Deletion Anomaly)",
+        "특정 데이터를 삭제할 때 의도하지 않은 다른 유효한 데이터까지 함께 삭제되는 현상이다."
+      ],
+      [
+        "갱신 이상(Update Anomaly)",
+        "중복 저장된 데이터의 일부만 수정되어 동일한 정보에 대해 서로 다른 값이 존재하게 되는 데이터 불일치 현상이다."
+      ]
+    ],
+    "tip": "<b>삽·삭·갱</b> (삽입-삭제-갱신) 이상으로 기억한다.<br>3가지 이상현상의 근본 원인은 데이터 중복(Redundancy)이며, 정규화(Normalization)를 통해 해결한다."
+  },
+  {
+    "id": "1W_Q02_12",
+    "type": "kw",
+    "area": "DB",
+    "areaClass": "tag-db",
+    "topic": "CAP 이론의 3가지 핵심 속성",
+    "question": "분산 데이터베이스 시스템 설계의 기본 원칙인 CAP 이론의 3가지 속성과 상호 관계를 설명하는 문제이다.",
+    "summary": "분산 데이터베이스 시스템 설계의 기본 원칙인 CAP 이론의 3가지 속성과 상호 관계를 설명하는 문제이다.",
+    "keywords": [
+      [
+        "일관성(Consistency)",
+        "모든 노드가 동일한 시점에 동일한 데이터를 반환하는 속성으로, 분산 환경에서 강한 일관성을 보장하면 응답 지연이 발생할 수 있다."
+      ],
+      [
+        "가용성(Availability)",
+        "모든 요청에 대해 장애가 없는 노드는 반드시 응답을 반환하는 속성으로, 일부 노드 장애 시에도 시스템이 동작해야 한다."
+      ],
+      [
+        "분할 수용성(Partition Tolerance)",
+        "네트워크 분할(노드 간 통신 단절)이 발생하더라도 시스템이 계속 동작하는 속성으로, 분산 시스템에서는 사실상 필수이다."
+      ]
+    ],
+    "tip": "CAP 이론에서 <b>P(분할 수용성)는 분산 환경에서 필수</b>이므로, 실질적 선택은 CP(일관성 우선) vs AP(가용성 우선)이다.<br>CP 시스템: HBase, MongoDB / AP 시스템: DynamoDB, Cassandra."
+  },
+  {
+    "id": "1W_Q02_13",
+    "type": "kw",
+    "area": "디지털서비스",
+    "areaClass": "tag-ds",
+    "topic": "클라우드 서비스 모델 3가지 유형",
+    "question": "서비스 제공 수준에 따른 클라우드 컴퓨팅의 3가지 서비스 모델(IaaS, PaaS, SaaS)과 각 모델의 통제 범위를 비교하는 문제이다.",
+    "summary": "서비스 제공 수준에 따른 클라우드 컴퓨팅의 3가지 서비스 모델(IaaS, PaaS, SaaS)과 각 모델의 통제 범위를 비교하는 문제이다.",
+    "keywords": [
+      [
+        "IaaS(Infrastructure as a Service)",
+        "서버, 스토리지, 네트워크 등 인프라 자원을 가상화하여 제공하며, 사용자가 OS부터 애플리케이션까지 직접 관리한다. 예: AWS EC2, Azure VM."
+      ],
+      [
+        "PaaS(Platform as a Service)",
+        "런타임, 미들웨어, OS까지 제공자가 관리하며, 사용자는 애플리케이션 코드와 데이터만 관리한다. 예: AWS Elastic Beanstalk, Heroku."
+      ],
+      [
+        "SaaS(Software as a Service)",
+        "완성된 소프트웨어를 인터넷을 통해 제공하며, 사용자는 설정과 데이터만 관리한다. 예: Google Workspace, Salesforce."
+      ]
+    ],
+    "tip": "<b>IaaS → PaaS → SaaS</b> 순으로 제공자의 관리 범위가 넓어지고, 사용자의 자유도와 관리 부담은 줄어든다.<br>\"피자 비유\": IaaS = 주방 빌려서 직접 요리, PaaS = 반죽 위에 토핑만 올림, SaaS = 완성된 피자 배달."
+  },
+  {
+    "id": "1W_Q02_14",
+    "type": "kw",
+    "area": "디지털서비스",
+    "areaClass": "tag-ds",
+    "topic": "엣지 컴퓨팅 아키텍처 3계층",
+    "question": "클라우드 컴퓨팅의 지연 시간 문제를 해결하기 위한 엣지 컴퓨팅 아키텍처의 3계층 구성요소를 나열하고 역할을 설명하는 문제이다.",
+    "summary": "클라우드 컴퓨팅의 지연 시간 문제를 해결하기 위한 엣지 컴퓨팅 아키텍처의 3계층 구성요소를 나열하고 역할을 설명하는 문제이다.",
+    "keywords": [
+      [
+        "클라우드 계층(Cloud Tier)",
+        "대규모 데이터의 배치 분석, AI/ML 모델 학습, 장기 데이터 저장을 수행하는 중앙 데이터센터 계층이다."
+      ],
+      [
+        "포그 계층(Fog Tier)",
+        "클라우드와 엣지 사이에 위치하여 지역 단위 데이터 집계, 사전 처리, 캐싱을 수행하는 중간 계층이다."
+      ],
+      [
+        "엣지 계층(Edge Tier)",
+        "IoT 디바이스, 게이트웨이 등 데이터가 생성되는 현장에서 실시간 데이터 수집, 필터링, 즉각적 응답을 수행하는 말단 계층이다."
+      ]
+    ],
+    "tip": "<b>클·포·엣</b> (클라우드-포그-엣지) 순서로 \"중앙 → 중간 → 현장\"의 위치를 기억한다.<br>데이터는 엣지에서 발생하여 위로 올라가고(상향), 제어 명령은 클라우드에서 아래로 내려온다(하향)."
+  },
+  {
+    "id": "1W_Q02_15",
+    "type": "kw",
+    "area": "디지털서비스",
+    "areaClass": "tag-ds",
+    "topic": "핀옵스(FinOps) 라이프사이클 3단계",
+    "question": "클라우드 자원의 가시성 확보 및 비용 최적화를 위한 핀옵스(FinOps) 라이프사이클의 3단계 절차를 순서대로 나열하는 문제이다.",
+    "summary": "클라우드 자원의 가시성 확보 및 비용 최적화를 위한 핀옵스(FinOps) 라이프사이클의 3단계 절차를 순서대로 나열하는 문제이다.",
+    "keywords": [
+      [
+        "가시성 확보(Inform)",
+        "클라우드 비용 데이터를 수집·태깅하여 부서·프로젝트별 비용을 가시화하고, 이해관계자에게 현황을 공유하는 단계이다."
+      ],
+      [
+        "최적화(Optimize)",
+        "가시화된 데이터를 기반으로 미사용 자원 제거, 예약 인스턴스 구매, 라이트사이징(Right-sizing) 등 비용 절감 기회를 식별·실행하는 단계이다."
+      ],
+      [
+        "운영(Operate)",
+        "최적화된 상태를 지속적으로 유지하기 위해 자동화된 정책을 적용하고, KPI를 모니터링하며 조직 문화를 내재화하는 단계이다."
+      ]
+    ],
+    "tip": "<b>Inform → Optimize → Operate</b> (IOO) 순서로 기억한다.<br>\"보고(Inform) → 고치고(Optimize) → 유지한다(Operate)\"로 직관적으로 이해한다."
+  }
+];
+
+let currentFilter='all', isListView=false, currentTab='list';
+let flashCards=[...CARDS], fcIndex=0, cardStates={};
+
+function switchTab(tab){
+  currentTab=tab;
+  document.querySelectorAll('.dash-tab').forEach(function(t,i){t.classList.toggle('active',(tab==='list'&&i===0)||(tab==='flash'&&i===1));});
+  document.getElementById('section-list').style.display=tab==='list'?'':'none';
+  document.getElementById('section-flash').style.display=tab==='flash'?'':'none';
+  if(tab==='flash')renderFlashCard();
+}
+
+function getFiltered(){
+  if(currentFilter==='def')return CARDS.filter(function(c){return c.type==='def';});
+  if(currentFilter==='kw')return CARDS.filter(function(c){return c.type==='kw';});
+  return CARDS;
+}
+
+function setFilter(type,el){
+  currentFilter=type;
+  document.querySelectorAll('.filter-btn').forEach(function(b){b.className='filter-btn px-3.5 py-1.5 rounded-full text-xs font-semibold bg-white text-gray-600 border border-gray-200';});
+  if(type==='all')el.className='filter-btn px-3.5 py-1.5 rounded-full text-xs font-semibold bg-indigo-600 text-white';
+  else if(type==='def')el.className='filter-btn px-3.5 py-1.5 rounded-full text-xs font-semibold bg-indigo-500 text-white';
+  else el.className='filter-btn px-3.5 py-1.5 rounded-full text-xs font-semibold bg-amber-500 text-white';
+  renderList();
+}
+
+function renderList(){
+  var f=getFiltered(),ch='',lh='';
+  f.forEach(function(c){
+    var ac=c.type==='def'?'accent-def':'accent-kw';
+    var tb=c.type==='def'?'<span class="inline-block px-2 py-0.5 rounded text-[10px] font-semibold type-badge-def">📌 정의형</span>':'<span class="inline-block px-2 py-0.5 rounded text-[10px] font-semibold type-badge-kw">🔑 핵심키워드형</span>';
+    var si=cardStates[c.id]==='know'?'<span class="text-emerald-500 text-lg">✅</span>':cardStates[c.id]==='dontknow'?'<span class="text-red-500 text-lg">❌</span>':'';
+    var n=c.id.split('_').pop();
+    var q=c.type==='def'?(c.question||c.definition.substring(0,80)+'...'):(c.question||c.summary);
+    ch+='<div class="quiz-card fade-in" onclick="startFlashSingle(\''+c.id+'\')">'+'<div class="card-accent '+ac+'"></div><div class="p-5"><div class="flex items-center justify-between mb-3"><div class="flex items-center gap-2"><span class="text-xs font-bold text-gray-400">'+n+'</span>'+tb+'</div>'+si+'</div><h3 class="font-bold text-[0.95rem] text-gray-900 mb-2 leading-snug">'+c.topic+'</h3><p class="text-xs text-gray-500 leading-relaxed line-clamp-2">'+q+'</p><div class="mt-3"><span class="subject-tag '+c.areaClass+'">'+c.area+'</span></div></div></div>';
+    var tb2=c.type==='def'?'<span class="inline-block px-2 py-0.5 rounded text-[10px] font-semibold type-badge-def">정의형</span>':'<span class="inline-block px-2 py-0.5 rounded text-[10px] font-semibold type-badge-kw">키워드형</span>';
+    var si2=cardStates[c.id]==='know'?'✅':cardStates[c.id]==='dontknow'?'❌':'—';
+    lh+='<div class="list-row" onclick="startFlashSingle(\''+c.id+'\')"><span class="text-xs font-bold text-gray-400">'+n+'</span><span class="text-sm font-semibold text-gray-800">'+c.topic+'</span><span>'+tb2+'</span><span class="subject-tag '+c.areaClass+'">'+c.area+'</span><span class="text-center">'+si2+'</span></div>';
+  });
+  document.getElementById('card-view').innerHTML=ch;
+  document.getElementById('list-rows').innerHTML=lh;
+}
+
+function toggleListView(){
+  isListView=!isListView;
+  document.getElementById('card-view').style.display=isListView?'none':'';
+  document.getElementById('list-view').style.display=isListView?'':'none';
+  document.getElementById('listViewIcon').textContent=isListView?'🗂️':'📋';
+  document.getElementById('listViewLabel').textContent=isListView?'카드':'리스트';
+}
+
+function startFlashAll(){flashCards=getFiltered();fcIndex=0;switchTab('flash');}
+function startFlashSingle(id){var f=getFiltered();var i=f.findIndex(function(c){return c.id===id;});flashCards=f;fcIndex=i>=0?i:0;switchTab('flash');}
+
+function renderFlashFront(c){
+  var b=c.type==='def'?'<span class="inline-block px-3 py-1 rounded-full text-xs font-semibold type-badge-def mb-4">📌 정의형</span>':'<span class="inline-block px-3 py-1 rounded-full text-xs font-semibold type-badge-kw mb-4">🔑 핵심키워드형</span>';
+  var q=c.type==='def'?(c.question||c.definition.substring(0,100)+'...'):(c.question||c.summary);
+  return '<div class="flex flex-col items-center justify-center h-full px-8 text-center">'+b+'<div class="text-xs text-gray-400 mb-2">'+c.id+' · '+c.area+'</div><div class="text-2xl font-extrabold text-gray-900 leading-snug mb-5">'+c.topic+'</div><div class="text-sm text-gray-600 leading-relaxed max-w-md">'+q+'</div><div class="absolute bottom-5 text-xs text-gray-300 flex items-center gap-1">👆 클릭하여 해설 보기</div></div>';
+}
+
+function renderFlashBack(c){
+  var h='<div class="p-6"><div class="flex items-center justify-between mb-4 pb-3 border-b-2 border-gray-100"><span class="font-bold text-gray-900">'+c.topic+'</span>'+(c.type==='def'?'<span class="inline-block px-2.5 py-0.5 rounded text-[10px] font-semibold type-badge-def">정의형</span>':'<span class="inline-block px-2.5 py-0.5 rounded text-[10px] font-semibold type-badge-kw">핵심키워드형</span>')+'</div>';
+  if(c.type==='def'){
+    h+='<div class="mb-3"><div class="text-xs font-bold text-indigo-600 mb-1.5">📌 정의</div><div class="def-quote text-sm leading-relaxed">'+c.definition+'</div></div>';
+    h+='<div class="mb-3"><div class="text-xs font-bold text-indigo-600 mb-1.5">📖 개요</div><div class="text-xs text-gray-700 leading-relaxed">'+c.overview+'</div></div>';
+    h+='<div class="mb-2"><div class="text-xs font-bold text-emerald-600 mb-1.5">🔑 답안 키포인트</div><div class="keypoint-box text-xs leading-relaxed">'+c.keypoint+'</div></div>';
+  } else {
+    h+='<div class="mb-3"><div class="text-xs font-bold text-amber-600 mb-1.5">📌 주제 요약</div><div class="kw-summary text-sm leading-relaxed">'+c.summary+'</div></div>';
+    h+='<div class="mb-3"><div class="text-xs font-bold text-amber-600 mb-1.5">🔑 핵심 키워드</div><table class="kw-table"><thead><tr><th>#</th><th>키워드</th><th>설명</th></tr></thead><tbody>';
+    c.keywords.forEach(function(kw,i){h+='<tr><td>'+(i+1)+'</td><td>'+kw[0]+'</td><td class="text-gray-600">'+kw[1]+'</td></tr>';});
+    h+='</tbody></table></div>';
+    if(c.tip)h+='<div class="mb-2"><div class="text-xs font-bold text-purple-600 mb-1.5">💡 암기 팁</div><div class="tip-box text-xs leading-relaxed">'+c.tip+'</div></div>';
+  }
+  return h+'</div>';
+}
+
+function renderFlashCard(){
+  if(!flashCards.length)return;
+  var c=flashCards[fcIndex];
+  document.getElementById('fc-front').innerHTML=renderFlashFront(c);
+  document.getElementById('fc-back').innerHTML=renderFlashBack(c);
+  document.getElementById('card-inner').classList.remove('flipped');
+  document.getElementById('fc-current').textContent=fcIndex+1;
+  document.getElementById('fc-total').textContent=flashCards.length;
+  document.getElementById('fc-btn-prev').disabled=fcIndex===0;
+  document.getElementById('fc-btn-next').disabled=fcIndex===flashCards.length-1;
+  document.getElementById('card-wrapper').style.display='';
+  document.getElementById('fc-controls').style.display='';
+  document.getElementById('fc-dots').style.display='';
+  document.getElementById('fc-counter-area').style.display='';
+  document.getElementById('result-screen').classList.remove('show');
+  var d='';flashCards.forEach(function(fc,i){var s=cardStates[fc.id]||'';d+='<div class="dot'+(i===fcIndex?' active':'')+(s?' '+s:'')+'" onclick="goToFlash('+i+')"></div>';});
+  document.getElementById('fc-dots').innerHTML=d;
+  updateHdrProgress();
+}
+
+function flipCard(){document.getElementById('card-inner').classList.toggle('flipped');}
+function fcNext(){if(fcIndex<flashCards.length-1){fcIndex++;renderFlashCard();}}
+function fcPrev(){if(fcIndex>0){fcIndex--;renderFlashCard();}}
+function goToFlash(i){fcIndex=i;renderFlashCard();}
+
+function markCard(state){
+  cardStates[flashCards[fcIndex].id]=state;renderFlashCard();renderList();
+  if(flashCards.every(function(fc){return!!cardStates[fc.id];}))showResult();
+  else if(fcIndex<flashCards.length-1)setTimeout(function(){fcNext();},300);
+}
+
+function showResult(){
+  var k=0,d=0;flashCards.forEach(function(fc){if(cardStates[fc.id]==='know')k++;else if(cardStates[fc.id]==='dontknow')d++;});
+  document.getElementById('res-know').textContent=k;document.getElementById('res-dontknow').textContent=d;
+  document.getElementById('card-wrapper').style.display='none';document.getElementById('fc-controls').style.display='none';
+  document.getElementById('fc-dots').style.display='none';document.getElementById('fc-counter-area').style.display='none';
+  document.getElementById('result-screen').classList.add('show');
+  document.getElementById('btn-retry-wrong').style.display=d>0?'':'none';
+}
+
+function resetFlash(){cardStates={};flashCards=getFiltered();fcIndex=0;renderFlashCard();renderList();}
+function retryWrong(){var w={};flashCards.forEach(function(fc){if(cardStates[fc.id]==='dontknow')w[fc.id]=true;});cardStates={};flashCards=CARDS.filter(function(c){return w[c.id];});fcIndex=0;renderFlashCard();renderList();}
+function updateHdrProgress(){var a=0;CARDS.forEach(function(c){if(cardStates[c.id])a++;});document.getElementById('hdr-progress').textContent=a+'/'+CARDS.length;}
+
+// Build filter buttons dynamically
+var defN=CARDS.filter(function(c){return c.type==='def';}).length;
+var kwN=CARDS.filter(function(c){return c.type==='kw';}).length;
+document.getElementById('filter-buttons').innerHTML='<button class="filter-btn px-3.5 py-1.5 rounded-full text-xs font-semibold bg-indigo-600 text-white" onclick="setFilter(\'all\',this)">전체 ('+CARDS.length+')</button><button class="filter-btn px-3.5 py-1.5 rounded-full text-xs font-semibold bg-white text-gray-600 border border-gray-200 hover:border-indigo-300" onclick="setFilter(\'def\',this)">📌 정의형 ('+defN+')</button><button class="filter-btn px-3.5 py-1.5 rounded-full text-xs font-semibold bg-white text-gray-600 border border-gray-200 hover:border-amber-300" onclick="setFilter(\'kw\',this)">🔑 핵심키워드형 ('+kwN+')</button>';
+
+document.addEventListener('keydown',function(e){if(currentTab!=='flash')return;if(e.key==='ArrowLeft')fcPrev();else if(e.key==='ArrowRight')fcNext();else if(e.key===' '||e.key==='Enter'){e.preventDefault();flipCard();}});
+
+renderList();
+</script>
+</body>
+</html>

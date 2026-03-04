@@ -689,8 +689,15 @@ function toggleStrategy(el){
     }else{d.classList.add('hidden');s.classList.remove('hidden');}
 }
 
-function getApiKey(){var k=new URLSearchParams(window.location.search).get('key');if(k)return k;return localStorage.getItem('gemini_api_key')||'';}
-function saveApiKey(){var k=document.getElementById('api-key-input').value.trim();if(k){localStorage.setItem('gemini_api_key',k);alert('API Key가 저장되었습니다.');toggleSettings();}else{alert('API Key를 입력해주세요.');}}
+function getApiKey() {
+    var urlKey = new URLSearchParams(window.location.search).get('key');
+    if (urlKey) { localStorage.setItem('gemini_api_key', urlKey); localStorage.setItem('geminiKey', urlKey); return urlKey; }
+    return localStorage.getItem('gemini_api_key') || localStorage.getItem('geminiKey') || '';
+}
+function saveApiKey() {
+    var k = document.getElementById('api-key-input').value.trim();
+    if (k) { localStorage.setItem('gemini_api_key', k); localStorage.setItem('geminiKey', k); window.GEMINI_API_KEY = k; alert('API Key가 저장되었습니다.'); toggleSettings(); }
+}
 function toggleSettings(){var m=document.getElementById('settings-modal');m.classList.toggle('hidden');if(!m.classList.contains('hidden')){document.getElementById('api-key-input').value=getApiKey();}}
 function toggleChat(){var s=document.getElementById('chat-sidebar');s.classList.toggle('open');s.classList.toggle('closed');}
 async function sendChat(){
@@ -701,7 +708,7 @@ async function sendChat(){
     box.innerHTML+='<div id="typing" class="chat-msg ai"><div class="typing-indicator"><span></span><span></span><span></span></div></div>';
     box.scrollTop=box.scrollHeight;
     try{
-        var r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key='+key,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{role:'user',parts:[{text:'당신은 정보관리기술사 시험 멘토입니다. "DevOps와 CALMS 프레임워크" 관련 질문에 전문적이고 명쾌하게 답변해주세요. 300자 이내로 핵심만 요약.\n\n질문: '+msg}]}]})});
+        var r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key='+geminiKey,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{role:'user',parts:[{text:'당신은 정보관리기술사 시험 멘토입니다. "DevOps와 CALMS 프레임워크" 관련 질문에 전문적이고 명쾌하게 답변해주세요. 300자 이내로 핵심만 요약.\n\n질문: '+msg}]}]})});
         var d=await r.json();var t=d.candidates[0].content.parts[0].text;
         document.getElementById('typing').remove();box.innerHTML+='<div class="chat-msg ai" style="white-space:pre-wrap;">'+t+'</div>';
     }catch(e){document.getElementById('typing').remove();box.innerHTML+='<div class="chat-msg ai text-red-500">오류: '+e.message+'</div>';}
@@ -715,7 +722,7 @@ var currentQuizData=null;        document.addEventListener('DOMContentLoaded',fu
 
     // ── 퀴즈 ──
     // Bridge: connect quiz JS to existing API key management
-    var geminiKey = (typeof getApiKey === 'function') ? (getApiKey() || '') : '';
+    var geminiKey = (typeof getApiKey === 'function') ? (getApiKey() || '') : (localStorage.getItem('geminiKey') || localStorage.getItem('gemini_api_key') || '');
 
     var quizTypeHistory = [];
     var currentQuizData = null;

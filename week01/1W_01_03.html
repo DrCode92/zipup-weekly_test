@@ -948,7 +948,7 @@ function toggleStrategy(el) {
 }
 
 // ─── API Key 관리 ───
-var geminiKey = localStorage.getItem('geminiKey') || new URLSearchParams(window.location.search).get('key') || '';
+var geminiKey = (typeof getApiKey === 'function') ? (getApiKey() || '') : (localStorage.getItem('geminiKey') || localStorage.getItem('gemini_api_key') || '');
 function toggleSettings() {
     var m = document.getElementById('settings-modal');
     m.classList.toggle('hidden');
@@ -958,7 +958,7 @@ function toggleSettings() {
 }
 function saveSettings() {
     geminiKey = document.getElementById('apiKeyInput').value.trim();
-    if (geminiKey) localStorage.setItem('geminiKey', geminiKey);
+    if (geminiKey) localStorage.setItem('gemini_api_key', geminiKey); localStorage.setItem('geminiKey', geminiKey);
     toggleSettings();
 }
 
@@ -1026,6 +1026,7 @@ var quizTopics = [
 ];
 
 async function generateQuiz() {
+        geminiKey = (typeof getApiKey === 'function') ? (getApiKey() || '') : (localStorage.getItem('geminiKey') || localStorage.getItem('gemini_api_key') || '');
     if (!geminiKey) { alert('API Key\ub97c \uba3c\uc800 \uc124\uc815\ud574\uc8fc\uc138\uc694.'); toggleSettings(); return; }
     document.getElementById('quiz-placeholder').classList.add('hidden');
     document.getElementById('quiz-container').classList.add('hidden');
@@ -1128,6 +1129,7 @@ function checkMultipleChoice(idx, btnEl) {
 }
 
 async function checkShortAnswer() {
+        geminiKey = (typeof getApiKey === 'function') ? (getApiKey() || '') : (localStorage.getItem('geminiKey') || localStorage.getItem('gemini_api_key') || '');
     var input = document.getElementById('shortAnswerInput');
     var btn = document.getElementById('shortAnswerBtn');
     var userAnswer = input.value.trim();

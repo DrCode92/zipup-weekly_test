@@ -906,23 +906,19 @@ SW 본질적 복잡성
         // === API Key Management ===
         let apiKey = "";
         function getApiKey() {
-            if (apiKey) return apiKey;
-            if (window.GEMINI_API_KEY) return window.GEMINI_API_KEY;
-            const urlParams = new URLSearchParams(window.location.search);
-            const urlKey = urlParams.get('key') || urlParams.get('apiKey');
-            if (urlKey) { localStorage.setItem('gemini_api_key', urlKey); return urlKey; }
-            return localStorage.getItem('gemini_api_key') || "";
-        }
+    var urlKey = new URLSearchParams(window.location.search).get('key');
+    if (urlKey) { localStorage.setItem('gemini_api_key', urlKey); localStorage.setItem('geminiKey', urlKey); return urlKey; }
+    return localStorage.getItem('gemini_api_key') || localStorage.getItem('geminiKey') || '';
+}
         function toggleSettings() {
             const m = document.getElementById('settings-modal');
             if (m.classList.contains('hidden')) { m.classList.remove('hidden'); document.getElementById('api-key-input').value = getApiKey(); }
             else { m.classList.add('hidden'); }
         }
         function saveApiKey() {
-            const k = document.getElementById('api-key-input').value.trim();
-            if (k) { localStorage.setItem('gemini_api_key', k); window.GEMINI_API_KEY = k; alert("API Key가 저장되었습니다."); toggleSettings(); }
-            else { alert("유효한 키를 입력해주세요."); }
-        }
+    var k = document.getElementById('api-key-input').value.trim();
+    if (k) { localStorage.setItem('gemini_api_key', k); localStorage.setItem('geminiKey', k); window.GEMINI_API_KEY = k; alert('API Key가 저장되었습니다.'); toggleSettings(); }
+}
 
         // === Chat ===
         function toggleChat() {
@@ -946,7 +942,7 @@ SW 본질적 복잡성
             mc.scrollTop = mc.scrollHeight;
             try {
                 const prompt = "당신은 정보관리기술사 시험 멘토입니다. '소프트웨어 위기(Software Crisis), 브룩스의 법칙(Brooks' Law), 맨먼스 신화, No Silver Bullet, 본질적 복잡성' 관련 질문에 전문적이고 명쾌하게 답변해주세요. 300자 이내로 핵심만 요약.\n\n질문: " + msg;
-                const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + ck, {
+                const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + geminiKey, {
                     method: 'POST', headers: {'Content-Type':'application/json'},
                     body: JSON.stringify({contents:[{parts:[{text:prompt}]}]})
                 });
@@ -958,9 +954,12 @@ SW 본질적 복잡성
         }
 
         // === Quiz ===
+        var geminiKey = (typeof getApiKey === 'function') ? (getApiKey() || '') : (localStorage.getItem('geminiKey') || localStorage.getItem('gemini_api_key') || '');
+
         let currentQuizData = null;
         let quizTypeHistory = []; // 최근 출제 유형 기록
         async function generateQuiz() {
+        geminiKey = (typeof getApiKey === 'function') ? (getApiKey() || '') : (localStorage.getItem('geminiKey') || localStorage.getItem('gemini_api_key') || '');
             const ck = getApiKey();
             if (!ck) { alert("API Key 설정이 필요합니다."); toggleSettings(); return; }
             const c = document.getElementById('quiz-container'), l = document.getElementById('quiz-loading'), p = document.getElementById('quiz-placeholder'), b = document.getElementById('btn-quiz-gen'), f = document.getElementById('quiz-feedback');
@@ -994,7 +993,7 @@ SW 본질적 복잡성
                 } else {
                     prompt = "다음 카테고리에 대한 단답형 퀴즈 1문제를 만드세요.\n카테고리: " + selected.category + "\n관련 키워드: " + selected.keywords + "\n\n규칙:\n- 반드시 위 카테고리와 키워드에 직접 관련된 문제를 출제하세요.\n- 정답은 1~2단어 또는 짧은 구문이어야 합니다.\n- 한국어로 작성하세요.\n\nOutput JSON: {\"type\":\"short\",\"question\":\"...\",\"correctAnswer\":\"...\",\"explanation\":\"...\"}";
                 }
-                const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + ck, {
+                const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + geminiKey, {
                     method:'POST', headers:{'Content-Type':'application/json'},
                     body: JSON.stringify({contents:[{parts:[{text:prompt}]}], generationConfig:{responseMimeType:"application/json"}})
                 });
@@ -1051,6 +1050,7 @@ SW 본질적 복잡성
             showFeedback(ic, currentQuizData.explanation);
         }
         async function checkShortAnswer() {
+        geminiKey = (typeof getApiKey === 'function') ? (getApiKey() || '') : (localStorage.getItem('geminiKey') || localStorage.getItem('gemini_api_key') || '');
             if (!currentQuizData) return;
             const ua = document.getElementById('quiz-answer-input').value.trim();
             if (!ua) { alert("정답을 입력해주세요."); return; }
@@ -1069,7 +1069,7 @@ SW 본질적 복잡성
                     + "- 띄어쓰기/조사 차이는 무시\n"
                     + "- 의미가 명확히 다르면 오답\n\n"
                     + "Output JSON: {\"correct\":true/false,\"reason\":\"판정 이유를 한국어로 간단히 설명\"}";
-                const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + ck, {
+                const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + geminiKey, {
                     method:'POST', headers:{'Content-Type':'application/json'},
                     body: JSON.stringify({contents:[{parts:[{text:gradingPrompt}]}], generationConfig:{responseMimeType:"application/json"}})
                 });

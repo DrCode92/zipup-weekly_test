@@ -647,10 +647,14 @@ const HTML_BASE_DIR = (() => {
 })();
 
 // 파일명 변환: 1W_01_01_xxx_학습페이지.html → 1W_01_01.html
+// file:// 프로토콜에서 localStorage 격리 대응: API 키를 URL 파라미터로 전달
 function getTopicUrl(t) {
     if (!t.file) return null;
     const m = t.file.match(/^(\d+W_\d+_\d+)/);
-    return HTML_BASE_DIR + (m ? m[1] + '.html' : t.file);
+    var url = HTML_BASE_DIR + (m ? m[1] + '.html' : t.file);
+    var k = getApiKey();
+    if (k) url += '?key=' + encodeURIComponent(k);
+    return url;
 }
 
 // ══════════ INIT ══════════
@@ -843,12 +847,12 @@ function getScopedTopics() {
 }
 
 // ══════════ GEMINI API ══════════
-function getApiKey() { return localStorage.getItem('gemini_api_key') || ''; }
+function getApiKey() { return localStorage.getItem('gemini_api_key') || localStorage.getItem('geminiKey') || ''; }
 function saveApiKey() {
     const key = document.getElementById('apiKeyInput').value.trim();
-    if (key) { localStorage.setItem('gemini_api_key', key); updateApiStatus(); toggleApiModal(); }
+    if (key) { localStorage.setItem('gemini_api_key', key); localStorage.setItem('geminiKey', key); updateApiStatus(); toggleApiModal(); }
 }
-function clearApiKey() { localStorage.removeItem('gemini_api_key'); updateApiStatus(); document.getElementById('apiKeyInput').value = ''; }
+function clearApiKey() { localStorage.removeItem('gemini_api_key'); localStorage.removeItem('geminiKey'); updateApiStatus(); document.getElementById('apiKeyInput').value = ''; }
 function updateApiStatus() {
     const el = document.getElementById('apiStatus');
     el.textContent = getApiKey() ? '✅ API Key가 설정되어 있습니다.' : '⚠️ API Key가 설정되지 않았습니다.';
@@ -862,7 +866,7 @@ function toggleApiModal() {
     }
 }
 
-// Gemini API 호출 — responseMimeType: application/json 으로 순수 JSON 강제
+// Gemini API 호출 — JSON 응답 강제 + 방어적 파싱
 // 429 발생 시 최대 3회 재시도 (exponential backoff: 2s → 4s → 8s)
 async function callGeminiJSON(prompt, _retries) {
     var maxRetries = 3;
@@ -878,14 +882,35 @@ async function callGeminiJSON(prompt, _retries) {
           })
         }
     );
-    if (r.status === 429 && attempt < maxRetries) {
+    if ((r.status === 429 || r.status === 503) && attempt < maxRetries) {
         var wait = Math.pow(2, attempt + 1) * 1000; // 2s, 4s, 8s
         await new Promise(function(res){ setTimeout(res, wait); });
         return callGeminiJSON(prompt, attempt + 1);
     }
-    if (!r.ok) throw new Error('API 오류: ' + r.status);
+    if (!r.ok) {
+        var errBody = '';
+        try { errBody = await r.text(); } catch(e){}
+        console.error('Gemini API Error ' + r.status + ':', errBody);
+        throw new Error('API 오류 ' + r.status + ': ' + (errBody ? errBody.substring(0, 200) : '응답 없음'));
+    }
     var d = await r.json();
-    var t = d.candidates[0].content.parts[0].text;
+    console.log('Gemini 응답 전체:', JSON.stringify(d).substring(0, 500));
+    // 방어적 파싱: candidates 존재 확인
+    if (!d.candidates || !d.candidates[0]) {
+        var reason = (d.promptFeedback && d.promptFeedback.blockReason) || 'unknown';
+        console.error('No candidates:', JSON.stringify(d));
+        throw new Error('API 응답에 candidates가 없습니다 (reason: ' + reason + ')');
+    }
+    if (!d.candidates[0].content || !d.candidates[0].content.parts) {
+        console.error('No content parts:', JSON.stringify(d.candidates[0]));
+        throw new Error('API 응답에 content가 없습니다 (finishReason: ' + (d.candidates[0].finishReason || 'unknown') + ')');
+    }
+    var parts = d.candidates[0].content.parts;
+    var t = '';
+    for (var pi = parts.length - 1; pi >= 0; pi--) {
+        if (parts[pi].text) { t = parts[pi].text; break; }
+    }
+    if (!t) throw new Error('API 응답에 텍스트가 없습니다');
     t = t.replace(/```json\s*/gi,'').replace(/```\s*/g,'').trim();
     var depth=0,start=-1,end=-1;
     for(var i=0;i<t.length;i++){

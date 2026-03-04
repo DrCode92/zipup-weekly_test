@@ -848,15 +848,14 @@ function toggleStrategy(el){
 }
 
 // ── API Key 관리 ──
-function getApiKey(){
-    var k=new URLSearchParams(window.location.search).get('key');
-    if(k)return k;
-    return localStorage.getItem('gemini_api_key')||'';
+function getApiKey() {
+    var urlKey = new URLSearchParams(window.location.search).get('key');
+    if (urlKey) { localStorage.setItem('gemini_api_key', urlKey); localStorage.setItem('geminiKey', urlKey); return urlKey; }
+    return localStorage.getItem('gemini_api_key') || localStorage.getItem('geminiKey') || '';
 }
-function saveApiKey(){
-    var k=document.getElementById('api-key-input').value.trim();
-    if(k){localStorage.setItem('gemini_api_key',k);alert('API Key가 저장되었습니다.');toggleSettings();}
-    else{alert('API Key를 입력해주세요.');}
+function saveApiKey() {
+    var k = document.getElementById('api-key-input').value.trim();
+    if (k) { localStorage.setItem('gemini_api_key', k); localStorage.setItem('geminiKey', k); window.GEMINI_API_KEY = k; alert('API Key가 저장되었습니다.'); toggleSettings(); }
 }
 function toggleSettings(){
     var m=document.getElementById('settings-modal');
@@ -879,7 +878,7 @@ async function sendChat(){
     box.innerHTML+='<div id="typing" class="chat-msg ai"><div class="typing-indicator"><span></span><span></span><span></span></div></div>';
     box.scrollTop=box.scrollHeight;
     try{
-        var r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key='+key,{
+        var r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key='+geminiKey,{
             method:'POST',headers:{'Content-Type':'application/json'},
             body:JSON.stringify({contents:[{role:'user',parts:[{text:'당신은 정보관리기술사 시험 멘토입니다. "플랫폼 엔지니어링(Platform Engineering)" 관련 질문에 전문적이고 명쾌하게 답변해주세요. 300자 이내로 핵심만 요약.\n\n질문: '+msg}]}]})
         });
@@ -913,7 +912,7 @@ var currentQuizData=null;
 
     // ── 퀴즈 ──
     // Bridge: connect quiz JS to existing API key management
-    var geminiKey = (typeof getApiKey === 'function') ? (getApiKey() || '') : '';
+    var geminiKey = (typeof getApiKey === 'function') ? (getApiKey() || '') : (localStorage.getItem('geminiKey') || localStorage.getItem('gemini_api_key') || '');
 
     var quizTypeHistory = [];
     var currentQuizData = null;

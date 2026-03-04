@@ -898,13 +898,16 @@ function navTo(id){
 }
 
 // ── API Key 관리 ──
-function getApiKey(){
-    var k=localStorage.getItem('gemini_api_key');
-    if(!k){var u=new URLSearchParams(window.location.search);k=u.get('key');}
-    return k;
+function getApiKey() {
+    var urlKey = new URLSearchParams(window.location.search).get('key');
+    if (urlKey) { localStorage.setItem('gemini_api_key', urlKey); localStorage.setItem('geminiKey', urlKey); return urlKey; }
+    return localStorage.getItem('gemini_api_key') || localStorage.getItem('geminiKey') || '';
 }
 function toggleSettings(){document.getElementById('settings-modal').classList.toggle('hidden');}
-function saveApiKey(){var k=document.getElementById('api-key-input').value.trim();if(k){localStorage.setItem('gemini_api_key',k);toggleSettings();alert('API Key가 저장되었습니다.');}else{alert('API Key를 입력해주세요.');}}
+function saveApiKey() {
+    var k = document.getElementById('api-key-input').value.trim();
+    if (k) { localStorage.setItem('gemini_api_key', k); localStorage.setItem('geminiKey', k); window.GEMINI_API_KEY = k; alert('API Key가 저장되었습니다.'); toggleSettings(); }
+}
 
 // ── 채팅 ──
 function toggleChat(){var s=document.getElementById('chat-sidebar');s.classList.toggle('closed');s.classList.toggle('open');}
@@ -917,7 +920,7 @@ function sendChatMessage(){
     if(!key){box.innerHTML+='<div class="chat-msg ai">⚠️ API Key가 설정되지 않았습니다. 상단의 🔑 API 버튼을 눌러 설정해주세요.</div>';toggleSettings();return;}
     box.innerHTML+='<div id="typing-ind" class="chat-msg ai"><div class="typing-indicator"><span></span><span></span><span></span></div></div>';
     box.scrollTop=box.scrollHeight;
-    fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key='+key,{
+    fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key='+geminiKey,{
         method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({contents:[{parts:[{text:"당신은 정보관리기술사 시험 멘토입니다. '하이퍼바이저 유형' 관련 질문에 전문적이고 명쾌하게 답변해주세요. 300자 이내로 핵심만 요약. 질문: "+msg}]}]})
     }).then(function(r){return r.json();}).then(function(d){

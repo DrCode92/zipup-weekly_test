@@ -1019,17 +1019,18 @@ body{font-family:'Noto Sans KR',sans-serif}
 
     // ── API Key ──
     function getApiKey() {
-        return localStorage.getItem('geminiKey') || localStorage.getItem('gemini_api_key') || new URLSearchParams(window.location.search).get('key') || '';
-    }
+    var urlKey = new URLSearchParams(window.location.search).get('key');
+    if (urlKey) { localStorage.setItem('gemini_api_key', urlKey); localStorage.setItem('geminiKey', urlKey); return urlKey; }
+    return localStorage.getItem('gemini_api_key') || localStorage.getItem('geminiKey') || '';
+}
     function toggleSettings() {
         var m = document.getElementById('settingsModal'); m.classList.toggle('hidden');
         if (!m.classList.contains('hidden')) { document.getElementById('apiKeyInput').value = getApiKey(); }
     }
     function saveApiKey() {
-        var k = document.getElementById('apiKeyInput').value.trim();
-        if(k) { localStorage.setItem('geminiKey', k); localStorage.setItem('gemini_api_key', k); }
-        toggleSettings();
-    }
+    var k = document.getElementById('apiKeyInput').value.trim();
+    if (k) { localStorage.setItem('gemini_api_key', k); localStorage.setItem('geminiKey', k); window.GEMINI_API_KEY = k; alert('API Key가 저장되었습니다.'); toggleSettings(); }
+}
 
     // ── AI 튜터 채팅 ──
     function toggleChat() { document.getElementById('chatSidebar').classList.toggle('open'); }
@@ -1045,7 +1046,7 @@ body{font-family:'Noto Sans KR',sans-serif}
         container.scrollTop = container.scrollHeight;
         try {
             var sysPrompt = "당신은 정보관리기술사 시험 멘토입니다. '획득가치관리(EVM), 성과지표 분석, 프로젝트 상태 진단' 관련 질문에 전문적이고 명쾌하게 답변해주세요. 300자 이내로 핵심만 요약.";
-            var r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key='+key,{
+            var r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key='+geminiKey,{
                 method:'POST',headers:{'Content-Type':'application/json'},
                 body:JSON.stringify({contents:[{parts:[{text:sysPrompt+"\n\nUser: "+msg}]}]})
             });

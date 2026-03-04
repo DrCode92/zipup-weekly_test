@@ -847,7 +847,7 @@ ON EMPLOYEE(NAME) TABLESPACE INDEX_TBS;</code></pre>
 
     <script>
     // ── API Key 관리 ──
-    let geminiKey = localStorage.getItem('geminiKey') || new URLSearchParams(window.location.search).get('key') || '';
+    let geminiKey = localStorage.getItem('geminiKey') || localStorage.getItem('gemini_api_key') || new URLSearchParams(window.location.search).get('key') || '';
     function toggleSettings() {
         var m = document.getElementById('settings-modal');
         m.classList.toggle('hidden');
@@ -855,7 +855,7 @@ ON EMPLOYEE(NAME) TABLESPACE INDEX_TBS;</code></pre>
     }
     function saveSettings() {
         geminiKey = document.getElementById('apiKeyInput').value.trim();
-        if (geminiKey) localStorage.setItem('geminiKey', geminiKey);
+        if (geminiKey) localStorage.setItem('gemini_api_key', geminiKey); localStorage.setItem('geminiKey', geminiKey);
         toggleSettings();
     }
 
@@ -1023,6 +1023,7 @@ ON EMPLOYEE(NAME) TABLESPACE INDEX_TBS;</code></pre>
         { category: "현대적 발전", keywords: "데이터 레이크하우스, dbt, Delta Lake, NoSQL, Schema-on-Read, Codd 12규칙" }
     ];
     async function generateQuiz() {
+        geminiKey = (typeof getApiKey === 'function') ? (getApiKey() || '') : (localStorage.getItem('geminiKey') || localStorage.getItem('gemini_api_key') || '');
         if (!geminiKey) { alert('API Key를 먼저 설정해주세요.'); toggleSettings(); return; }
         var btn = document.getElementById('btn-quiz-gen');
         btn.disabled = true; btn.innerHTML = '<span>생성 중...</span>';
@@ -1107,6 +1108,7 @@ ON EMPLOYEE(NAME) TABLESPACE INDEX_TBS;</code></pre>
         showQuizFeedback(correct, currentQuizData.options[currentQuizData.correctIndex], currentQuizData.explanation);
     }
     async function checkShortAnswer() {
+        geminiKey = (typeof getApiKey === 'function') ? (getApiKey() || '') : (localStorage.getItem('geminiKey') || localStorage.getItem('gemini_api_key') || '');
         var ans = document.getElementById('quiz-answer-input').value.trim();
         if (!ans) { alert('답을 입력해주세요.'); return; }
         var btn = document.getElementById('btn-short-submit');

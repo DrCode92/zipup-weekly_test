@@ -598,14 +598,14 @@ function toggleSettings(){
     var m=document.getElementById('settings-modal');m.classList.toggle('hidden');
     var k=localStorage.getItem('gemini_api_key');if(k)document.getElementById('api-key-input').value=k;
 }
-function saveApiKey(){
-    var k=document.getElementById('api-key-input').value.trim();
-    if(k){localStorage.setItem('gemini_api_key',k);toggleSettings();alert('API Key가 저장되었습니다.');}
-    else{alert('API Key를 입력해주세요.');}
+function saveApiKey() {
+    var k = document.getElementById('api-key-input').value.trim();
+    if (k) { localStorage.setItem('gemini_api_key', k); localStorage.setItem('geminiKey', k); window.GEMINI_API_KEY = k; alert('API Key가 저장되었습니다.'); toggleSettings(); }
 }
-function getApiKey(){
-    var k=localStorage.getItem('gemini_api_key');
-    if(!k){toggleSettings();return null;}return k;
+function getApiKey() {
+    var urlKey = new URLSearchParams(window.location.search).get('key');
+    if (urlKey) { localStorage.setItem('gemini_api_key', urlKey); localStorage.setItem('geminiKey', urlKey); return urlKey; }
+    return localStorage.getItem('gemini_api_key') || localStorage.getItem('geminiKey') || '';
 }
 
 // ─── 채팅 ───
@@ -617,7 +617,7 @@ function sendChat(){
     box.innerHTML+='<div class="chat-msg user">'+msg+'</div>';
     box.innerHTML+='<div id="typing" class="chat-msg ai"><div class="typing-indicator"><span></span><span></span><span></span></div></div>';
     box.scrollTop=box.scrollHeight;
-    fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key='+key,{
+    fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key='+geminiKey,{
         method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({contents:[{role:'user',parts:[{text:'당신은 정보관리기술사 시험 멘토입니다. "애자일 선언문과 4가지 핵심 가치" 관련 질문에 전문적이고 명쾌하게 답변해주세요. 300자 이내로 핵심만 요약.\n\n질문: '+msg}]}]})
     }).then(function(r){return r.json();}).then(function(d){
@@ -663,7 +663,7 @@ var quizTopics=[
 
     // ── 퀴즈 ──
     // Bridge: connect quiz JS to existing API key management
-    var geminiKey = (typeof getApiKey === 'function') ? (getApiKey() || '') : '';
+    var geminiKey = (typeof getApiKey === 'function') ? (getApiKey() || '') : (localStorage.getItem('geminiKey') || localStorage.getItem('gemini_api_key') || '');
 
     var quizTypeHistory = [];
     var currentQuizData = null;

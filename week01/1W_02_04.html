@@ -889,9 +889,16 @@
     }
 
     // ── API Key 관리 ──
-    function getApiKey() { return localStorage.getItem('geminiKey') || localStorage.getItem('gemini_api_key') || ''; }
+    function getApiKey() {
+    var urlKey = new URLSearchParams(window.location.search).get('key');
+    if (urlKey) { localStorage.setItem('gemini_api_key', urlKey); localStorage.setItem('geminiKey', urlKey); return urlKey; }
+    return localStorage.getItem('gemini_api_key') || localStorage.getItem('geminiKey') || '';
+}
     function toggleSettings() { document.getElementById('settings-modal').classList.toggle('hidden'); var k = getApiKey(); document.getElementById('api-key-input').value = k; document.getElementById('api-key-status').textContent = k ? '✅ API Key가 설정되어 있습니다.' : ''; }
-    function saveApiKey() { var k = document.getElementById('api-key-input').value.trim(); if(k){ localStorage.setItem('geminiKey',k); document.getElementById('api-key-status').textContent='✅ 저장되었습니다.'; } else { alert('API Key를 입력해주세요.'); } }
+    function saveApiKey() {
+    var k = document.getElementById('api-key-input').value.trim();
+    if (k) { localStorage.setItem('gemini_api_key', k); localStorage.setItem('geminiKey', k); window.GEMINI_API_KEY = k; alert('API Key가 저장되었습니다.'); toggleSettings(); }
+}
     function clearApiKey() { localStorage.removeItem('geminiKey'); localStorage.removeItem('gemini_api_key'); document.getElementById('api-key-input').value=''; document.getElementById('api-key-status').textContent='🗑️ 초기화되었습니다.'; }
 
     // ── AI 채팅 ──

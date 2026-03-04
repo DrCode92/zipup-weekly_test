@@ -638,21 +638,17 @@ const SUBJECT_CONFIG = {
 };
 
 // ══════════ PATH CONFIG ══════════
-// 경로 자동 감지: 로컬(week01/html/) vs GitHub Pages(같은 폴더)
+// 로컬·GitHub 동일: 대시보드와 토픽 HTML이 같은 폴더, 간소화 파일명(NW_XX_XX.html)
 // URL 파라미터 ?base=xxx 로 수동 오버라이드 가능
-const IS_LOCAL = location.protocol === 'file:';
 const HTML_BASE_DIR = (() => {
     const params = new URLSearchParams(location.search);
     if (params.has('base')) return params.get('base').replace(/\/?$/, '/');
-    if (IS_LOCAL) return 'week01/html/';
-    return '';  // GitHub Pages: 대시보드와 토픽 HTML이 같은 폴더
+    return '';  // 대시보드와 토픽 HTML이 같은 폴더
 })();
 
-// GitHub 파일명 변환: 1W_01_01_xxx_학습페이지.html → 1W_01_01.html
+// 파일명 변환: 1W_01_01_xxx_학습페이지.html → 1W_01_01.html
 function getTopicUrl(t) {
     if (!t.file) return null;
-    if (IS_LOCAL) return HTML_BASE_DIR + t.file;
-    // GitHub: ID 기반 간소화 파일명 (NW_XX_XX.html)
     const m = t.file.match(/^(\d+W_\d+_\d+)/);
     return HTML_BASE_DIR + (m ? m[1] + '.html' : t.file);
 }
@@ -867,11 +863,14 @@ function toggleApiModal() {
 }
 
 // Gemini API 호출 — responseMimeType: application/json 으로 순수 JSON 강제
-async function callGeminiJSON(prompt) {
+// 429 발생 시 최대 3회 재시도 (exponential backoff: 2s → 4s → 8s)
+async function callGeminiJSON(prompt, _retries) {
+    var maxRetries = 3;
+    var attempt = _retries || 0;
     var key = getApiKey();
     if (!key) { toggleApiModal(); throw new Error('API Key 필요'); }
     var r = await fetch(
-        'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=' + key,
+        'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + key,
         { method:'POST', headers:{'Content-Type':'application/json'},
           body: JSON.stringify({
               contents:[{parts:[{text:prompt}]}],
@@ -879,6 +878,11 @@ async function callGeminiJSON(prompt) {
           })
         }
     );
+    if (r.status === 429 && attempt < maxRetries) {
+        var wait = Math.pow(2, attempt + 1) * 1000; // 2s, 4s, 8s
+        await new Promise(function(res){ setTimeout(res, wait); });
+        return callGeminiJSON(prompt, attempt + 1);
+    }
     if (!r.ok) throw new Error('API 오류: ' + r.status);
     var d = await r.json();
     var t = d.candidates[0].content.parts[0].text;
@@ -897,11 +901,14 @@ async function callGeminiJSON(prompt) {
 // ══════════ QUIZ GENERATION ══════════
 var quizTypeHistory = [];
 var currentQuizData = null;
+var isQuizGenerating = false; // 버튼 연타 방지 플래그
 
 async function generateQuiz(type) {
+    if (isQuizGenerating) return; // 이미 생성 중이면 무시
     var area = document.getElementById('quizArea');
     var scoped = getScopedTopics();
     if (scoped.length === 0) { alert('선택한 범위에 토픽이 없습니다.'); return; }
+    isQuizGenerating = true;
 
     // 중복 방지 랜덤 토픽 선택
     var available = scoped.filter(function(t){ return !usedTopicIds.has(t.id); });
@@ -945,6 +952,8 @@ async function generateQuiz(type) {
             + '<div class="text-2xl mb-2">⚠️</div>'
             + '<p class="text-sm text-red-600 font-medium">' + err.message + '</p>'
             + '<p class="text-xs text-gray-400 mt-2">API Key를 확인하거나 다시 시도해주세요</p></div>';
+    } finally {
+        isQuizGenerating = false;
     }
 }
 

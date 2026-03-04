@@ -785,7 +785,9 @@ body{font-family:'Noto Sans KR',sans-serif}
 
 <script>
 // ── 멘토 모드 ──
-const isMentorMode = new URLSearchParams(window.location.search).get('mentor') === 'true';
+const isMentorMode = new URLSearchParams(window.location.search).get('mentor') === 'true'
+            || window.location.hash.includes('mentor')
+            || window.location.href.includes('mentor=true');
 const sections = isMentorMode
     ? ['overview','idpcore','design','textbook','script','quiz']
     : ['overview','idpcore','design','textbook','quiz'];
@@ -877,7 +879,7 @@ async function sendChat(){
     box.innerHTML+='<div id="typing" class="chat-msg ai"><div class="typing-indicator"><span></span><span></span><span></span></div></div>';
     box.scrollTop=box.scrollHeight;
     try{
-        var r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key='+key,{
+        var r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key='+key,{
             method:'POST',headers:{'Content-Type':'application/json'},
             body:JSON.stringify({contents:[{role:'user',parts:[{text:'당신은 정보관리기술사 시험 멘토입니다. "플랫폼 엔지니어링(Platform Engineering)" 관련 질문에 전문적이고 명쾌하게 답변해주세요. 300자 이내로 핵심만 요약.\n\n질문: '+msg}]}]})
         });
@@ -948,7 +950,7 @@ var currentQuizData=null;
             + "JSON 형식으로 응답: " + format;
         try {
             var r = await fetch(
-                'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=' + geminiKey,
+                'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + geminiKey,
                 { method:'POST', headers:{'Content-Type':'application/json'},
                   body: JSON.stringify({ contents:[{parts:[{text:prompt}]}], generationConfig:{responseMimeType:"application/json"} })
                 }
@@ -1022,7 +1024,7 @@ var currentQuizData=null;
                 + "판정 기준:\n- 핵심 의미가 동일하면 정답\n- 약어/풀네임 모두 인정\n- 영어/한글 혼용 인정\n- 띄어쓰기/조사 차이는 무시\n- 의미가 명확히 다르면 오답\n\n"
                 + "Output JSON: {\"correct\":true/false,\"reason\":\"판정 이유\"}";
             var r = await fetch(
-                'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=' + geminiKey,
+                'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + geminiKey,
                 { method:'POST', headers:{'Content-Type':'application/json'},
                   body: JSON.stringify({ contents:[{parts:[{text:gradingPrompt}]}], generationConfig:{responseMimeType:"application/json"} })
                 }

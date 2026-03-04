@@ -670,7 +670,7 @@ if(ctx){new Chart(ctx,{type:'radar',data:{labels:['메모리 용량','대역폭'
 </div>
 </footer>
 <script>
-var isMentorMode=new URLSearchParams(window.location.search).get('mentor')==='true';
+var isMentorMode = new URLSearchParams(window.location.search).get('mentor') === 'true' || window.location.hash.includes('mentor') || window.location.href.includes('mentor=true');
 if(isMentorMode){document.getElementById('nav-script').classList.remove('hidden');}
 var sections=isMentorMode?['overview','protocols','evolution','textbook','script','quiz']:['overview','protocols','evolution','textbook','quiz'];
 function navTo(id){document.querySelectorAll('.nav-item').forEach(function(el){el.classList.remove('active','text-indigo-600');});document.getElementById('nav-'+id).classList.add('active','text-indigo-600');sections.forEach(function(s){document.getElementById(s).classList.add('hidden');});document.getElementById(id).classList.remove('hidden');window.scrollTo({top:0,behavior:'smooth'});}
@@ -688,7 +688,7 @@ function getApiKey(){var k=localStorage.getItem('gemini_api_key');if(!k){k=new U
 function saveApiKey(){var k=document.getElementById('api-key-input').value.trim();if(k){localStorage.setItem('gemini_api_key',k);toggleSettings();alert('API Key가 저장되었습니다!');}else{alert('API Key를 입력해주세요.');}}
 function toggleSettings(){var m=document.getElementById('settings-modal');m.classList.toggle('hidden');var k=localStorage.getItem('gemini_api_key');if(k){document.getElementById('api-key-input').value=k;}}
 function toggleChat(){var sb=document.getElementById('chat-sidebar');sb.classList.toggle('open');sb.classList.toggle('closed');}
-async function sendChat(){var input=document.getElementById('chat-input');var msg=input.value.trim();if(!msg)return;input.value='';var box=document.getElementById('chat-messages');box.innerHTML+='<div class="chat-msg user">'+msg+'</div>';box.innerHTML+='<div id="typing" class="chat-msg ai"><div class="typing-indicator"><span></span><span></span><span></span></div></div>';box.scrollTop=box.scrollHeight;var key=getApiKey();if(!key){document.getElementById('typing').remove();box.innerHTML+='<div class="chat-msg ai">⚠️ API Key가 설정되지 않았습니다. 🔑 API 버튼을 클릭하여 설정해주세요.</div>';box.scrollTop=box.scrollHeight;return;}try{var r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key='+key,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{role:'user',parts:[{text:'당신은 정보관리기술사 시험 멘토입니다. "CXL(Compute Express Link) 3.0" 관련 질문에 전문적이고 명쾌하게 답변해주세요. 300자 이내로 핵심만 요약.\n\n질문: '+msg}]}]})});var d=await r.json();document.getElementById('typing').remove();var answer=d.candidates[0].content.parts[0].text;if(typeof marked!=='undefined'){answer=marked.parse(answer);}box.innerHTML+='<div class="chat-msg ai">'+answer+'</div>';}catch(e){document.getElementById('typing').remove();box.innerHTML+='<div class="chat-msg ai">⚠️ 오류: '+e.message+'</div>';}box.scrollTop=box.scrollHeight;}
+async function sendChat(){var input=document.getElementById('chat-input');var msg=input.value.trim();if(!msg)return;input.value='';var box=document.getElementById('chat-messages');box.innerHTML+='<div class="chat-msg user">'+msg+'</div>';box.innerHTML+='<div id="typing" class="chat-msg ai"><div class="typing-indicator"><span></span><span></span><span></span></div></div>';box.scrollTop=box.scrollHeight;var key=getApiKey();if(!key){document.getElementById('typing').remove();box.innerHTML+='<div class="chat-msg ai">⚠️ API Key가 설정되지 않았습니다. 🔑 API 버튼을 클릭하여 설정해주세요.</div>';box.scrollTop=box.scrollHeight;return;}try{var r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key='+key,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{role:'user',parts:[{text:'당신은 정보관리기술사 시험 멘토입니다. "CXL(Compute Express Link) 3.0" 관련 질문에 전문적이고 명쾌하게 답변해주세요. 300자 이내로 핵심만 요약.\n\n질문: '+msg}]}]})});var d=await r.json();document.getElementById('typing').remove();var answer=d.candidates[0].content.parts[0].text;if(typeof marked!=='undefined'){answer=marked.parse(answer);}box.innerHTML+='<div class="chat-msg ai">'+answer+'</div>';}catch(e){document.getElementById('typing').remove();box.innerHTML+='<div class="chat-msg ai">⚠️ 오류: '+e.message+'</div>';}box.scrollTop=box.scrollHeight;}
 
     (function(){var p=new URLSearchParams(window.location.search);var k=p.get('key');if(k){localStorage.setItem('gemini_api_key',k);}})();
 
@@ -731,7 +731,7 @@ async function sendChat(){var input=document.getElementById('chat-input');var ms
             + "JSON 형식으로 응답: " + format;
         try {
             var r = await fetch(
-                'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=' + geminiKey,
+                'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + geminiKey,
                 { method:'POST', headers:{'Content-Type':'application/json'},
                   body: JSON.stringify({ contents:[{parts:[{text:prompt}]}], generationConfig:{responseMimeType:"application/json"} })
                 }
@@ -805,7 +805,7 @@ async function sendChat(){var input=document.getElementById('chat-input');var ms
                 + "판정 기준:\n- 핵심 의미가 동일하면 정답\n- 약어/풀네임 모두 인정\n- 영어/한글 혼용 인정\n- 띄어쓰기/조사 차이는 무시\n- 의미가 명확히 다르면 오답\n\n"
                 + "Output JSON: {\"correct\":true/false,\"reason\":\"판정 이유\"}";
             var r = await fetch(
-                'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=' + geminiKey,
+                'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + geminiKey,
                 { method:'POST', headers:{'Content-Type':'application/json'},
                   body: JSON.stringify({ contents:[{parts:[{text:gradingPrompt}]}], generationConfig:{responseMimeType:"application/json"} })
                 }

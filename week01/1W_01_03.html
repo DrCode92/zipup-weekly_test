@@ -874,7 +874,7 @@ P₁ Running → 인터럽트 → P₁ PCB 저장 → 스케줄러
 
 <script>
 // ─── 멘토 모드 ───
-var isMentorMode = new URLSearchParams(window.location.search).get('mentor') === 'true';
+var isMentorMode = new URLSearchParams(window.location.search).get('mentor') === 'true' || window.location.hash.includes('mentor') || window.location.href.includes('mentor=true');
 if (isMentorMode) {
     document.getElementById('nav-script').classList.remove('hidden');
 }
@@ -994,7 +994,7 @@ async function sendChat() {
     showTyping();
     try {
         var r = await fetch(
-            'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=' + geminiKey,
+            'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + geminiKey,
             { method:'POST', headers:{'Content-Type':'application/json'},
               body: JSON.stringify({
                   contents:[{parts:[{text:"\ub2f9\uc2e0\uc740 \uc815\ubcf4\uad00\ub9ac\uae30\uc220\uc0ac \uc2dc\ud5d8 \uba58\ud1a0\uc785\ub2c8\ub2e4. '\uc778\ud130\ub7fd\ud2b8(Interrupt) \ucc98\ub9ac \uba54\ucee4\ub2c8\uc998\uacfc PCB' \uad00\ub828 \uc9c8\ubb38\uc5d0 \uc804\ubb38\uc801\uc774\uace0 \uba85\ucf8c\ud558\uac8c \ub2f5\ubcc0\ud574\uc8fc\uc138\uc694. 300\uc790 \uc774\ub0b4\ub85c \ud575\uc2ec\ub9cc \uc694\uc57d.\n\n\uc9c8\ubb38: " + msg}]}]
@@ -1053,7 +1053,7 @@ async function generateQuiz() {
 
     try {
         var r = await fetch(
-            'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=' + geminiKey,
+            'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + geminiKey,
             { method:'POST', headers:{'Content-Type':'application/json'},
               body: JSON.stringify({
                   contents:[{parts:[{text:prompt}]}],
@@ -1145,7 +1145,7 @@ async function checkShortAnswer() {
             + "\ud310\uc815 \uae30\uc900:\n- \ud575\uc2ec \uc758\ubbf8\uac00 \ub3d9\uc77c\ud558\uba74 \uc815\ub2f5\n- \uc57d\uc5b4/\ud480\ub124\uc784 \ubaa8\ub450 \uc778\uc815\n- \uc601\uc5b4/\ud55c\uae00 \ud63c\uc6a9 \uc778\uc815\n- \ub744\uc5b4\uc4f0\uae30/\uc870\uc0ac \ucc28\uc774\ub294 \ubb34\uc2dc\n- \uc758\ubbf8\uac00 \uba85\ud655\ud788 \ub2e4\ub974\uba74 \uc624\ub2f5\n\n"
             + "Output JSON: {\"correct\":true/false,\"reason\":\"\ud310\uc815 \uc774\uc720\"}";
         var r = await fetch(
-            'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=' + geminiKey,
+            'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + geminiKey,
             { method:'POST', headers:{'Content-Type':'application/json'},
               body: JSON.stringify({
                   contents:[{parts:[{text:gradingPrompt}]}],

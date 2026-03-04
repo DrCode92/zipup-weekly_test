@@ -1018,7 +1018,7 @@
         box.innerHTML+='<div class="chat-msg ai" id="chat-loading"><div class="typing-indicator"><span></span><span></span><span></span></div></div>';
         box.scrollTop=box.scrollHeight;
         try {
-            var r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key='+geminiKey,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:"당신은 정보관리기술사 시험 멘토입니다. '명세 기반 테스트, 구조 기반 커버리지, MC/DC' 관련 질문에 전문적이고 명쾌하게 답변해주세요. 300자 이내로 핵심만 요약.\n\n질문: "+msg}]}],generationConfig:{maxOutputTokens:1024}})});
+            var r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key='+geminiKey,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:"당신은 정보관리기술사 시험 멘토입니다. '명세 기반 테스트, 구조 기반 커버리지, MC/DC' 관련 질문에 전문적이고 명쾌하게 답변해주세요. 300자 이내로 핵심만 요약.\n\n질문: "+msg}]}],generationConfig:{maxOutputTokens:1024}})});
             var d=await r.json(); var t=d.candidates[0].content.parts[0].text;
             var loading=document.getElementById('chat-loading'); if(loading) loading.outerHTML='<div class="chat-msg ai prose">'+marked.parse(t)+'</div>';
         } catch(e) { var loading=document.getElementById('chat-loading'); if(loading) loading.outerHTML='<div class="chat-msg ai text-red-500">오류: '+e.message+'</div>'; }
@@ -1055,7 +1055,7 @@
         var format=isMC?'{"question":"문제","options":["A","B","C","D"],"correctIndex":0,"explanation":"해설"}':'{"question":"문제","correctAnswer":"정답","explanation":"해설"}';
         var prompt="다음 카테고리에 대한 "+quizType+" 퀴즈 1문제를 만드세요.\n"+"카테고리: "+selected.category+"\n"+"관련 키워드: "+selected.keywords+"\n"+"규칙: 반드시 위 카테고리와 키워드에 직접 관련된 문제를 출제하세요.\n"+"JSON 형식으로 응답: "+format;
         try {
-            var r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key='+geminiKey,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{responseMimeType:"application/json"}})});
+            var r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key='+geminiKey,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{responseMimeType:"application/json"}})});
             var d=await r.json(); var t=d.candidates[0].content.parts[0].text;
             t=t.replace(/```json\s*/gi,"").replace(/```\s*/g,"").trim();
             var depth=0,start=-1,end=-1;
@@ -1095,7 +1095,7 @@
         var btn=document.getElementById('btn-short-submit'); btn.disabled=true; btn.textContent='채점 중...';
         try {
             var gradingPrompt="당신은 정보관리기술사 시험 채점관입니다. 아래 문제에 대해 사용자의 답안이 정답으로 인정될 수 있는지 판정하세요.\n\n"+"문제: "+currentQuizData.question+"\n"+"모범 정답: "+currentQuizData.correctAnswer+"\n"+"사용자 답안: "+ans+"\n\n"+"판정 기준:\n- 핵심 의미가 동일하면 정답\n- 약어/풀네임 모두 인정\n- 영어/한글 혼용 인정\n- 띄어쓰기/조사 차이는 무시\n- 의미가 명확히 다르면 오답\n\n"+"Output JSON: {\"correct\":true/false,\"reason\":\"판정 이유\"}";
-            var r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key='+geminiKey,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:gradingPrompt}]}],generationConfig:{responseMimeType:"application/json"}})});
+            var r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key='+geminiKey,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:gradingPrompt}]}],generationConfig:{responseMimeType:"application/json"}})});
             var d=await r.json(); var gt=d.candidates[0].content.parts[0].text;
             gt=gt.replace(/```json\s*/gi,"").replace(/```\s*/g,"").trim();
             var gd=0,gs=-1,ge=-1;for(var i=0;i<gt.length;i++){if(gt[i]==='{'){if(gd===0)gs=i;gd++;}else if(gt[i]==='}'){gd--;if(gd===0&&gs!==-1){ge=i;break;}}}

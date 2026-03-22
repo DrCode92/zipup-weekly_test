@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>ZIP-UP 5주차 주간퀴즈 워밍업</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Malgun Gothic','Apple SD Gothic Neo','Segoe UI',sans-serif;background:#f4f6fa;color:#1e293b;min-height:100vh}
+
+/* Header */
+.hdr{background:#fff;border-bottom:2px solid #e2e8f0;padding:12px 20px;display:flex;align-items:center;gap:10px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.logo{background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;font-weight:800;font-size:12px;padding:4px 10px;border-radius:5px;letter-spacing:1px;white-space:nowrap}
+.hdr-info{display:flex;flex-direction:column;gap:1px}
+.hdr-t{font-size:14px;font-weight:700;color:#3730a3}
+.hdr-sub{font-size:10px;color:#64748b}
+.hdr-badge{margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.hdr-year{font-size:13px;font-weight:700;color:#64748b}
+.hdr-tag{font-size:9px;background:#eef2ff;color:#4f46e5;padding:2px 7px;border-radius:4px;font-weight:700}
+
+/* Progress */
+.prog-wrap{background:#fff;padding:10px 20px;border-bottom:1px solid #e2e8f0}
+.prog-info{display:flex;justify-content:space-between;font-size:11px;color:#64748b;margin-bottom:5px}
+.prog-bar{height:6px;background:#e2e8f0;border-radius:99px;overflow:hidden}
+.prog-fill{height:100%;background:linear-gradient(90deg,#4f46e5,#7c3aed);border-radius:99px;transition:width .4s}
+
+.con{max-width:700px;margin:0 auto;padding:24px 16px 20px}
+
+/* Home */
+.home-title{text-align:center;margin:0 0 4px;font-size:22px;font-weight:800;color:#3730a3}
+.home-sub{text-align:center;font-size:12px;color:#64748b;margin-bottom:22px;line-height:1.6}
+.warmup-card{background:#fff;border:2px solid #e2e8f0;border-radius:16px;padding:28px 24px;cursor:pointer;transition:all .2s;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.06);max-width:340px;margin:0 auto}
+.warmup-card:hover{border-color:#4f46e5;box-shadow:0 6px 20px rgba(79,70,229,.14);transform:translateY(-3px)}
+.warmup-card.done{border-color:#10b981;background:#f0fdf4}
+.warmup-icon{font-size:36px;margin-bottom:8px}
+.warmup-lbl{font-size:20px;font-weight:800;color:#3730a3;margin-bottom:4px}
+.warmup-card.done .warmup-lbl{color:#059669}
+.warmup-theme{font-size:12px;color:#64748b;margin-bottom:6px;line-height:1.5}
+.warmup-detail{font-size:11px;color:#94a3b8;margin-bottom:14px;line-height:1.5}
+.day-score{font-size:12px;font-weight:700}
+.day-btn{display:inline-block;margin-top:10px;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;border:none;padding:9px 24px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;transition:opacity .2s}
+.day-btn:hover{opacity:.85}
+.warmup-card.done .day-btn{background:linear-gradient(135deg,#059669,#10b981)}
+
+/* Q Card */
+.q-card{background:#fff;border:1px solid #e2e8f0;border-radius:13px;padding:22px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.q-meta{display:flex;gap:7px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
+.tag{font-size:10px;padding:2px 8px;border-radius:99px;font-weight:700}
+.tSE{background:#dbeafe;color:#1d4ed8}
+.tCA{background:#dcfce7;color:#166534}
+.tDB{background:#fee2e2;color:#b91c1c}
+.tDS{background:#fef3c7;color:#92400e}
+.tN{background:#f1f5f9;color:#475569}
+.back-btn{margin-left:auto;background:#fff;border:1px solid #cbd5e1;color:#475569;padding:3px 10px;border-radius:6px;font-size:11px;cursor:pointer;transition:all .15s}
+.back-btn:hover{border-color:#4f46e5;color:#4f46e5}
+.q-text{font-size:14px;line-height:1.85;color:#1e293b;margin-bottom:16px;font-weight:500}
+
+/* Options */
+.opts{display:flex;flex-direction:column;gap:8px}
+.opt{background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:9px;padding:11px 14px;text-align:left;cursor:pointer;color:#334155;font-size:13px;line-height:1.55;transition:all .18s;display:flex;align-items:flex-start;gap:9px}
+.opt:hover:not(.dis){border-color:#4f46e5;background:#eef2ff;color:#1e293b}
+.opt-lbl{font-weight:800;min-width:20px;color:#4f46e5}
+.opt.ok{border-color:#10b981;background:#f0fdf4;color:#065f46}
+.opt.ok .opt-lbl{color:#10b981}
+.opt.ng{border-color:#ef4444;background:#fef2f2;color:#991b1b}
+.opt.ng .opt-lbl{color:#ef4444}
+.opt.rv{border-color:#10b981;background:#f0fdf4;color:#065f46;opacity:.6}
+.opt.dis{cursor:default}
+
+/* Feedback */
+.fb{margin-top:12px;padding:12px 14px;border-radius:9px;font-size:12px;line-height:1.7;display:none}
+.fb.ok{background:#f0fdf4;border:1px solid #86efac;color:#14532d}
+.fb.ng{background:#fef2f2;border:1px solid #fca5a5;color:#7f1d1d}
+.fb-t{font-weight:800;margin-bottom:3px}
+.next-row{text-align:right;margin-top:10px}
+.next-btn{background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;border:none;padding:9px 22px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;display:none;box-shadow:0 2px 8px rgba(79,70,229,.2)}
+.next-btn:hover{opacity:.88}
+
+/* Result */
+.result-card{background:#fff;border:2px solid #c7d2fe;border-radius:16px;padding:36px 24px;text-align:center;box-shadow:0 2px 12px rgba(79,70,229,.08)}
+.r-score{font-size:52px;font-weight:800;background:linear-gradient(135deg,#4f46e5,#7c3aed);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.r-denom{font-size:18px;color:#94a3b8}
+.r-pct{font-size:13px;color:#64748b;margin:5px 0 12px}
+.r-grade{font-size:20px;font-weight:700;margin-bottom:5px;color:#1e293b}
+.r-msg{font-size:13px;color:#64748b;margin-bottom:20px}
+.r-btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.r-btn{border:none;padding:10px 22px;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;transition:opacity .2s}
+.r-btn:hover{opacity:.85}
+.r-btn.primary{background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;box-shadow:0 2px 8px rgba(79,70,229,.2)}
+.r-btn.secondary{background:#f1f5f9;border:1px solid #cbd5e1;color:#475569}
+
+/* Footer */
+.footer{border-top:1px solid #e2e8f0;background:#fff;padding:16px 20px;text-align:center;margin-top:16px}
+.footer-name{font-size:12px;color:#475569;margin-bottom:4px;font-weight:500}
+.footer-copy{font-size:11px;color:#94a3b8}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <span class="logo">ZIP-UP</span>
+  <div class="hdr-info">
+    <span class="hdr-t" id="hdrT">5주차 주간퀴즈 워밍업</span>
+    <span class="hdr-sub">KPC 정보관리기술사 ZIP-UP 심화반</span>
+  </div>
+  <div class="hdr-badge">
+    <span class="hdr-year">2026</span>
+    <span class="hdr-tag">주간퀴즈</span>
+  </div>
+</div>
+
+<div id="progWrap" class="prog-wrap" style="display:none">
+  <div class="prog-info"><span id="progTxt"></span><span id="scoreTxt"></span></div>
+  <div class="prog-bar"><div class="prog-fill" id="progFill"></div></div>
+</div>
+
+<div class="con" id="app"></div>
+
+<div class="footer">
+  <div class="footer-name">박교익PE &nbsp;|&nbsp; 132회 정보관리기술사 &nbsp;|&nbsp; dr.code92@gmail.com</div>
+  <div class="footer-copy">Copyright © KPC 정보관리기술사 ZIP-UP 심화반. All rights reserved.</div>
+</div>
+
+<script>
+const QS=[
+/* ── SE 8문항 ── */
+{a:'SE',t:'형상 관리 (SCM)',q:'소프트웨어 형상 관리(SCM)의 4대 활동에 해당하지 않는 것은?',o:['형상 식별(Identification)','변경 통제(Control)','형상 배포(Deployment)','형상 감사(Audit)'],ans:2,exp:'SCM 4대 활동은 <b>식별(Identification) → 통제(Control) → 상태기록(Status Accounting) → 감사(Audit)</b>입니다. 배포(Deployment)는 형상 관리 활동이 아니라 릴리즈 관리 영역에 해당합니다.'},
+{a:'SE',t:'화이트박스 테스트',q:'화이트박스 테스트의 커버리지 기준 중 강도가 가장 높은 것은?',o:['구문 커버리지(Statement Coverage)','분기 커버리지(Branch Coverage)','조건/결정 커버리지(C/DC)','경로 커버리지(Path Coverage)'],ans:3,exp:'커버리지 강도 순서: <b>구문 < 분기 < 조건/결정 < MC/DC < 경로</b>. 경로 커버리지는 모든 가능한 실행 경로를 테스트하므로 가장 강력하지만, 루프가 있으면 경우의 수가 무한대가 되어 실무 적용이 어렵습니다.'},
+{a:'SE',t:'결함 생명주기',q:'결함 생명주기에서 결함 수정 후 재테스트(Retest)에서 결함이 여전히 존재할 경우 전이되는 상태로 옳은 것은?',o:['Closed','Deferred','Rejected','Reopen'],ans:3,exp:'재테스트에서 결함이 해결되지 않았으면 <b>Reopen</b> 상태로 되돌아가 담당자가 다시 수정합니다. Closed=해결 완료, Deferred=다음 버전으로 이연, Rejected=결함 아님 판정입니다.'},
+{a:'SE',t:'경계값 분석 (BVA)',q:'경계값 분석(BVA)이 효과적인 이유로 가장 적절한 것은?',o:['모든 입력 조합을 테스트하여 완벽한 검증이 가능하다','코드 내부 구조를 직접 분석하여 논리 결함을 찾아낸다','테스트 케이스 수를 최소화하여 비용을 절감한다','프로그래머의 off-by-one 오류가 경계 부근에서 가장 빈번하게 발생하기 때문이다'],ans:3,exp:'BVA는 <b>경계값(최소, 최대)과 그 바로 안팎의 값</b>을 테스트합니다. 조건문 작성 시 ≤와 <를 혼동하는 <b>off-by-one 오류</b>가 경계에서 가장 많이 발생하기 때문입니다.'},
+{a:'SE',t:'McCabe 순환 복잡도',q:'제어 흐름 그래프에서 간선(E)=15, 노드(N)=12일 때 McCabe 순환 복잡도 V(G)의 값은?',o:['5','3','25','7'],ans:0,exp:'<b>V(G) = E − N + 2 = 15 − 12 + 2 = 5.</b> 이 값은 독립 경로 수이자 최소 테스트 케이스 수입니다. 소스 코드 레벨에서는 (분기문 수 + 1)로도 계산할 수 있습니다.'},
+{a:'SE',t:'테스팅 7원칙',q:"ISTQB 테스팅 7원칙 중 '결함은 특정 소수 모듈에 집중되어 발생한다'는 원칙의 명칭으로 옳은 것은?",o:['살충제 패러독스(Pesticide Paradox)','결함 집중(Defect Clustering)','조기 테스팅(Early Testing)','오류 부재의 궤변(Absence-of-errors Fallacy)'],ans:1,exp:'<b>결함 집중(Defect Clustering)</b>은 파레토 법칙(80/20)과 유사하게, 전체 결함의 대부분이 소수 모듈에 집중된다는 원칙입니다. 이를 통해 고위험 모듈을 우선 테스트하는 전략을 수립합니다.'},
+{a:'SE',t:'코드 인스펙션',q:'파간(Fagan) 코드 인스펙션 5단계를 순서대로 올바르게 나열한 것은?',o:['계획 → 준비 → 사전교육 → 인스펙션 회의 → 시정조치','계획 → 사전교육 → 준비 → 인스펙션 회의 → 시정조치','사전교육 → 계획 → 준비 → 인스펙션 회의 → 시정조치','계획 → 사전교육 → 인스펙션 회의 → 준비 → 시정조치'],ans:1,exp:'5단계: <b>계획(Planning) → 사전교육(Overview) → 준비(Preparation) → 인스펙션 회의(Inspection Meeting) → 시정조치(Rework & Follow-up).</b> 사전교육에서 저자가 팀원에게 산출물을 설명합니다.'},
+{a:'SE',t:'유지보수 4유형',q:'소프트웨어 유지보수 4유형 중 비용이 가장 높은 비중을 차지하는 유형으로 옳은 것은?',o:['하자 보수(Corrective) — 약 50~60%','적응 보수(Adaptive) — 약 50~60%','예방 보수(Preventive) — 약 50~60%','완전 보수(Perfective) — 약 50~60%'],ans:3,exp:'연구에 따르면 유지보수 비용의 약 <b>50~60%가 완전 보수(Perfective)</b>에 투입됩니다. 사용자의 기능 추가·성능 개선 요구가 가장 빈번하기 때문이며, 하자 보수(버그 수정)는 약 17~21%에 불과합니다.'},
+
+/* ── CA/OS 4문항 ── */
+{a:'CA',t:'RAID 5',q:'RAID 5에서 단일 디스크 고장 시 데이터를 복구하는 원리로 옳은 것은?',o:['나머지 디스크의 데이터와 분산 패리티를 XOR 연산하여 복구한다','미러링된 복제본에서 직접 읽어온다','핫 스페어 디스크에 사전 백업된 데이터를 복원한다','ECC(오류 정정 코드)로 비트 단위 복구를 수행한다'],ans:0,exp:'RAID 5는 <b>패리티를 모든 디스크에 분산 저장</b>합니다. A XOR B XOR P = 0이므로, 하나가 고장나면 나머지와 패리티를 XOR하여 원래 데이터를 복구합니다. 최소 3개 디스크가 필요합니다.'},
+{a:'CA',t:'SCAN 알고리즘',q:'SCAN(엘리베이터) 알고리즘의 동작 방식으로 옳은 것은?',o:['항상 현재 위치에서 가장 가까운 요청을 먼저 처리한다','요청 도착 순서(FCFS)대로 처리한다','한 방향으로 이동하며 요청을 처리하고, 끝에 도달하면 방향을 전환한다','각 요청에 우선순위를 부여하여 높은 순서부터 처리한다'],ans:2,exp:'SCAN은 <b>엘리베이터처럼 한 방향으로 이동하며 요청을 처리</b>하고, 디스크 끝에 도달하면 반대 방향으로 전환합니다. SSTF의 기아 현상을 해결하면서 합리적인 탐색 시간을 제공합니다.'},
+{a:'CA',t:'FTL 3대 기능',q:'SSD FTL(Flash Translation Layer)의 3대 핵심 기능으로 올바르게 묶인 것은?',o:['ECC 오류 정정, 암호화, 캐시 관리','TRIM 명령 처리, DRAM 캐싱, 블록 미러링','논리-물리 주소 매핑, 웨어 레벨링, 가비지 컬렉션','클럭 관리, 전력 최적화, 펌웨어 업데이트'],ans:2,exp:'FTL 3대 기능: <b>①논리-물리 주소 매핑</b>(OS에 일관된 LBA 제공), <b>②웨어 레벨링</b>(P/E 사이클 균등 분산), <b>③가비지 컬렉션</b>(무효 블록 정리). NAND 특성인 덮어쓰기 불가를 관리하는 핵심 펌웨어입니다.'},
+{a:'CA',t:'시스템 버스',q:'시스템 버스 3종류 중 CPU가 접근할 메모리 위치를 지정하기 위해 사용하는 단방향 버스는?',o:['데이터 버스(Data Bus)','제어 버스(Control Bus)','주소 버스(Address Bus)','시스템 버스(System Bus)'],ans:2,exp:'<b>주소 버스</b>는 CPU가 메모리/I/O의 위치를 지정하는 <b>단방향</b> 버스입니다. 데이터 버스=양방향 데이터 전송, 제어 버스=양방향 읽기/쓰기/인터럽트 신호 전달입니다.'},
+
+/* ── DB 4문항 ── */
+{a:'DB',t:'MVCC',q:'MVCC에서 읽기 트랜잭션이 락(Lock) 없이 일관된 데이터를 읽을 수 있는 원리로 옳은 것은?',o:['읽기 시 항상 최신 커밋 데이터만 반환하도록 강제한다','모든 읽기에 공유 잠금(S-Lock)을 걸어 일관성을 확보한다','트랜잭션 시작 시 전체 테이블을 복사하여 별도 공간에서 읽는다','수정 시 이전 버전을 Undo 영역에 보관하여, 읽기는 필요한 시점의 버전을 조회한다'],ans:3,exp:'MVCC는 데이터 변경 시 <b>이전 버전을 Undo 영역에 보관</b>합니다. 읽기 트랜잭션은 자신의 시작 시점에 맞는 버전을 Undo에서 조회하므로 <b>쓰기와 충돌 없이 일관된 읽기</b>가 가능합니다.'},
+{a:'DB',t:'트랜잭션 격리 수준',q:'트랜잭션 격리 수준 4단계를 낮은 순서부터 올바르게 나열한 것은?',o:['Read Uncommitted → Read Committed → Repeatable Read → Serializable','Read Committed → Read Uncommitted → Repeatable Read → Serializable','Repeatable Read → Read Committed → Serializable → Read Uncommitted','Serializable → Repeatable Read → Read Committed → Read Uncommitted'],ans:0,exp:'<b>Read Uncommitted → Read Committed → Repeatable Read → Serializable.</b> 단계가 높을수록 이상 현상(Dirty Read, Non-Repeatable Read, Phantom Read)을 더 많이 차단하지만 동시성은 감소합니다.'},
+{a:'DB',t:'조인 알고리즘',q:'3대 물리적 조인 알고리즘 중 해시 조인(Hash Join)이 가장 적합한 상황으로 옳은 것은?',o:['드라이빙 테이블 결과가 매우 적고 내부 테이블에 인덱스가 있는 경우','두 테이블이 조인 컬럼 기준으로 이미 정렬되어 있는 경우','인덱스가 없는 대용량 테이블 간 동등 조인(Equi-Join)을 수행하는 경우','비동등 조인(Non-Equi Join)으로 범위 비교가 필요한 경우'],ans:2,exp:'해시 조인은 <b>작은 테이블을 해시 테이블로 메모리에 적재(Build)</b>한 후 큰 테이블을 스캔(Probe)합니다. 인덱스 없는 대용량 동등 조인에 가장 효율적이며, ①은 NL 조인, ②는 Sort-Merge 조인에 적합합니다.'},
+{a:'DB',t:'분산 투명성',q:'분산 데이터베이스 5대 투명성 중 데이터가 여러 조각으로 분할되어 있다는 사실을 사용자가 인식할 필요 없는 투명성은?',o:['위치 투명성(Location)','분할 투명성(Fragmentation)','중복 투명성(Replication)','병행 투명성(Concurrency)'],ans:1,exp:'<b>분할 투명성</b>은 데이터가 수평/수직으로 분할된 사실을 숨기고, 사용자는 하나의 완전한 테이블처럼 접근합니다. 위치=저장 위치 은닉, 중복=복제 사실 은닉, 병행=동시 접근 제어 은닉입니다.'},
+
+/* ── DS 4문항 ── */
+{a:'DS',t:'Apache Kafka',q:'Kafka의 아키텍처에서 메시지가 저장되는 기본 단위이자 병렬 처리의 핵심인 구성 요소는?',o:['Partition','Consumer Group','Broker','Zookeeper'],ans:0,exp:'<b>Partition</b>은 Topic 내 메시지가 실제 저장되는 단위이자 병렬 처리 단위입니다. Partition 수를 늘리면 Consumer Group 내 Consumer들이 각각 담당하여 처리량이 향상됩니다.'},
+{a:'DS',t:'MEC',q:'MEC(Multi-access Edge Computing)에 대한 설명으로 옳지 않은 것은?',o:['단말기 자체 칩에서 AI 연산을 수행하는 온디바이스 AI와 동일한 기술이다','ETSI에서 표준화를 주도하고 있다','기지국 인근에 서버를 배치하여 초저지연 서비스를 제공한다','자율주행, AR/VR, 원격 수술 등에 활용된다'],ans:0,exp:'MEC는 <b>네트워크 에지(기지국 인근)에 서버를 배치</b>하는 인프라 기술이고, 온디바이스 AI는 <b>단말기 자체 NPU에서 연산</b>하는 기술입니다. 배치 위치가 근본적으로 다른 별개 개념입니다.'},
+{a:'DS',t:'빅데이터 5V',q:'빅데이터 5V 특성을 모두 올바르게 나열한 것은?',o:['Volume, Velocity, Variety, Veracity, Value','Volume, Velocity, Variety, Visibility, Value','Volume, Versatility, Variety, Veracity, Value','Volume, Velocity, Validity, Veracity, Value'],ans:0,exp:'빅데이터 5V: <b>Volume(규모), Velocity(속도), Variety(다양성), Veracity(진실성), Value(가치).</b> 3V(Volume·Velocity·Variety)에서 Veracity와 Value가 추가되어 데이터 품질과 비즈니스 가치를 함께 강조합니다.'},
+{a:'DS',t:'AI 모델 경량화',q:'AI 모델 경량화 3대 기법의 설명이 올바르게 매핑된 것은?',o:['프루닝=비트수 축소, 양자화=뉴런 제거, 지식증류=모델 병합','프루닝=뉴런/연결 제거, 양자화=비트수 축소, 지식증류=교사→학생 모델 전달','프루닝=교사→학생 전달, 양자화=레이어 융합, 지식증류=가중치 제거','프루닝=레이어 융합, 양자화=모델 분할, 지식증류=비트수 축소'],ans:1,exp:'<b>프루닝</b>=중요도 낮은 가중치/뉴런 제거, <b>양자화</b>=FP32→INT8 등 비트수 축소, <b>지식증류</b>=대형 교사 모델의 소프트 레이블로 소형 학생 모델 훈련. 세 기법을 조합하여 최적 경량화를 달성합니다.'}
+];
+
+let warmupScore=null;
+let curQ=-1,score=0,answered=false;
+
+function atag(a){
+  const m={SE:'tSE',CA:'tCA',DB:'tDB',DS:'tDS'};
+  const l={SE:'소프트웨어공학',CA:'CA/OS',DB:'데이터베이스',DS:'디지털서비스'};
+  return`<span class="tag ${m[a]||'tSE'}">${l[a]||a}</span>`;
+}
+
+async function loadScores(){
+  try{const r=await window.storage.get('quiz5q_warmup');if(r)warmupScore=JSON.parse(r.value);}catch(e){}
+  renderHome();
+}
+async function saveScore(sc){
+  warmupScore={score:sc,total:20};
+  try{await window.storage.set('quiz5q_warmup',JSON.stringify(warmupScore));}catch(e){}
+}
+
+function renderHome(){
+  document.getElementById('hdrT').textContent='5주차 주간퀴즈 워밍업';
+  document.getElementById('progWrap').style.display='none';
+  const done=!!warmupScore;
+  const pct=done?Math.round(warmupScore.score/20*100):null;
+  document.getElementById('app').innerHTML=`<div class="home-title">5주차 주간퀴즈 워밍업</div>
+<div class="home-sub">일요일 워밍업 · 정의/특징 + 핵심키워드 개념 미리보기 20문항<br>소프트웨어공학 · CA/OS · 데이터베이스 · 디지털서비스 | 4지선다 · 즉시 정답 확인</div>
+<div class="warmup-card${done?' done':''}" onclick="startQuiz()">
+<div class="warmup-icon">⚡</div>
+<div class="warmup-lbl">주간퀴즈 워밍업</div>
+<div class="warmup-theme">정의·특징 + 핵심키워드 미리보기</div>
+<div class="warmup-detail">SE 8문항 · CA/OS 4문항 · DB 4문항 · DS 4문항</div>
+${done?`<div class="day-score" style="color:#059669">${warmupScore.score}/20 (${pct}%)</div>`:'<div class="day-score" style="color:#94a3b8">미완료</div>'}
+<button class="day-btn">${done?'다시 풀기':'시작하기'}</button>
+</div>`;
+}
+
+function startQuiz(){
+  curQ=0;score=0;answered=false;
+  document.getElementById('hdrT').textContent='주간퀴즈 워밍업';
+  renderQ();
+}
+
+function renderQ(){
+  const pw=document.getElementById('progWrap');
+  pw.style.display='block';
+  document.getElementById('progTxt').textContent=`${curQ+1} / 20`;
+  document.getElementById('scoreTxt').textContent=`점수: ${score}`;
+  document.getElementById('progFill').style.width=`${((curQ+1)/20)*100}%`;
+  const q=QS[curQ];
+  document.getElementById('app').innerHTML=`<div class="q-card">
+<div class="q-meta">${atag(q.a)}<span class="tag tN">Q${curQ+1}</span><span class="tag tN">${q.t}</span>
+<button class="back-btn" onclick="renderHome()">← 목록</button></div>
+<div class="q-text">${q.q}</div>
+<div class="opts" id="opts">${q.o.map((o,i)=>`<button class="opt" id="o${i}" onclick="choose(${i})"><span class="opt-lbl">${['①','②','③','④'][i]}</span><span>${o}</span></button>`).join('')}</div>
+<div class="fb" id="fb"></div>
+</div>
+<div class="next-row"><button class="next-btn" id="nxt" onclick="nextQ()">${curQ+1<20?'다음 문제 →':'결과 보기 →'}</button></div>`;
+  answered=false;
+}
+
+function choose(idx){
+  if(answered)return;
+  answered=true;
+  const q=QS[curQ];
+  for(let i=0;i<4;i++){
+    const b=document.getElementById('o'+i);
+    b.classList.add('dis');
+    if(i===q.ans)b.classList.add(idx===q.ans?'ok':'rv');
+  }
+  const fb=document.getElementById('fb');
+  if(idx===q.ans){
+    score++;
+    document.getElementById('o'+idx).classList.add('ok');
+    fb.className='fb ok';
+    fb.innerHTML=`<div class="fb-t">✅ 정답!</div>${q.exp}`;
+  }else{
+    document.getElementById('o'+idx).classList.add('ng');
+    fb.className='fb ng';
+    fb.innerHTML=`<div class="fb-t">❌ 오답 — 정답: ${'①②③④'[q.ans]}</div>${q.exp}`;
+  }
+  fb.style.display='block';
+  document.getElementById('nxt').style.display='inline-block';
+  document.getElementById('scoreTxt').textContent=`점수: ${score}`;
+}
+
+function nextQ(){curQ++;if(curQ>=20){showResult();}else{renderQ();}}
+
+function showResult(){
+  saveScore(score);
+  document.getElementById('progWrap').style.display='none';
+  const pct=Math.round(score/20*100);
+  const grade=pct>=90?'🏆 최우수':pct>=75?'🥇 우수':pct>=60?'🥈 보통':'🥉 분발 필요';
+  const msg=pct>=90?'완벽에 가까운 이해도입니다! 이번 주 퀴즈도 기대됩니다!':pct>=75?'핵심 개념을 잘 파악하고 있습니다. 본 퀴즈도 화이팅!':pct>=60?'부족한 영역을 교재로 한 번 훑어보면 좋겠습니다.':'이번 주 교재를 먼저 읽고 본 퀴즈에 도전해보세요!';
+  document.getElementById('app').innerHTML=`<div class="result-card">
+<div style="font-size:12px;color:#94a3b8;margin-bottom:8px">주간퀴즈 워밍업 결과</div>
+<div><span class="r-score">${score}</span><span class="r-denom"> / 20</span></div>
+<div class="r-pct">정답률 ${pct}%</div>
+<div class="r-grade">${grade}</div>
+<div class="r-msg">${msg}</div>
+<div class="r-btns">
+<button class="r-btn primary" onclick="startQuiz()">다시 풀기</button>
+<button class="r-btn secondary" onclick="renderHome()">목록으로</button>
+</div></div>`;
+}
+
+if(typeof window.storage!=='undefined'){loadScores();}else{renderHome();}
+</script>
+</body>
+</html>

@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>ZIP-UP 5주차 주간모의고사 워밍업</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Malgun Gothic','Apple SD Gothic Neo','Segoe UI',sans-serif;background:#f4f6fa;color:#1e293b;min-height:100vh}
+
+/* Header */
+.hdr{background:#fff;border-bottom:2px solid #e2e8f0;padding:12px 20px;display:flex;align-items:center;gap:10px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.logo{background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;font-weight:800;font-size:12px;padding:4px 10px;border-radius:5px;letter-spacing:1px;white-space:nowrap}
+.hdr-info{display:flex;flex-direction:column;gap:1px}
+.hdr-t{font-size:14px;font-weight:700;color:#3730a3}
+.hdr-sub{font-size:10px;color:#64748b}
+.hdr-year{margin-left:auto;font-size:13px;font-weight:700;color:#64748b}
+.hdr-badge{margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.hdr-tag{font-size:9px;background:#eef2ff;color:#4f46e5;padding:2px 7px;border-radius:4px;font-weight:700}
+
+/* Progress */
+.prog-wrap{background:#fff;padding:10px 20px;border-bottom:1px solid #e2e8f0}
+.prog-info{display:flex;justify-content:space-between;font-size:11px;color:#64748b;margin-bottom:5px}
+.prog-bar{height:6px;background:#e2e8f0;border-radius:99px;overflow:hidden}
+.prog-fill{height:100%;background:linear-gradient(90deg,#4f46e5,#7c3aed);border-radius:99px;transition:width .4s}
+
+.con{max-width:700px;margin:0 auto;padding:24px 16px 20px}
+
+/* Home */
+.home-title{text-align:center;margin:0 0 4px;font-size:22px;font-weight:800;color:#3730a3}
+.home-sub{text-align:center;font-size:12px;color:#64748b;margin-bottom:22px;line-height:1.6}
+.warmup-card{background:#fff;border:2px solid #e2e8f0;border-radius:16px;padding:28px 24px;cursor:pointer;transition:all .2s;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.06);max-width:340px;margin:0 auto}
+.warmup-card:hover{border-color:#4f46e5;box-shadow:0 6px 20px rgba(79,70,229,.14);transform:translateY(-3px)}
+.warmup-card.done{border-color:#10b981;background:#f0fdf4}
+.warmup-icon{font-size:36px;margin-bottom:8px}
+.warmup-lbl{font-size:20px;font-weight:800;color:#3730a3;margin-bottom:4px}
+.warmup-card.done .warmup-lbl{color:#059669}
+.warmup-theme{font-size:12px;color:#64748b;margin-bottom:6px;line-height:1.5}
+.warmup-detail{font-size:11px;color:#94a3b8;margin-bottom:14px;line-height:1.5}
+.day-score{font-size:12px;font-weight:700}
+.day-btn{display:inline-block;margin-top:10px;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;border:none;padding:9px 24px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;transition:opacity .2s}
+.day-btn:hover{opacity:.85}
+.warmup-card.done .day-btn{background:linear-gradient(135deg,#059669,#10b981)}
+
+/* Q Card */
+.q-card{background:#fff;border:1px solid #e2e8f0;border-radius:13px;padding:22px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.q-meta{display:flex;gap:7px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
+.tag{font-size:10px;padding:2px 8px;border-radius:99px;font-weight:700}
+.tSE{background:#dbeafe;color:#1d4ed8}
+.tCA{background:#dcfce7;color:#166534}
+.tDB{background:#fee2e2;color:#b91c1c}
+.tDS{background:#fef3c7;color:#92400e}
+.tN{background:#f1f5f9;color:#475569}
+.back-btn{margin-left:auto;background:#fff;border:1px solid #cbd5e1;color:#475569;padding:3px 10px;border-radius:6px;font-size:11px;cursor:pointer;transition:all .15s}
+.back-btn:hover{border-color:#4f46e5;color:#4f46e5}
+.q-text{font-size:14px;line-height:1.85;color:#1e293b;margin-bottom:16px;font-weight:500}
+
+/* Options */
+.opts{display:flex;flex-direction:column;gap:8px}
+.opt{background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:9px;padding:11px 14px;text-align:left;cursor:pointer;color:#334155;font-size:13px;line-height:1.55;transition:all .18s;display:flex;align-items:flex-start;gap:9px}
+.opt:hover:not(.dis){border-color:#4f46e5;background:#eef2ff;color:#1e293b}
+.opt-lbl{font-weight:800;min-width:20px;color:#4f46e5}
+.opt.ok{border-color:#10b981;background:#f0fdf4;color:#065f46}
+.opt.ok .opt-lbl{color:#10b981}
+.opt.ng{border-color:#ef4444;background:#fef2f2;color:#991b1b}
+.opt.ng .opt-lbl{color:#ef4444}
+.opt.rv{border-color:#10b981;background:#f0fdf4;color:#065f46;opacity:.6}
+.opt.dis{cursor:default}
+
+/* Feedback */
+.fb{margin-top:12px;padding:12px 14px;border-radius:9px;font-size:12px;line-height:1.7;display:none}
+.fb.ok{background:#f0fdf4;border:1px solid #86efac;color:#14532d}
+.fb.ng{background:#fef2f2;border:1px solid #fca5a5;color:#7f1d1d}
+.fb-t{font-weight:800;margin-bottom:3px}
+.next-row{text-align:right;margin-top:10px}
+.next-btn{background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;border:none;padding:9px 22px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;display:none;box-shadow:0 2px 8px rgba(79,70,229,.2)}
+.next-btn:hover{opacity:.88}
+
+/* Result */
+.result-card{background:#fff;border:2px solid #c7d2fe;border-radius:16px;padding:36px 24px;text-align:center;box-shadow:0 2px 12px rgba(79,70,229,.08)}
+.r-score{font-size:52px;font-weight:800;background:linear-gradient(135deg,#4f46e5,#7c3aed);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.r-denom{font-size:18px;color:#94a3b8}
+.r-pct{font-size:13px;color:#64748b;margin:5px 0 12px}
+.r-grade{font-size:20px;font-weight:700;margin-bottom:5px;color:#1e293b}
+.r-msg{font-size:13px;color:#64748b;margin-bottom:20px}
+.r-btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.r-btn{border:none;padding:10px 22px;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;transition:opacity .2s}
+.r-btn:hover{opacity:.85}
+.r-btn.primary{background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;box-shadow:0 2px 8px rgba(79,70,229,.2)}
+.r-btn.secondary{background:#f1f5f9;border:1px solid #cbd5e1;color:#475569}
+
+/* Footer */
+.footer{border-top:1px solid #e2e8f0;background:#fff;padding:16px 20px;text-align:center;margin-top:16px}
+.footer-name{font-size:12px;color:#475569;margin-bottom:4px;font-weight:500}
+.footer-copy{font-size:11px;color:#94a3b8}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <span class="logo">ZIP-UP</span>
+  <div class="hdr-info">
+    <span class="hdr-t" id="hdrT">5주차 주간모의고사 워밍업</span>
+    <span class="hdr-sub">KPC 정보관리기술사 ZIP-UP 심화반</span>
+  </div>
+  <div class="hdr-badge">
+    <span class="hdr-year">2026</span>
+    <span class="hdr-tag">주간모의고사</span>
+  </div>
+</div>
+
+<div id="progWrap" class="prog-wrap" style="display:none">
+  <div class="prog-info"><span id="progTxt"></span><span id="scoreTxt"></span></div>
+  <div class="prog-bar"><div class="prog-fill" id="progFill"></div></div>
+</div>
+
+<div class="con" id="app"></div>
+
+<div class="footer">
+  <div class="footer-name">박교익PE &nbsp;|&nbsp; 132회 정보관리기술사 &nbsp;|&nbsp; dr.code92@gmail.com</div>
+  <div class="footer-copy">Copyright © KPC 정보관리기술사 ZIP-UP 심화반. All rights reserved.</div>
+</div>
+
+<script>
+const QS=[
+/* ── SE (8문항) ── ans 분포: ①×5, ②×5, ③×5, ④×5 */
+{a:'SE',t:'ISO/IEC 25010',q:'ISO/IEC 25010 품질 모델의 8대 주특성 개수와 기존 ISO/IEC 9126 대비 주요 변경 사항으로 옳은 것은?',o:['6대 주특성 → 8대로 확대, 보안성과 호환성이 독립 주특성으로 분리','8대 주특성 유지, 사용성과 신뢰성이 통합됨','9대 주특성으로 확대, 재사용성이 새로 추가됨','7대 주특성으로 축소, 이식성이 유지보수성에 통합됨'],ans:0,exp:'ISO/IEC 9126은 6개 주특성이었으나, 25010에서는 <b>호환성(Compatibility)</b>과 <b>보안성(Security)</b>이 독립된 주특성으로 분리·추가되어 총 8대 주특성이 되었습니다.'},
+{a:'SE',t:'McCabe 순환 복잡도',q:'McCabe 순환 복잡도의 산출 기준이 되는 그래프와 해당 공식으로 옳은 것은?',o:['호출 그래프(Call Graph), V(G) = N × E','데이터 흐름 그래프(DFG), V(G) = N − E + 1','제어 흐름 그래프(CFG), V(G) = E − N + 2','의존성 그래프(Dependency Graph), V(G) = E + N'],ans:2,exp:'McCabe 복잡도는 <b>제어 흐름 그래프(CFG)</b>를 기반으로 하며, 공식은 <b>V(G) = E(간선) − N(노드) + 2</b>입니다. 이 값은 프로그램의 독립 실행 경로 수를 나타냅니다.'},
+{a:'SE',t:'상태 전이 테스트',q:'상태 전이 테스트(State Transition Testing)가 가장 적합한 테스트 대상으로 옳은 것은?',o:['입력값의 경계 부근에서 오류가 빈번한 수치 계산 모듈','대용량 데이터 처리 시 성능 병목을 측정하는 부하 테스트 대상','정적 웹 페이지의 HTML 구문 오류 검출','이벤트에 따라 동작이 변하는 화면 전환, 프로토콜, 임베디드 시스템'],ans:3,exp:'상태 전이 테스트는 시스템이 <b>특정 이벤트에 의해 상태가 변경되는 동작</b>을 검증합니다. ATM 거래 흐름, 네트워크 프로토콜, UI 화면 전환 등이 대표적 적용 사례입니다.'},
+{a:'SE',t:'기술 부채',q:'기술 부채(Technical Debt)의 정의로 가장 적절한 것은?',o:['프로젝트 일정 지연에 따른 인건비 초과분','빠른 개발을 위해 최선이 아닌 설계를 선택하여 향후 추가 비용이 발생하는 현상','오픈소스 라이선스 위반으로 인한 법적 손실 비용','테스트 자동화 도구 도입에 필요한 초기 투자 비용'],ans:1,exp:'기술 부채는 단기 이익을 위해 <b>차선의 기술적 결정</b>을 내린 결과, 향후 유지보수·확장 시 추가로 지불해야 하는 비용입니다. Ward Cunningham이 처음 비유한 개념입니다.'},
+{a:'SE',t:'SOLID 원칙',q:'SOLID 원칙 중 개방-폐쇄 원칙(OCP)의 핵심 의미로 옳은 것은?',o:['하나의 클래스는 하나의 책임만 가져야 한다','상위 타입 객체를 하위 타입으로 교체해도 동작이 보장되어야 한다','기존 코드를 수정하지 않고 기능을 확장할 수 있어야 한다','구체 클래스가 아닌 추상화에 의존해야 한다'],ans:2,exp:'<b>OCP(Open-Closed Principle)</b>는 소프트웨어 요소가 확장에는 열려있고(Open) 수정에는 닫혀있어야(Closed) 한다는 원칙입니다. 인터페이스·추상 클래스를 활용하여 구현합니다.'},
+{a:'SE',t:'정적 테스트',q:'정적 테스트(Static Testing)와 동적 테스트(Dynamic Testing)를 구분하는 핵심 기준으로 옳은 것은?',o:['자동화 도구 사용 여부','개발자가 수행하는가 QA가 수행하는가의 주체 차이','단위 테스트와 통합 테스트의 범위 차이','테스트 대상 프로그램의 실행(Execution) 여부'],ans:3,exp:'정적 테스트는 <b>코드를 실행하지 않고</b> 리뷰·분석하는 방법(인스펙션, SAST 등)이고, 동적 테스트는 <b>코드를 실행하여</b> 결과를 확인하는 방법입니다.'},
+{a:'SE',t:'감리 3단계',q:'정보시스템 감리에서 현장감리 이전에 수행하는 예비조사의 주된 목적으로 옳은 것은?',o:['감리 대상 사업의 문서·산출물을 사전 검토하여 현장감리 계획을 수립한다','발주처와 개발사 간 계약 분쟁을 법적으로 조정한다','시정조치 이행 여부를 최종 확인한다','현장에서 개발 환경의 성능 테스트를 수행한다'],ans:0,exp:'<b>예비조사</b>는 사업계획서, 요구사항 정의서 등을 사전 분석하여 감리 포인트를 도출하고, 효율적인 <b>현장감리 수행 계획</b>을 수립하는 단계입니다.'},
+{a:'SE',t:'레만의 진화 법칙',q:"레만(Lehman)의 소프트웨어 진화 법칙 중 '지속적 변경(Continuing Change)' 법칙이 의미하는 것은?",o:['소프트웨어는 배포 후 변경하지 않는 것이 최선이다','모든 소프트웨어는 정해진 수명 주기 후 폐기해야 한다','실제 환경에서 사용되는 소프트웨어는 변경하지 않으면 점점 유용성이 떨어진다','변경 빈도가 높을수록 소프트웨어 품질이 반드시 향상된다'],ans:2,exp:'레만의 제1법칙인 <b>지속적 변경</b>은 실세계 환경에서 사용되는 E-type 소프트웨어는 환경 변화에 적응하기 위해 계속 변경되어야 하며, 그렇지 않으면 점차 쓸모없어진다는 법칙입니다.'},
+
+/* ── CA/OS (4문항) ── */
+{a:'CA',t:'C-SCAN 알고리즘',q:'C-SCAN 알고리즘이 기본 SCAN 대비 개선한 핵심 포인트로 옳은 것은?',o:['헤드를 고정하고 디스크 플래터만 회전시켜 탐색 시간을 제거한다','평균 탐색 시간을 최소로 줄여 SSTF와 동일한 성능을 낸다','대기 큐를 우선순위 기반으로 정렬하여 처리한다','한 방향으로만 서비스 후 시작점으로 복귀하여 응답 시간의 편차를 균등화한다'],ans:3,exp:'SCAN은 왕복 이동으로 양 끝과 중간의 응답 시간 편차가 생깁니다. <b>C-SCAN</b>은 한쪽 끝에 도달하면 서비스 없이 시작점으로 복귀하여 모든 실린더에 <b>균등한 대기 시간</b>을 제공합니다.'},
+{a:'CA',t:'NUMA 아키텍처',q:'NUMA(Non-Uniform Memory Access) 아키텍처의 특징으로 옳은 것은?',o:['모든 프로세서가 동일한 시간에 동일한 메모리에 접근한다','각 프로세서에 로컬 메모리가 있어, 원격 메모리 접근 시 추가 지연이 발생한다','단일 프로세서 시스템에서만 적용 가능한 메모리 구조이다','캐시 메모리를 사용하지 않고 메인 메모리에 직접 접근하는 구조이다'],ans:1,exp:'NUMA는 프로세서마다 <b>로컬 메모리</b>를 배치하여 로컬 접근은 빠르지만, 다른 프로세서의 메모리(원격)에 접근하면 인터커넥트를 경유하여 <b>지연이 증가</b>합니다. 대규모 멀티소켓 서버에서 주로 사용됩니다.'},
+{a:'CA',t:'HBM 메모리',q:'HBM(High Bandwidth Memory)이 기존 GDDR 메모리 대비 높은 대역폭을 달성하는 핵심 구조적 특징은?',o:['단일 칩 내부에 더 빠른 클럭 속도의 DRAM 셀을 사용한다','PCB 기판 위에 DRAM 칩을 수평으로 더 많이 배치하여 병렬 채널을 늘린다','여러 DRAM 다이를 수직으로 적층(3D Stacking)하고 TSV(Through-Silicon Via)로 연결한다','SRAM 기반으로 설계하여 DRAM보다 빠른 접근 속도를 구현한다'],ans:2,exp:'HBM은 DRAM 다이를 <b>TSV(실리콘 관통 비아)</b>로 수직 연결하여 <b>3D 적층</b> 구조를 구현합니다. 이를 통해 넓은 버스 폭(1024bit 이상)과 높은 대역폭을 확보하면서도 전력 소모를 줄입니다.'},
+{a:'CA',t:'FTL',q:'SSD의 FTL(Flash Translation Layer)이 가비지 컬렉션(GC)을 수행해야 하는 근본 원인으로 옳은 것은?',o:['NAND 플래시는 블록 단위로만 삭제(erase)가 가능하여 무효 페이지가 섞인 블록을 정리해야 하므로','NAND 플래시는 읽기 속도가 느려서 주기적으로 데이터를 재배치해야 하므로','SSD 컨트롤러 캐시가 가득 차면 데이터를 강제로 플러시해야 하므로','OS 파일 시스템이 직접 블록 관리를 하지 못하므로'],ans:0,exp:'NAND 플래시는 <b>페이지 단위 쓰기, 블록 단위 삭제</b>라는 비대칭 특성이 있습니다. 무효(invalid) 페이지가 섞인 블록에서 유효 데이터를 다른 곳으로 복사한 후 블록 전체를 erase하는 것이 GC의 역할입니다.'},
+
+/* ── DB (4문항) ── */
+{a:'DB',t:'B+Tree 인덱스',q:'B+Tree 인덱스가 RDBMS에서 기본 인덱스 구조로 채택되는 이유로 가장 적절한 것은?',o:['해시 구조보다 동등(=) 검색 속도가 항상 빠르다','데이터 삽입 시 재구조화(Split)가 발생하지 않아 쓰기 성능이 우수하다','인덱스 크기가 원본 테이블보다 항상 작다','트리 높이가 O(log N)으로 낮고, 리프 노드 연결로 범위 검색과 정렬 출력이 모두 효율적이다'],ans:3,exp:'B+Tree는 <b>O(log N) 높이</b>로 점 검색이 빠르고, 리프 노드가 <b>링크드 리스트로 연결</b>되어 범위 검색(BETWEEN, ORDER BY)에도 최적입니다. 이 두 가지 장점이 RDBMS 기본 인덱스로 선택되는 핵심 이유입니다.'},
+{a:'DB',t:'ARIES 알고리즘',q:'데이터베이스 회복 알고리즘인 ARIES의 3단계 순서로 옳은 것은?',o:['Undo → Redo → 분석(Analysis)','Redo → Undo → 분석(Analysis)','분석(Analysis) → Redo → Undo','분석(Analysis) → Undo → Redo'],ans:2,exp:'ARIES 회복 3단계: <b>①분석(Analysis)</b> — 로그를 스캔하여 Redo/Undo 대상 파악, <b>②Redo</b> — 커밋된 트랜잭션 재수행, <b>③Undo</b> — 미완료 트랜잭션 취소. "분석 → Redo → Undo" 순서입니다.'},
+{a:'DB',t:'시계열 DB (TSDB)',q:'시계열 데이터베이스(TSDB)가 범용 RDBMS 대비 시계열 데이터 처리에 유리한 핵심 이유로 옳은 것은?',o:['ACID 트랜잭션을 지원하지 않아 쓰기 속도가 빠르다','NoSQL 기반이므로 스키마 변경이 자유롭다','인메모리 전용이라 디스크 I/O가 발생하지 않는다','시간 기반 파티셔닝과 압축, 다운샘플링이 내장되어 시간 축 쿼리 성능이 최적화되어 있다'],ans:3,exp:'TSDB는 <b>시간 기반 파티셔닝</b>으로 특정 구간 데이터에 빠르게 접근하고, <b>자동 다운샘플링과 압축</b>으로 장기 데이터를 효율적으로 관리합니다. InfluxDB, TimescaleDB 등이 대표적입니다.'},
+{a:'DB',t:'MVCC',q:'MVCC(다중 버전 동시성 제어)가 락(Lock) 기반 방식의 어떤 문제를 해결하는가?',o:['읽기 트랜잭션과 쓰기 트랜잭션이 서로 차단(Blocking)하는 문제','데이터 중복 저장에 따른 디스크 공간 부족 문제','트랜잭션 커밋 시 로그 기록에 따른 성능 저하 문제','인덱스 갱신에 따른 B+Tree 분열(Split) 문제'],ans:0,exp:'락 기반 방식은 쓰기 중인 데이터를 읽으려면 락 해제를 기다려야 합니다. MVCC는 <b>이전 버전을 Undo 영역에 보관</b>하여 읽기가 쓰기를 차단하지 않고, 쓰기도 읽기를 차단하지 않아 <b>동시성이 크게 향상</b>됩니다.'},
+
+/* ── DS (4문항) ── */
+{a:'DS',t:'HDFS',q:'HDFS(Hadoop Distributed File System)에서 기본 블록 크기가 128MB로 매우 큰 이유로 옳은 것은?',o:['분산 환경에서 네트워크 암호화 처리량을 높이기 위해서다','블록 수를 줄여 네임노드의 메타데이터 부담을 낮추고, 순차 읽기 시 디스크 탐색 오버헤드를 최소화하기 위해서다','블록 크기가 클수록 데이터 압축률이 높아지기 때문이다','MapReduce에서 Map 태스크 수를 최대로 늘리기 위해서다'],ans:1,exp:'HDFS는 대용량 파일의 순차 처리에 최적화되어 있습니다. 블록을 크게 하면 <b>네임노드가 관리할 블록 메타데이터가 줄어들고</b>, 디스크 탐색(seek) 대비 실제 전송 시간 비율이 높아져 <b>처리 효율이 향상</b>됩니다.'},
+{a:'DS',t:'MEC',q:'MEC(Multi-access Edge Computing)의 배치 위치와 주된 장점으로 옳은 것은?',o:['사용자 단말기 내부에 AI 칩을 탑재하여 오프라인 처리를 지원한다','중앙 데이터센터에 GPU 클러스터를 집중 배치하여 대규모 배치 분석을 가속한다','무선 기지국 근처에 서버를 배치하여 중앙 클라우드 대비 네트워크 지연을 대폭 줄인다','위성 통신 기반으로 전 세계 어디서나 동일한 지연 시간을 보장한다'],ans:2,exp:'MEC는 <b>기지국(Radio Access Network) 인접 위치에 컴퓨팅 자원을 배치</b>하여 데이터가 중앙 클라우드까지 왕복하지 않고 에지에서 처리됩니다. 자율주행, AR/VR 등 <b>초저지연</b> 서비스에 필수입니다.'},
+{a:'DS',t:'온디바이스 AI / sLLM',q:'대규모 LLM을 스마트폰에서 구동하기 위한 경량화 기법으로 옳지 않은 것은?',o:['프루닝(Pruning) — 영향이 적은 가중치를 제거하여 모델 크기 축소','양자화(Quantization) — FP32를 INT8 등 낮은 비트수로 변환하여 연산량 감소','지식 증류(Knowledge Distillation) — 대형 교사 모델의 지식을 소형 학생 모델에 전달','데이터 증강(Data Augmentation) — 학습 데이터를 늘려 모델 정확도 향상'],ans:3,exp:'프루닝, 양자화, 지식 증류는 <b>모델 자체를 작고 가볍게 만드는 경량화 기법</b>입니다. <b>데이터 증강</b>은 학습 데이터를 다양화하여 정확도를 높이는 기법으로, 모델 크기를 줄이는 경량화와는 다른 영역입니다.'},
+{a:'DS',t:'클라우드 네이티브 / Kafka',q:'Apache Kafka가 메시지를 디스크에 저장함에도 높은 처리 성능을 달성하는 핵심 기술적 이유로 옳은 것은?',o:['각 메시지를 별도 파일로 저장하여 병렬 I/O를 극대화하기 때문이다','메시지를 디스크에 저장하지 않고 전부 메모리에서 처리하기 때문이다','메시지를 디스크에 순차 쓰기(Sequential I/O)로 append하여 랜덤 I/O를 회피하기 때문이다','SSD 전용 파일 시스템을 사용하여 하드웨어 수준에서 최적화하기 때문이다'],ans:2,exp:'Kafka는 모든 메시지를 <b>로그 파일 끝에 순차적으로 append</b>합니다. 순차 I/O는 디스크 헤드 이동이 최소화되어 <b>랜덤 I/O 대비 수십~수백 배 빠른 쓰기 성능</b>을 발휘합니다.'}
+];
+
+let warmupScore=null;
+let curQ=-1,score=0,answered=false;
+
+function atag(a){
+  const m={SE:'tSE',CA:'tCA',DB:'tDB',DS:'tDS'};
+  const l={SE:'소프트웨어공학',CA:'CA/OS',DB:'데이터베이스',DS:'디지털서비스'};
+  return`<span class="tag ${m[a]||'tSE'}">${l[a]||a}</span>`;
+}
+
+async function loadScores(){
+  try{const r=await window.storage.get('quiz5_warmup');if(r)warmupScore=JSON.parse(r.value);}catch(e){}
+  renderHome();
+}
+async function saveScore(sc){
+  warmupScore={score:sc,total:20};
+  try{await window.storage.set('quiz5_warmup',JSON.stringify(warmupScore));}catch(e){}
+}
+
+function renderHome(){
+  document.getElementById('hdrT').textContent='5주차 주간모의고사 워밍업';
+  document.getElementById('progWrap').style.display='none';
+  const done=!!warmupScore;
+  const pct=done?Math.round(warmupScore.score/20*100):null;
+  document.getElementById('app').innerHTML=`<div class="home-title">5주차 주간모의고사 워밍업</div>
+<div class="home-sub">일요일 워밍업 · 이번 주 주간모의고사 핵심 개념 미리보기 20문항<br>소프트웨어공학 · CA/OS · 데이터베이스 · 디지털서비스 | 4지선다 · 즉시 정답 확인</div>
+<div class="warmup-card${done?' done':''}" onclick="startQuiz()">
+<div class="warmup-icon">🔥</div>
+<div class="warmup-lbl">주간모의고사 워밍업</div>
+<div class="warmup-theme">5주차 핵심 개념 미리보기</div>
+<div class="warmup-detail">SE 8문항 · CA/OS 4문항 · DB 4문항 · DS 4문항</div>
+${done?`<div class="day-score" style="color:#059669">${warmupScore.score}/20 (${pct}%)</div>`:'<div class="day-score" style="color:#94a3b8">미완료</div>'}
+<button class="day-btn">${done?'다시 풀기':'시작하기'}</button>
+</div>`;
+}
+
+function startQuiz(){
+  curQ=0;score=0;answered=false;
+  document.getElementById('hdrT').textContent='주간모의고사 워밍업';
+  renderQ();
+}
+
+function renderQ(){
+  const pw=document.getElementById('progWrap');
+  pw.style.display='block';
+  document.getElementById('progTxt').textContent=`${curQ+1} / 20`;
+  document.getElementById('scoreTxt').textContent=`점수: ${score}`;
+  document.getElementById('progFill').style.width=`${((curQ+1)/20)*100}%`;
+  const q=QS[curQ];
+  document.getElementById('app').innerHTML=`<div class="q-card">
+<div class="q-meta">${atag(q.a)}<span class="tag tN">Q${curQ+1}</span><span class="tag tN">${q.t}</span>
+<button class="back-btn" onclick="renderHome()">← 목록</button></div>
+<div class="q-text">${q.q}</div>
+<div class="opts" id="opts">${q.o.map((o,i)=>`<button class="opt" id="o${i}" onclick="choose(${i})"><span class="opt-lbl">${['①','②','③','④'][i]}</span><span>${o}</span></button>`).join('')}</div>
+<div class="fb" id="fb"></div>
+</div>
+<div class="next-row"><button class="next-btn" id="nxt" onclick="nextQ()">${curQ+1<20?'다음 문제 →':'결과 보기 →'}</button></div>`;
+  answered=false;
+}
+
+function choose(idx){
+  if(answered)return;
+  answered=true;
+  const q=QS[curQ];
+  for(let i=0;i<4;i++){
+    const b=document.getElementById('o'+i);
+    b.classList.add('dis');
+    if(i===q.ans)b.classList.add(idx===q.ans?'ok':'rv');
+  }
+  const fb=document.getElementById('fb');
+  if(idx===q.ans){
+    score++;
+    document.getElementById('o'+idx).classList.add('ok');
+    fb.className='fb ok';
+    fb.innerHTML=`<div class="fb-t">✅ 정답!</div>${q.exp}`;
+  }else{
+    document.getElementById('o'+idx).classList.add('ng');
+    fb.className='fb ng';
+    fb.innerHTML=`<div class="fb-t">❌ 오답 — 정답: ${'①②③④'[q.ans]}</div>${q.exp}`;
+  }
+  fb.style.display='block';
+  document.getElementById('nxt').style.display='inline-block';
+  document.getElementById('scoreTxt').textContent=`점수: ${score}`;
+}
+
+function nextQ(){curQ++;if(curQ>=20){showResult();}else{renderQ();}}
+
+function showResult(){
+  saveScore(score);
+  document.getElementById('progWrap').style.display='none';
+  const pct=Math.round(score/20*100);
+  const grade=pct>=90?'🏆 최우수':pct>=75?'🥇 우수':pct>=60?'🥈 보통':'🥉 분발 필요';
+  const msg=pct>=90?'완벽에 가까운 이해도입니다! 이번 주 퀴즈도 기대됩니다!':pct>=75?'핵심 개념을 잘 파악하고 있습니다. 본 퀴즈도 화이팅!':pct>=60?'부족한 영역을 교재로 한 번 훑어보면 좋겠습니다.':'이번 주 교재를 먼저 읽고 본 퀴즈에 도전해보세요!';
+  document.getElementById('app').innerHTML=`<div class="result-card">
+<div style="font-size:12px;color:#94a3b8;margin-bottom:8px">주간모의고사 워밍업 결과</div>
+<div><span class="r-score">${score}</span><span class="r-denom"> / 20</span></div>
+<div class="r-pct">정답률 ${pct}%</div>
+<div class="r-grade">${grade}</div>
+<div class="r-msg">${msg}</div>
+<div class="r-btns">
+<button class="r-btn primary" onclick="startQuiz()">다시 풀기</button>
+<button class="r-btn secondary" onclick="renderHome()">목록으로</button>
+</div></div>`;
+}
+
+if(typeof window.storage!=='undefined'){loadScores();}else{renderHome();}
+</script>
+</body>
+</html>

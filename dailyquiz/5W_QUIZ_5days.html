@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>ZIP-UP 5주차 주간퀴즈</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Malgun Gothic','Apple SD Gothic Neo','Segoe UI',sans-serif;background:#f4f6fa;color:#1e293b;min-height:100vh}
+
+/* Header */
+.hdr{background:#fff;border-bottom:2px solid #e2e8f0;padding:12px 20px;display:flex;align-items:center;gap:10px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.logo{background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;font-weight:800;font-size:12px;padding:4px 10px;border-radius:5px;letter-spacing:1px;white-space:nowrap}
+.hdr-info{display:flex;flex-direction:column;gap:1px}
+.hdr-t{font-size:14px;font-weight:700;color:#3730a3}
+.hdr-sub{font-size:10px;color:#64748b}
+.hdr-year{margin-left:auto;font-size:13px;font-weight:700;color:#64748b}
+
+/* Progress */
+.prog-wrap{background:#fff;padding:10px 20px;border-bottom:1px solid #e2e8f0}
+.prog-info{display:flex;justify-content:space-between;font-size:11px;color:#64748b;margin-bottom:5px}
+.prog-bar{height:6px;background:#e2e8f0;border-radius:99px;overflow:hidden}
+.prog-fill{height:100%;background:linear-gradient(90deg,#4f46e5,#7c3aed);border-radius:99px;transition:width .4s}
+
+.con{max-width:700px;margin:0 auto;padding:24px 16px 20px}
+
+/* Home */
+.home-title{text-align:center;margin:0 0 4px;font-size:22px;font-weight:800;color:#3730a3}
+.home-sub{text-align:center;font-size:12px;color:#64748b;margin-bottom:22px;line-height:1.6}
+.day-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(min-width:500px){.day-grid{grid-template-columns:repeat(3,1fr)}}
+.day-card{background:#fff;border:2px solid #e2e8f0;border-radius:13px;padding:18px 14px;cursor:pointer;transition:all .2s;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.day-card:hover{border-color:#4f46e5;box-shadow:0 4px 14px rgba(79,70,229,.12);transform:translateY(-2px)}
+.day-card.done{border-color:#10b981;background:#f0fdf4}
+.day-lbl{font-size:17px;font-weight:800;color:#3730a3;margin-bottom:3px}
+.day-card.done .day-lbl{color:#059669}
+.day-theme{font-size:11px;color:#64748b;margin-bottom:8px;line-height:1.45;white-space:pre-line}
+.day-score{font-size:12px;font-weight:700}
+.day-btn{display:inline-block;margin-top:10px;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;border:none;padding:7px 16px;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;transition:opacity .2s}
+.day-btn:hover{opacity:.85}
+.day-card.done .day-btn{background:linear-gradient(135deg,#059669,#10b981)}
+
+/* Q Card */
+.q-card{background:#fff;border:1px solid #e2e8f0;border-radius:13px;padding:22px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.q-meta{display:flex;gap:7px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
+.tag{font-size:10px;padding:2px 8px;border-radius:99px;font-weight:700}
+.tSE{background:#dbeafe;color:#1d4ed8}
+.tCA{background:#dcfce7;color:#166534}
+.tDB{background:#fee2e2;color:#b91c1c}
+.tDS{background:#fef3c7;color:#92400e}
+.tN{background:#f1f5f9;color:#475569}
+.back-btn{margin-left:auto;background:#fff;border:1px solid #cbd5e1;color:#475569;padding:3px 10px;border-radius:6px;font-size:11px;cursor:pointer;transition:all .15s}
+.back-btn:hover{border-color:#4f46e5;color:#4f46e5}
+.q-text{font-size:14px;line-height:1.85;color:#1e293b;margin-bottom:16px;font-weight:500}
+
+/* Options */
+.opts{display:flex;flex-direction:column;gap:8px}
+.opt{background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:9px;padding:11px 14px;text-align:left;cursor:pointer;color:#334155;font-size:13px;line-height:1.55;transition:all .18s;display:flex;align-items:flex-start;gap:9px}
+.opt:hover:not(.dis){border-color:#4f46e5;background:#eef2ff;color:#1e293b}
+.opt-lbl{font-weight:800;min-width:20px;color:#4f46e5}
+.opt.ok{border-color:#10b981;background:#f0fdf4;color:#065f46}
+.opt.ok .opt-lbl{color:#10b981}
+.opt.ng{border-color:#ef4444;background:#fef2f2;color:#991b1b}
+.opt.ng .opt-lbl{color:#ef4444}
+.opt.rv{border-color:#10b981;background:#f0fdf4;color:#065f46;opacity:.6}
+.opt.dis{cursor:default}
+
+/* Feedback */
+.fb{margin-top:12px;padding:12px 14px;border-radius:9px;font-size:12px;line-height:1.7;display:none}
+.fb.ok{background:#f0fdf4;border:1px solid #86efac;color:#14532d}
+.fb.ng{background:#fef2f2;border:1px solid #fca5a5;color:#7f1d1d}
+.fb-t{font-weight:800;margin-bottom:3px}
+.next-row{text-align:right;margin-top:10px}
+.next-btn{background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;border:none;padding:9px 22px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;display:none;box-shadow:0 2px 8px rgba(79,70,229,.2)}
+.next-btn:hover{opacity:.88}
+
+/* Result */
+.result-card{background:#fff;border:2px solid #c7d2fe;border-radius:16px;padding:36px 24px;text-align:center;box-shadow:0 2px 12px rgba(79,70,229,.08)}
+.r-score{font-size:52px;font-weight:800;background:linear-gradient(135deg,#4f46e5,#7c3aed);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.r-denom{font-size:18px;color:#94a3b8}
+.r-pct{font-size:13px;color:#64748b;margin:5px 0 12px}
+.r-grade{font-size:20px;font-weight:700;margin-bottom:5px;color:#1e293b}
+.r-msg{font-size:13px;color:#64748b;margin-bottom:20px}
+.r-btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.r-btn{border:none;padding:10px 22px;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;transition:opacity .2s}
+.r-btn:hover{opacity:.85}
+.r-btn.primary{background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;box-shadow:0 2px 8px rgba(79,70,229,.2)}
+.r-btn.secondary{background:#f1f5f9;border:1px solid #cbd5e1;color:#475569}
+
+/* Footer */
+.footer{border-top:1px solid #e2e8f0;background:#fff;padding:16px 20px;text-align:center;margin-top:16px}
+.footer-name{font-size:12px;color:#475569;margin-bottom:4px;font-weight:500}
+.footer-copy{font-size:11px;color:#94a3b8}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <span class="logo">ZIP-UP</span>
+  <div class="hdr-info">
+    <span class="hdr-t" id="hdrT">5주차 주간퀴즈</span>
+    <span class="hdr-sub">KPC 정보관리기술사 ZIP-UP 심화반</span>
+  </div>
+  <span class="hdr-year">2026</span>
+</div>
+
+<div id="progWrap" class="prog-wrap" style="display:none">
+  <div class="prog-info"><span id="progTxt"></span><span id="scoreTxt"></span></div>
+  <div class="prog-bar"><div class="prog-fill" id="progFill"></div></div>
+</div>
+
+<div class="con" id="app"></div>
+
+<div class="footer">
+  <div class="footer-name">박교익PE &nbsp;|&nbsp; 132회 정보관리기술사 &nbsp;|&nbsp; dr.code92@gmail.com</div>
+  <div class="footer-copy">Copyright © KPC 정보관리기술사 ZIP-UP 심화반. All rights reserved.</div>
+</div>
+
+<script>
+const DAYS=[
+{label:'DAY 1',theme:'소프트웨어공학\n핵심 개념',color:'#4f46e5',
+qs:[
+{a:'SE',t:'형상 관리',q:'소프트웨어 형상 관리(SCM)에서 베이스라인(Baseline)의 역할로 옳은 것은?',o:['코드 실행 성능을 측정하는 기준 지표','검토·승인된 형상 항목의 공식 변경 통제 기준점','개발자별 작업 진행도를 추적하는 마일스톤','소스 코드의 버그 발생 빈도를 기록하는 레포트'],ans:1,exp:'베이스라인은 검토·승인 이후 공식 변경 통제 대상이 된 형상 항목의 기준선입니다. 이후 변경은 반드시 <b>CCB(변경 통제 위원회)</b> 승인을 거쳐야 합니다.'},
+{a:'SE',t:'형상 관리',q:'SCM의 4대 핵심 활동을 모두 포함한 것은?',o:['계획-설계-구현-배포','식별(Identification)-통제(Control)-기록(Status Accounting)-감사(Audit)','요구사항 수집-분석-모델링-검증','분기 생성-병합-릴리즈-롤백'],ans:1,exp:'SCM 4대 활동: 형상 <b>식별 → 변경 통제 → 상태 기록 → 형상 감사</b>. 이 사이클로 산출물의 무결성과 추적성을 보장합니다.'},
+{a:'SE',t:'화이트박스 테스트',q:'화이트박스 테스트에 대한 설명으로 옳은 것은?',o:['외부 명세서만으로 기능의 입출력 결과를 검증한다','소스 코드 내부 구조·논리 흐름을 기반으로 경로를 검증한다','사용자 시나리오 기반으로 인수 조건 충족 여부를 확인한다','완성 시스템을 실제 환경에 배포한 후 부하를 측정한다'],ans:1,exp:'화이트박스 테스트는 소스 코드 내부를 직접 확인하는 <b>구조 기반 테스트</b>입니다. 구문·분기·조건 커버리지를 측정하며 McCabe 순환 복잡도가 테스트케이스 수의 기준이 됩니다.'},
+{a:'SE',t:'ISO/IEC 25010',q:'ISO/IEC 25010이 기존 9126 대비 독립된 주특성으로 강화한 두 항목은?',o:['신뢰성(Reliability)과 유지보수성(Maintainability)','기능 적합성과 성능 효율성','호환성(Compatibility)과 보안성(Security)','사용성(Usability)과 이식성(Portability)'],ans:2,exp:'ISO/IEC 25010의 핵심 변경점은 <b>호환성과 보안성이 9126 대비 독립된 주특성으로 분리·강화</b>된 것입니다. 총 8대 주특성을 정의합니다.'},
+{a:'SE',t:'카오스 엔지니어링',q:'카오스 엔지니어링의 정의로 가장 적절한 것은?',o:['마이크로서비스 간 의존성을 분석하여 순환 참조를 제거하는 설계 기법','분산 시스템이 예기치 않은 조건에 견딜 수 있는지 고의로 장애를 주입하여 검증하는 기법','장애 발생 후 원인을 분석하고 재발을 방지하는 사후 대응 프로세스','혼돈 이론으로 난수 기반 보안 키를 생성하는 암호화 기법'],ans:1,exp:'Netflix의 <b>Chaos Monkey</b>로 유명한 카오스 엔지니어링은 프로덕션 환경에 고의로 장애를 주입하여 복원력을 선제적으로 검증하는 SRE 기법입니다.'},
+{a:'SE',t:'결함 생명주기',q:'결함 생명주기(Defect Life Cycle)의 일반적인 상태 전이 순서로 옳은 것은?',o:['Open → Assigned → Fixed → Retest → Closed','Open → Closed → Retest → Fixed → Assigned','Assigned → Open → Fixed → Closed → Retest','Fixed → Assigned → Open → Retest → Closed'],ans:0,exp:'결함은 발견(Open) → 담당자 배정(Assigned) → 수정(Fixed) → 재확인(Retest) → 종료(Closed) 순입니다. 재확인 실패 시 <b>Reopen</b> 상태로 돌아갑니다.'},
+{a:'SE',t:'경계값 분석',q:'입력 유효 범위가 1~100일 때 경계값 분석(BVA)으로 선정하는 테스트 케이스로 가장 적절한 것은?',o:['25, 50, 75 (균등 분포)','0, 1, 2, 99, 100, 101 (경계 및 경계±1)','10, 20, 30, ..., 100 (10단위 샘플링)','1, 50, 100 (최소·중간·최대)'],ans:1,exp:'BVA는 경계값(1,100)과 그 바로 안팎의 값(0, 2, 99, 101)을 테스트합니다. <b>off-by-one 오류</b>가 경계 주변에서 가장 빈번하기 때문입니다.'},
+{a:'SE',t:'McCabe 복잡도',q:'제어 흐름 그래프에서 노드(N)=10, 간선(E)=13일 때 McCabe 순환 복잡도 V(G)는?',o:['3','5','7','23'],ans:1,exp:'<b>V(G) = E − N + 2 = 13 − 10 + 2 = 5.</b> 이 값은 독립적인 경로 수이자 최소 필요 테스트 케이스 수를 의미합니다.'},
+{a:'SE',t:'테스팅 7원칙',q:"'동일한 테스트를 반복하면 새로운 결함을 더 이상 발견하지 못한다'는 현상에 해당하는 원칙은?",o:['결함 집중(Defect Clustering)','완벽한 테스팅은 불가능','살충제 패러독스(Pesticide Paradox)','오류 부재의 궤변'],ans:2,exp:'<b>살충제 패러독스</b>는 같은 테스트를 반복하면 결함 발견 능력이 떨어지는 현상입니다. 주기적으로 테스트 케이스를 갱신해야 합니다.'},
+{a:'SE',t:'코드 인스펙션',q:'파간(Fagan) 코드 인스펙션 5단계의 2번째 단계로 옳은 것은?',o:['준비(Preparation)','사전교육(Overview)','인스펙션 회의(Inspection Meeting)','계획(Planning)'],ans:1,exp:'5단계: <b>계획 → 사전교육 → 준비 → 인스펙션 회의 → 시정 및 후속조치.</b> 사전교육에서 저자가 팀원에게 산출물을 설명합니다.'},
+{a:'SE',t:'SLI/SLO/SLA',q:'SRE에서 SLO와 SLA의 목표 수치 관계로 옳은 것은?',o:['SLA 목표치 > SLO 목표치','SLO 목표치 > SLA 목표치','SLO = SLA (항상 동일)','독립적으로 설정되어 비교 불가'],ans:1,exp:'SLO(내부 목표)는 SLA(외부 협약) 위반 패널티를 피하기 위해 <b>SLA보다 높게</b> 설정합니다. 이 여유분을 <b>Error Budget</b>이라 합니다.'},
+{a:'SE',t:'정보시스템 감리',q:'정보시스템 감리 3단계 순서로 옳은 것은?',o:['현장감리 → 예비조사 → 시정조치 확인','예비조사 → 현장감리 → 시정조치 확인','시정조치 확인 → 예비조사 → 현장감리','예비조사 → 시정조치 확인 → 현장감리'],ans:1,exp:'감리 3단계: <b>①예비조사(문서 검토·계획) → ②현장감리(실제 점검·인터뷰) → ③시정조치 확인(이행 여부 확인).</b>'},
+{a:'SE',t:'유지보수 4유형',q:"사용자가 '검색 결과를 더 빠르게 보여달라'고 요청하여 알고리즘을 최적화한 경우 해당 유지보수 유형은?",o:['하자 보수(Corrective)','적응 보수(Adaptive)','완전 보수(Perfective)','예방 보수(Preventive)'],ans:2,exp:'<b>완전 보수(Perfective)</b>는 기능 개선·성능 향상 수정입니다. 하자=버그 수정, 적응=환경 변화 대응, 예방=잠재 문제 사전 제거입니다.'},
+{a:'CA',t:'RAID 5',q:'RAID 5를 구성하기 위한 최소 디스크 개수와 단일 디스크 고장 시 복구 방법으로 옳은 것은?',o:['최소 2개, 미러링으로 복구','최소 3개, 패리티 XOR 연산으로 복구','최소 4개, 백업 디스크로 복구','최소 2개, 패리티 연산으로 복구'],ans:1,exp:'RAID 5는 <b>최소 3개 디스크</b>가 필요하며, 나머지 디스크 데이터와 분산된 패리티를 <b>XOR 연산</b>하여 고장 디스크 데이터를 복구합니다.'},
+{a:'DB',t:'MVCC',q:'MVCC가 기존 잠금(Lock) 기반 동시성 제어 대비 가지는 핵심 장점은?',o:['모든 읽기에 공유 잠금을 걸어 일관성을 보장한다','읽기 작업이 쓰기 작업을 차단하지 않아 동시성이 향상된다','단일 버전만 유지하여 스토리지를 절약한다','2단계 잠금과 결합하여 직렬화를 보장한다'],ans:1,exp:'MVCC는 수정 시 <b>Undo 영역에 이전 버전을 보존</b>합니다. 읽기는 락 없이 필요한 버전을 읽으므로 읽기-쓰기 충돌 없이 동시성이 향상됩니다.'},
+{a:'DB',t:'B+Tree',q:'B+Tree가 B-Tree 대비 범위 검색(Range Search)에 유리한 이유로 가장 적절한 것은?',o:['모든 노드에 데이터가 있어 검색 깊이가 낮다','루트 노드에 시작값이 항상 저장되기 때문이다','리프 노드에만 데이터가 있고 리프끼리 링크드 리스트로 연결되어 순차 탐색이 가능하다','내부 노드에 데이터가 중복 저장되어 있기 때문이다'],ans:2,exp:'B+Tree는 <b>리프 노드가 링크드 리스트로 연결</b>되어, 시작 지점을 찾은 후 포인터를 따라 연속 데이터를 빠르게 스캔할 수 있습니다.'},
+{a:'DS',t:'Apache Kafka',q:'Apache Kafka에서 메시지를 발행하는 측과 구독하는 측의 공식 명칭으로 옳은 것은?',o:['Publisher - Subscriber','Producer - Consumer','Sender - Receiver','Writer - Reader'],ans:1,exp:'Kafka는 Pub/Sub 모델을 구현하지만 공식 용어로 <b>Producer(생산자)와 Consumer(소비자)</b>를 사용합니다.'},
+{a:'DS',t:'MEC',q:'MEC(Mobile Edge Computing)에 대한 설명으로 옳지 않은 것은?',o:['기지국 주변에 컴퓨팅·스토리지 자원을 배치하는 기술이다','중앙 클라우드까지 왕복 지연을 줄여 초저지연 서비스를 실현한다','ETSI에서 표준화를 주도하고 있다','단말기 자체 칩에 AI 연산을 탑재하는 온디바이스 기술과 동일하다'],ans:3,exp:'MEC는 <b>기지국(에지)에 서버를 배치</b>하는 기술이고, 온디바이스 AI는 단말기 자체 NPU에서 연산하는 별개의 개념입니다.'},
+{a:'DS',t:'프루닝',q:'AI 모델 경량화 기법 중 프루닝(Pruning)의 동작 방식으로 옳은 것은?',o:['가중치를 낮은 비트수로 변환하여 정밀도를 줄인다','영향이 적은 가중치나 뉴런 연결을 0으로 만들어 제거한다','큰 교사 모델의 지식을 작은 학생 모델에 전달하여 압축한다','여러 레이어를 하나로 합쳐 연산량을 줄인다'],ans:1,exp:'프루닝은 중요도가 낮은 <b>가중치(Weight)를 0으로 만들어 연결을 제거</b>합니다. ①은 양자화, ③은 지식증류, ④는 레이어 융합입니다.'},
+{a:'DS',t:'클라우드 네이티브',q:'CNCF가 제시하는 클라우드 네이티브 4대 핵심 기술 요소에 해당하지 않는 것은?',o:['마이크로서비스 아키텍처(MSA)','컨테이너(Container)','서버리스(Serverless)','데브옵스(DevOps)'],ans:2,exp:'CNCF 클라우드 네이티브 4대 요소는 <b>MSA, 컨테이너, CI/CD, DevOps</b>입니다. 서버리스는 관련 기술이지만 4대 핵심 요소에 포함되지 않습니다.'}
+]},
+{label:'DAY 2',theme:'CA/OS · 데이터베이스\n핵심 개념',color:'#059669',
+qs:[
+{a:'CA',t:'SCAN 알고리즘',q:'SCAN 알고리즘(엘리베이터)이 SSTF 대비 개선한 문제로 옳은 것은?',o:['평균 탐색 시간을 가장 짧게 만든다','특정 실린더가 무한정 대기하는 기아 현상을 해소한다','도착 순서를 완전히 보장하여 공정성을 확보한다','디스크 헤드 이동이 없어 탐색 시간이 0이 된다'],ans:1,exp:'SSTF는 가까운 요청만 처리하므로 먼 실린더에 <b>기아 현상</b>이 발생합니다. SCAN은 양 끝을 오가며 모든 요청을 처리하여 기아 현상을 방지합니다.'},
+{a:'CA',t:'i-node',q:'유닉스 i-node에서 대용량 파일을 참조하기 위해 사용하는 구조로 옳은 것은?',o:['직접 블록 포인터만으로 무제한 파일 지원','직접·단일 간접·이중 간접·삼중 간접 포인터를 계층적으로 사용','파일 크기가 클수록 i-node 개수를 늘려 대응','연결 리스트 방식으로 다음 블록 주소를 현재 블록에 저장'],ans:1,exp:'i-node는 <b>직접·단일·이중·삼중 간접 포인터를 계층적으로</b> 제공합니다. 소용량은 빠르게, 대용량 파일도 효율적으로 참조 가능합니다.'},
+{a:'CA',t:'파일 할당 방식',q:'연속 할당(Contiguous Allocation)의 가장 큰 단점으로 옳은 것은?',o:['임의 접근(Random Access)이 불가능하다','외부 단편화(External Fragmentation)가 발생한다','파일 삭제 시 데이터가 복구 불가능해진다','디렉터리 구조를 유지할 수 없다'],ans:1,exp:'연속 할당은 임의 접근에 유리하지만, 파일 삭제·생성 반복 시 가용 블록이 분산되는 <b>외부 단편화</b>가 발생합니다.'},
+{a:'CA',t:'시스템 버스',q:'시스템 버스 3종류와 역할이 모두 올바르게 매핑된 것은?',o:['데이터 버스(데이터 전송)/주소 버스(메모리 위치 지정)/제어 버스(읽기·쓰기 신호)','데이터 버스(명령어)/주소 버스(데이터)/제어 버스(전원 제어)','입력 버스/출력 버스/시스템 버스','전송 버스/위치 버스/신호 버스'],ans:0,exp:'시스템 버스 3종: <b>①데이터 버스</b>(데이터, 양방향) <b>②주소 버스</b>(메모리 위치, 단방향) <b>③제어 버스</b>(읽기/쓰기/인터럽트 신호, 양방향).'},
+{a:'CA',t:'FTL',q:'SSD FTL의 웨어 레벨링(Wear Leveling)이 필요한 이유로 옳은 것은?',o:['SSD는 읽기 횟수가 일정 수준을 넘으면 데이터가 손상되기 때문이다','NAND 플래시는 P/E Cycle 한계가 있어 특정 블록의 조기 마모를 방지하기 위해','SSD 컨트롤러 과열을 방지하기 위해 작업을 균등 분배하기 때문이다','운영체제와 블록 주소를 일치시키기 위해'],ans:1,exp:'NAND 플래시는 블록당 <b>P/E 사이클 한계</b>(약 3,000~10,000회)가 있습니다. 웨어 레벨링은 쓰기/삭제를 모든 블록에 균등 분산시켜 조기 마모를 방지합니다.'},
+{a:'DB',t:'MVCC',q:'MVCC에서 데이터를 수정할 때 이전 버전을 보관하는 장소로 옳은 것은?',o:['Redo 로그(Redo Log)','Undo 영역(Undo Segment)','바이너리 로그(Binary Log)','더블 라이트 버퍼'],ans:1,exp:'MVCC는 수정 시 변경 전 값을 <b>Undo 영역</b>에 보관합니다. 읽기 트랜잭션은 Undo 영역에서 필요한 버전을 조회하므로 락 없이 일관된 읽기가 가능합니다.'},
+{a:'DB',t:'옵티마이저 힌트',q:'SQL 옵티마이저 힌트(Hint)에 대한 설명으로 옳은 것은?',o:['DBMS 내부에서 자동 생성되는 실행 계획 최적화 규칙이다','개발자가 SQL 내에 삽입하여 옵티마이저에게 특정 실행 계획을 지시하는 주석이다','데이터 통계 정보를 자동으로 수집하는 백그라운드 프로세스이다','인덱스를 자동 생성·관리하는 DBMS 기능이다'],ans:1,exp:'힌트는 SQL에 삽입하는 <b>주석 형태</b>(Oracle: /*+ INDEX(...) */)로, CBO가 비효율적인 실행 계획을 수립할 때 개발자가 강제 보정하는 수단입니다.'},
+{a:'DB',t:'트랜잭션 격리 수준',q:"격리 수준 중 커밋되지 않은 데이터를 다른 트랜잭션이 읽을 수 있는 'Dirty Read'가 발생하는 단계는?",o:['Read Committed 이상에서만 발생','Read Uncommitted 단계에서 발생','Repeatable Read 이상에서만 발생','Serializable에서만 발생'],ans:1,exp:'<b>Dirty Read</b>는 가장 낮은 격리 수준인 <b>Read Uncommitted</b>에서만 발생합니다. Read Committed부터는 커밋된 데이터만 읽으므로 방지됩니다.'},
+{a:'DB',t:'분산 투명성',q:'사용자가 데이터가 어느 노드에 저장되어 있는지 알 필요 없이 접근할 수 있는 투명성은?',o:['분할 투명성(Fragmentation)','위치 투명성(Location)','중복 투명성(Replication)','장애 투명성(Failure)'],ans:1,exp:'<b>위치 투명성</b>은 데이터의 물리적 저장 위치를 사용자에게 숨기는 속성입니다. 분할=데이터 분할 사실 은닉, 중복=복제 사실 은닉, 장애=일부 노드 장애에도 서비스 유지입니다.'},
+{a:'DB',t:'조인 알고리즘',q:'중첩 루프 조인(Nested Loop Join)이 적합한 상황으로 옳은 것은?',o:['두 테이블 모두 대용량이고 인덱스가 없는 경우','이미 정렬된 두 대용량 테이블을 병합하는 경우','드라이빙 테이블 결과 건수가 적고 내부 테이블에 인덱스가 있는 경우','메모리에 해시 테이블을 올릴 수 있는 경우'],ans:2,exp:'NL 조인은 <b>드라이빙 결과가 적고 내부 테이블에 인덱스가 있을 때</b> 최고 성능을 발휘합니다. 외부 루프 건수만큼 내부 인덱스를 탐색하는 구조입니다.'},
+{a:'DS',t:'빅데이터 5V',q:"빅데이터 5V 중 'Velocity(속도)'를 가장 잘 설명하는 사례는?",o:['SNS에 업로드되는 이미지·동영상 등 다양한 형식 데이터','IoT 센서나 금융 거래에서 초당 수만 건씩 발생하는 실시간 스트리밍 데이터','수십 페타바이트에 달하는 대규모 로그 데이터','분석 결과가 비즈니스 의사결정에 기여하는 가치 있는 데이터'],ans:1,exp:'<b>Velocity</b>는 데이터 생성·처리·분석 속도를 의미합니다. 금융 사기 탐지, IoT 실시간 모니터링처럼 즉각 처리가 필요한 경우가 대표 사례입니다.'},
+{a:'DS',t:'Apache Kafka',q:'Kafka가 대용량 메시지를 고성능으로 처리할 수 있는 기술적 이유로 옳은 것은?',o:['모든 데이터를 메모리(RAM)에만 저장하여 I/O 없이 처리한다','데이터를 디스크에 순차 저장(Sequential I/O)하여 랜덤 I/O보다 빠른 쓰기 성능을 낸다','SSD 전용 파일 시스템을 사용하여 최적화한다','각 메시지를 별도 파일로 저장하여 병렬 처리를 극대화한다'],ans:1,exp:'Kafka는 메시지를 디스크에 <b>순차 append</b> 방식으로 기록합니다. 순차 I/O는 랜덤 I/O 대비 월등히 빠르며 대용량 실시간 스트리밍 처리 성능을 확보합니다.'},
+{a:'DS',t:'MEC',q:'MEC 활용이 가장 적합한 서비스로 묶인 것은?',o:['소셜 미디어 피드 갱신, 이메일 수신','자율주행 차량 실시간 제어, 원격 로봇 수술','대용량 파일 백업, 빅데이터 배치 분석','딥러닝 모델 학습, 클라우드 렌더팜'],ans:1,exp:'MEC는 수 밀리초 이하의 <b>초저지연</b>이 요구되는 서비스에 최적입니다. 자율주행이나 원격 수술처럼 지연이 곧 사고로 이어질 수 있는 영역에서 핵심 역할을 합니다.'},
+{a:'CA',t:'파일 할당 방식',q:'색인 할당(Indexed Allocation)에서 큰 파일을 지원하는 방법으로 옳은 것은?',o:['인덱스 블록 크기를 동적으로 확장한다','다단계 인덱스(Multi-level Index) 또는 연결 인덱스를 사용한다','파일마다 별도 파티션을 할당한다','연속 할당으로 전환하여 처리한다'],ans:1,exp:'인덱스 블록 하나로 참조 가능한 블록 수에 한계가 있으므로, 대용량 파일에는 <b>다단계 인덱스</b>나 인덱스 블록 연결 방식을 사용합니다.'},
+{a:'CA',t:'시스템 버스',q:'주소 버스(Address Bus)의 방향성으로 옳은 것은?',o:['양방향(CPU ↔ 메모리)','단방향(CPU → 메모리/I/O)','단방향(메모리 → CPU)','방향이 없는 브로드캐스트 방식'],ans:1,exp:'주소 버스는 <b>CPU가 접근할 메모리 위치나 I/O 포트를 지정하는 단방향</b> 버스입니다. 데이터 버스와 제어 버스는 양방향으로 동작합니다.'},
+{a:'CA',t:'RAID 5',q:'RAID 6이 RAID 5 대비 우수한 점으로 옳은 것은?',o:['읽기 성능이 2배 빠르다','동시에 2개 디스크가 고장나도 데이터를 복구할 수 있다','패리티 없이 순수 데이터만 저장하여 용량 효율이 높다','최소 디스크 수가 RAID 5보다 적다'],ans:1,exp:'RAID 6은 <b>두 개의 독립 패리티</b>를 저장하여 동시 2개 디스크 고장에도 복구가 가능합니다. RAID 5는 1개 고장까지만 복구 가능하며, RAID 6 최소 구성은 4개입니다.'},
+{a:'DB',t:'트랜잭션 격리 수준',q:'트랜잭션 격리 수준을 낮은 단계부터 높은 단계 순으로 올바르게 나열한 것은?',o:['Read Committed → Read Uncommitted → Repeatable Read → Serializable','Read Uncommitted → Read Committed → Repeatable Read → Serializable','Repeatable Read → Read Committed → Read Uncommitted → Serializable','Serializable → Repeatable Read → Read Committed → Read Uncommitted'],ans:1,exp:'ANSI SQL 표준 격리 수준: <b>Read Uncommitted → Read Committed → Repeatable Read → Serializable.</b> 단계가 높을수록 이상 현상을 더 많이 차단하지만 동시성은 감소합니다.'},
+{a:'DB',t:'분산 투명성',q:'데이터가 여러 노드에 복제되어 있어도 사용자가 단일 데이터처럼 인식하는 투명성은?',o:['분할 투명성','위치 투명성','중복 투명성(Replication Transparency)','지역사상 투명성'],ans:2,exp:'<b>중복 투명성</b>은 동일 데이터의 복제 사실을 사용자에게 숨겨, 어느 복제본에 접근하더라도 동일한 결과를 받도록 보장합니다.'},
+{a:'DB',t:'조인 알고리즘',q:'인덱스가 없는 대용량 테이블 두 개를 동등 조인할 때 옵티마이저가 선택하기 가장 적합한 물리적 조인 방식은?',o:['중첩 루프 조인(NL Join)','정렬 병합 조인(Sort-Merge Join)','해시 조인(Hash Join)','크로스 조인(Cross Join)'],ans:2,exp:'<b>해시 조인</b>은 작은 테이블을 해시 테이블에 올린 후 큰 테이블을 탐색합니다. 인덱스가 없는 대용량 동등 조인에 가장 효율적입니다.'},
+{a:'CA',t:'FTL',q:'SSD FTL의 3대 핵심 기능을 모두 포함한 것은?',o:['ECC 오류 정정, 암호화, 캐시 관리','논리-물리 주소 매핑, 웨어 레벨링, 가비지 컬렉션','TRIM 처리, DRAM 캐싱, 블록 미러링','클럭 관리, 전력 최적화, 펌웨어 업데이트'],ans:1,exp:'FTL 3대 기능: <b>①논리-물리 주소 매핑</b>(OS가 논리 주소로 접근) <b>②웨어 레벨링</b>(블록 균등 마모) <b>③가비지 컬렉션</b>(삭제 블록 정리).'}
+]},
+{label:'DAY 3',theme:'디지털서비스 심화\n+ 혼합 복습',color:'#d97706',
+qs:[
+{a:'DS',t:'Apache Kafka',q:'Kafka에서 Topic을 여러 Partition으로 나누는 주된 이유로 옳은 것은?',o:['메시지를 시간 순서대로 정렬하기 위해','병렬 처리를 통한 처리량 향상과 수평 확장을 위해','메시지 중복을 방지하기 위해','Consumer 수를 제한하기 위해'],ans:1,exp:'<b>Partition</b>은 Kafka의 병렬 처리 단위입니다. Partition 수를 늘리면 Consumer Group 내 Consumer들이 각 Partition을 병렬로 처리하여 전체 처리량이 향상됩니다.'},
+{a:'DS',t:'빅데이터 5V',q:"빅데이터 5V 중 'Value(가치)'가 강조하는 내용으로 옳은 것은?",o:['수집·저장 가능한 데이터의 양을 최대화하는 것','대량 데이터에서 비즈니스 의사결정에 유용한 통찰을 추출하는 것','데이터를 실시간으로 처리하여 즉각적인 응답을 제공하는 것','데이터의 정확성과 신뢰성을 검증하는 것'],ans:1,exp:'<b>Value</b>는 단순히 많은 데이터를 보유하는 것보다, 그 데이터에서 <b>비즈니스 가치 있는 인사이트</b>를 추출하는 것이 중요하다는 개념입니다.'},
+{a:'DS',t:'AI 모델 경량화',q:'AI 모델 경량화 기법 중 양자화(Quantization)의 동작 방식으로 옳은 것은?',o:['중요도 낮은 뉴런 연결을 제거하여 파라미터 수를 줄인다','FP32 등 높은 정밀도 가중치를 INT8 등 낮은 비트수로 변환하여 모델 크기를 줄인다','큰 모델의 지식을 작은 모델에 전달하여 압축한다','여러 레이어를 하나로 합쳐 연산 횟수를 줄인다'],ans:1,exp:'양자화는 <b>FP32(32bit) → INT8(8bit)</b> 등으로 변환합니다. 모델 크기와 연산량이 대폭 줄어들며 일부 정확도 손실이 발생할 수 있습니다.'},
+{a:'DS',t:'AI 모델 경량화',q:"지식 증류(Knowledge Distillation)에서 '교사 모델(Teacher Model)'의 역할로 옳은 것은?",o:['학생 모델의 가중치를 직접 복사하여 초기화한다','큰 교사 모델의 출력(소프트 레이블)을 활용하여 작은 학생 모델을 학습시킨다','교사 모델과 학생 모델이 앙상블을 이루어 함께 추론한다','학생 모델이 교사 모델보다 더 많은 파라미터를 가진다'],ans:1,exp:'지식 증류는 대형 교사 모델의 <b>소프트 레이블(클래스 간 확률 분포)</b>을 학습 신호로 사용하여 소형 학생 모델을 훈련합니다.'},
+{a:'DS',t:'클라우드 네이티브',q:'클라우드 네이티브 4대 요소 중 Continuous Delivery와 Continuous Deployment의 차이로 옳은 것은?',o:['두 개념은 완전히 동일하다','Continuous Delivery는 릴리즈 준비 자동화까지, Continuous Deployment는 프로덕션 배포까지 자동화한다','Continuous Deployment는 수동 배포, Continuous Delivery는 자동 배포를 의미한다','CI와 CD는 반드시 별개 도구를 사용해야 한다'],ans:1,exp:'<b>Continuous Delivery</b>는 언제든 배포 가능한 상태를 유지하되 실제 배포는 수동 승인을 거칩니다. <b>Continuous Deployment</b>는 승인 없이 프로덕션까지 자동 배포됩니다.'},
+{a:'CA',t:'SCAN 알고리즘',q:'LOOK 알고리즘이 SCAN 알고리즘을 개선한 방식으로 옳은 것은?',o:['헤드 이동 방향을 단방향으로 고정한다','끝 실린더까지 이동하지 않고 마지막 요청 위치에서 방향을 전환한다','요청 없는 실린더는 고속으로 통과한다','헤드를 항상 중앙에서 출발시킨다'],ans:1,exp:'SCAN은 실린더 양 끝까지 이동하지만, LOOK은 <b>실제 대기 중인 마지막 요청 위치</b>에서 방향을 전환합니다. 불필요한 헤드 이동을 줄여 효율이 높습니다.'},
+{a:'CA',t:'FTL',q:'SSD FTL의 가비지 컬렉션(Garbage Collection)이 수행하는 작업으로 옳은 것은?',o:['손상된 NAND 셀을 물리적으로 교체하는 작업','유효 데이터를 새 위치로 이동하고 기존 블록을 erase하여 재사용 가능하게 만드는 작업','I/O 명령을 스케줄링하여 처리 순서를 최적화하는 작업','논리-물리 주소 매핑 테이블을 갱신하는 작업'],ans:1,exp:'NAND 플래시는 덮어쓰기가 불가능하므로, 가비지 컬렉션이 <b>유효 데이터를 복사한 후 원본 블록을 erase</b>하여 재사용 가능 상태로 만듭니다.'},
+{a:'DB',t:'트랜잭션 격리 수준',q:"'Phantom Read' 이상 현상을 방지하기 위해 필요한 최소 격리 수준은?",o:['Read Committed','Repeatable Read','Serializable','Read Uncommitted'],ans:2,exp:'<b>Phantom Read</b>는 같은 범위 쿼리를 두 번 실행했을 때 새 행이 나타나는 현상입니다. 표준 SQL 기준으로는 <b>Serializable</b>에서만 완전히 방지됩니다.'},
+{a:'DB',t:'B+Tree',q:'B+Tree에서 노드가 꽉 찬 상태에서 새 키를 삽입할 때 발생하는 구조 변화로 옳은 것은?',o:['전체 트리를 재구성하여 새 루트를 만든다','해당 노드를 두 개로 분열(Split)하고 중간 키를 부모 노드로 올린다','삽입이 실패하고 다른 위치에 새 트리를 생성한다','리프 노드 링크드 리스트만 갱신한다'],ans:1,exp:'B+Tree는 노드 <b>분열(Split)</b>로 균형을 유지합니다. 꽉 찬 노드에 삽입 시 두 노드로 분열하고 중간 키가 부모로 올라갑니다.'},
+{a:'DB',t:'조인 알고리즘',q:'정렬 병합 조인(Sort-Merge Join)이 유리한 조건으로 옳은 것은?',o:['양쪽 테이블에 인덱스가 있고 결과 건수가 매우 적은 경우','두 테이블이 조인 컬럼 기준으로 이미 정렬되어 있거나 정렬 비용이 크지 않은 경우','메모리가 충분하여 작은 테이블을 해시 테이블에 올릴 수 있는 경우','비동등 조인(Non-Equi Join)이 포함된 복잡한 조건에서'],ans:1,exp:'Sort-Merge 조인은 두 테이블을 각각 정렬한 후 병합합니다. <b>이미 인덱스 순으로 정렬된 경우</b> 정렬 비용이 없어 특히 유리합니다.'},
+{a:'SE',t:'카오스 엔지니어링',q:"카오스 엔지니어링 실험에서 '정상 상태(Steady State)'를 먼저 정의하는 이유로 옳은 것은?",o:['장애 주입 도구가 정상 상태를 기반으로 스크립트를 자동 생성하기 때문이다','장애 주입 전후를 비교하여 시스템이 정상 범위를 벗어났는지 과학적으로 판단하기 위해','법적으로 정상 상태를 문서화할 의무가 있기 때문이다','모든 카오스 실험은 정상 상태에서만 안전하게 수행할 수 있기 때문이다'],ans:1,exp:'카오스 엔지니어링은 <b>과학적 실험 방법론</b>을 따릅니다. 정상 상태(예: 에러율 < 0.1%)를 가설로 정의하고, 장애 주입 후에도 이 범위를 유지하는지 검증합니다.'},
+{a:'SE',t:'테스팅 7원칙',q:"'조기 테스팅(Early Testing)' 원칙과 관련된 개념으로 가장 적절한 것은?",o:['테스트는 시스템이 완성된 최종 단계에서만 수행해야 한다','요구사항 분석 단계부터 테스트 활동을 시작하면 결함 수정 비용을 크게 줄일 수 있다','빠른 테스트 도구로 CI/CD 파이프라인 속도를 높여야 한다','테스트는 전문 QA 인력이 조기에 개입해야만 효과적이다'],ans:1,exp:'<b>조기 테스팅</b>은 결함 발견이 늦을수록 수정 비용이 기하급수적으로 증가(Boehm 곡선)한다는 원칙입니다. 요구사항 단계 대비 운영 단계 수정 비용은 100배 이상입니다.'},
+{a:'SE',t:'정보시스템 감리',q:'정보시스템 감리 현장감리 단계에서 수행하는 주요 활동으로 옳은 것은?',o:['감리 계획서 작성 및 발주처 보고','산출물 직접 검토, 인터뷰 수행, 발견 문제를 감리조서에 기록','이전 감리 시정 사항의 이행 여부 확인','감리 보고서를 최종 확정하여 납품'],ans:1,exp:'<b>현장감리</b>는 감리원이 실제 현장에서 산출물을 검토하고 이해관계자 인터뷰를 수행하며, 발견된 문제를 <b>감리조서</b>에 기록하는 핵심 단계입니다.'},
+{a:'SE',t:'형상 관리',q:"소프트웨어 형상 관리의 '형상 항목(Configuration Item)'으로 옳지 않은 것은?",o:['요구사항 명세서','소스 코드','테스트 계획서','개발자의 구두 설명 및 회의 발언'],ans:3,exp:'형상 항목은 <b>식별·통제·기록이 가능한 공식 산출물</b>이어야 합니다. 요구사항 명세서, 설계서, 소스 코드, 테스트 케이스 등이 해당되며, 비공식 구두 발언은 포함되지 않습니다.'},
+{a:'DS',t:'프루닝',q:'구조적 프루닝(Structured Pruning)이 비구조적 프루닝보다 GPU 가속 효과가 더 좋은 이유는?',o:['GPU는 0이 아닌 값만 연산하도록 특화되어 있어서','뉴런/필터 단위로 제거하여 실제 행렬 크기가 줄어들므로 GPU 연산 효율이 향상되기 때문이다','랜덤하게 가중치를 제거하기 때문이다','그래디언트가 0인 파라미터를 제거하기 때문이다'],ans:1,exp:'<b>구조적 프루닝</b>은 뉴런·채널·레이어 전체를 제거하여 실제 행렬 크기가 줄어듭니다. 비구조적 프루닝은 희소 행렬을 생성하므로 일반 GPU에서 속도 향상이 제한적입니다.'},
+{a:'DS',t:'빅데이터 5V',q:"빅데이터 5V 중 'Veracity(진실성)'가 강조하는 것은?",o:['수집 가능한 데이터의 절대적인 양','데이터의 신뢰성과 정확성 보장','데이터 생성·처리·분석 속도','정형·비정형·반정형 데이터 형태의 다양성'],ans:1,exp:'<b>Veracity</b>는 수집된 데이터의 품질과 정확성을 의미합니다. 노이즈, 불완전한 데이터, 편향된 데이터를 처리하여 신뢰할 수 있는 분석 결과를 도출하는 것이 핵심입니다.'},
+{a:'CA',t:'i-node',q:'유닉스 파일 시스템에서 하드 링크(Hard Link)와 i-node의 관계로 옳은 것은?',o:['하드 링크 생성 시 새로운 i-node가 생성된다','하드 링크는 동일한 i-node를 가리키는 새로운 디렉터리 엔트리를 생성한다','하드 링크는 원본 파일 경로를 저장하는 포인터 파일이다','하드 링크 삭제 시 원본 i-node도 즉시 삭제된다'],ans:1,exp:'하드 링크는 <b>동일한 i-node 번호를 가리키는 새 디렉터리 엔트리</b>입니다. 모든 하드 링크가 삭제되어 링크 카운터가 0이 될 때만 i-node와 데이터가 실제 해제됩니다.'},
+{a:'CA',t:'파일 할당 방식',q:'연결 할당(Linked Allocation)의 단점으로 옳은 것은?',o:['외부 단편화가 심하여 디스크 공간 활용이 비효율적이다','임의 접근(Direct Access)이 어렵고 포인터 손상 시 데이터 유실 위험이 있다','인덱스 블록 관리로 인한 추가 공간 오버헤드가 발생한다','파일 크기 변경이 불가능하다'],ans:1,exp:'연결 할당은 <b>순차 접근만 가능</b>합니다. 중간 포인터가 손상되면 이후 블록 전체에 접근 불가능해지며, FAT(File Allocation Table)이 이 단점을 보완한 방식입니다.'},
+{a:'DB',t:'분산 투명성',q:"분산 DB의 각 지역 노드의 DBMS 종류나 스키마 차이를 숨겨 통일된 방식으로 접근 가능하게 하는 투명성은?",o:['분할 투명성','위치 투명성','장애 투명성','지역사상 투명성(Local Mapping Transparency)'],ans:3,exp:'<b>지역사상 투명성</b>은 각 지역 노드의 이기종 DBMS(Oracle, MySQL 등) 또는 다른 스키마 체계를 숨겨, 사용자가 단일 DBMS처럼 접근할 수 있도록 하는 속성입니다.'},
+{a:'DB',t:'MVCC',q:"MVCC의 '스냅샷 격리(Snapshot Isolation)'가 제공하는 특성으로 옳은 것은?",o:['트랜잭션 시작 시점의 데이터 상태를 일관되게 읽을 수 있다','다른 트랜잭션의 미완료 변경 사항도 즉시 볼 수 있다','모든 트랜잭션이 직렬화되어 이상 현상이 완전히 제거된다','읽기 시 항상 최신 데이터만 반환된다'],ans:0,exp:'<b>스냅샷 격리</b>는 트랜잭션 시작 시점의 일관된 데이터 버전을 제공합니다. 실행 중 다른 트랜잭션의 변경 영향을 받지 않아 일관된 뷰를 유지합니다.'}
+]},
+{label:'DAY 4',theme:'응용·심화\n통합 문제',color:'#dc2626',
+qs:[
+{a:'SE',t:'형상 관리',q:'형상 관리에서 변경 요청(CR) 처리 절차로 옳은 것은?',o:['변경 요청 → CCB 승인 → 구현 → 검증·테스트 → 베이스라인 업데이트','베이스라인 업데이트 → 구현 → CCB 검토 → 변경 요청','변경 요청 → 즉시 구현 → CCB 사후 보고 → 베이스라인 업데이트','CCB 사전 승인 없이 개발자가 임의 변경 가능'],ans:0,exp:'베이스라인 이후 변경은 <b>변경 요청 → CCB 승인 → 구현 → 테스트 → 베이스라인 갱신</b>의 공식 절차를 따릅니다. CCB 승인 없는 임의 변경은 형상 관리 위반입니다.'},
+{a:'SE',t:'화이트박스 테스트',q:'항공 소프트웨어 표준 DO-178C에서 최고 등급(DAL A)에 요구하는 커버리지 기준은?',o:['구문 커버리지(Statement Coverage)','분기 커버리지(Branch Coverage)','MC/DC(Modified Condition/Decision Coverage)','경로 커버리지(Path Coverage)'],ans:2,exp:'DO-178C DAL A 등급은 <b>MC/DC</b>를 요구합니다. 각 조건이 독립적으로 전체 결정 결과에 영향을 미침을 확인하는 기준으로, 분기 커버리지보다 강하면서 경로 커버리지보다 실용적입니다.'},
+{a:'SE',t:'카오스 엔지니어링',q:"'GameDay' 방식 카오스 엔지니어링에 대한 설명으로 옳은 것은?",o:['자동화 도구로 24시간 무작위 장애를 주입하는 방식','팀 전체가 참여하여 계획된 대규모 장애 시나리오를 실제로 수행하고 대응 역량을 훈련하는 방식','개발 환경에서만 수행하는 안전한 카오스 테스트','AI가 자동으로 취약 서비스를 분석하여 장애를 주입하는 방식'],ans:1,exp:'<b>GameDay</b>는 개발·운영·SRE 팀 전체가 참여하여 실제 장애 시나리오를 연습하는 이벤트입니다. 장애 대응 프로세스와 팀 협력을 검증하고 훈련합니다.'},
+{a:'SE',t:'결함 생명주기',q:"결함 생명주기에서 'Deferred(이연)' 상태의 의미로 옳은 것은?",o:['결함이 수정되었지만 재테스트를 기다리는 상태','결함은 인정하지만 현재 버전에서 수정하지 않고 다음 릴리즈로 미루기로 결정한 상태','결함이 이미 다른 리포트에 등록된 중복 결함인 상태','결함 리포트 자체가 잘못 작성되어 취소된 상태'],ans:1,exp:'<b>Deferred</b> 상태는 결함은 인정하지만 우선순위·일정·비용 이유로 현재 릴리즈에서 수정하지 않고 <b>향후 버전으로 이연</b>하는 상태입니다.'},
+{a:'SE',t:'SLI/SLO/SLA',q:"SRE에서 'Error Budget'의 정의로 옳은 것은?",o:['장애 시 고객에게 지급해야 하는 보상금 예산','SLO(목표치)와 100% 사이의 허용 가능한 장애·오류 여유분','연간 발생 허용 버그의 최대 개수','장애 복구에 투입 가능한 인력 수'],ans:1,exp:'<b>Error Budget = 100% − SLO 목표치.</b> 예: SLO 99.9%이면 Error Budget = 0.1%(월 약 43분). 소진 시 새 기능 배포를 중단하고 안정화에 집중합니다.'},
+{a:'SE',t:'코드 인스펙션',q:"코드 인스펙션 '준비(Preparation)' 단계의 주요 활동으로 옳은 것은?",o:['진행자가 인스펙션 일정과 참여자를 결정한다','각 검토자가 체크리스트로 독립적으로 산출물을 검토하고 결함을 사전에 식별한다','저자가 팀원에게 산출물 개요를 설명한다','발견 결함 목록을 작성하고 수정 담당자를 지정한다'],ans:1,exp:'준비 단계에서 각 검토자는 <b>인스펙션 회의 전에 독립적으로 체크리스트로 산출물을 검토</b>합니다. 이 개인 사전 검토가 인스펙션 회의의 효율을 높이는 핵심입니다.'},
+{a:'CA',t:'RAID 5',q:'RAID 5에서 디스크가 고장났을 때 복구에 사용하는 연산으로 옳은 것은?',o:['AND 연산으로 나머지 디스크 데이터 합산','XOR 연산으로 나머지 디스크 데이터와 패리티를 계산하여 복구','OR 연산으로 패리티 블록에서 직접 원본 복원','나머지 디스크를 미러링하여 복제본 생성'],ans:1,exp:'RAID 패리티는 <b>XOR 연산</b>으로 계산됩니다. A XOR B XOR C = P일 때, A가 고장나면 A = B XOR C XOR P로 복구합니다.'},
+{a:'CA',t:'RAID 5',q:"RAID 5에서 데이터 쓰기 시 발생하는 'Write Penalty'의 원인으로 옳은 것은?",o:['미러링을 위해 동일 데이터를 두 번 써야 하기 때문이다','데이터 변경 시 패리티 재계산을 위해 기존 데이터와 기존 패리티를 추가로 읽어야 하기 때문이다','쓰기 전 디스크 전체를 초기화해야 하기 때문이다','순차적으로만 처리가 가능하기 때문이다'],ans:1,exp:'RAID 5 Write Penalty: 1번 쓰기에 실제로 <b>4번 I/O</b>(기존 데이터 읽기 + 기존 패리티 읽기 + 새 데이터 쓰기 + 새 패리티 쓰기)가 발생합니다.'},
+{a:'CA',t:'i-node',q:'유닉스 파일 시스템에서 디렉터리(Directory)의 실체로 옳은 것은?',o:['파일명과 i-node 번호 쌍의 목록을 저장하는 특수 파일','실제 데이터 블록 주소만 저장하는 인덱스 구조','파일의 메타데이터만 저장하는 특수 i-node','계층적 경로 정보를 B+Tree로 관리하는 구조'],ans:0,exp:'디렉터리는 <b>(파일명, i-node 번호) 쌍의 목록을 저장하는 특수 파일</b>입니다. 파일 열기 시 OS는 디렉터리에서 파일명에 해당하는 i-node 번호를 찾아 데이터 블록에 접근합니다.'},
+{a:'DB',t:'MVCC',q:"MVCC 스냅샷 격리의 대표적 한계인 'Write Skew' 이상 현상을 설명한 것으로 옳은 것은?",o:['두 트랜잭션이 동시에 같은 행을 수정하여 한쪽 변경이 사라지는 현상','두 트랜잭션이 각각 다른 행을 읽고 서로의 조건을 충족하는 변경을 하여 결과적으로 일관성이 깨지는 현상','한 트랜잭션이 커밋되지 않은 데이터를 읽는 현상','같은 범위 쿼리 실행 시 새 행이 나타나는 현상'],ans:1,exp:'<b>Write Skew</b> 예시: 두 의사가 동시에 당직자 1명 조건 확인 후 각자 퇴근 신청 → 당직자 0명. <b>Serializable 격리</b>로만 완전 방지됩니다.'},
+{a:'DB',t:'B+Tree',q:'B+Tree에서 데이터 수가 N배 증가할 때 트리 높이 변화로 옳은 것은?',o:['높이가 N배 선형적으로 증가','높이가 O(log N)으로 매우 완만하게 증가','높이가 변하지 않는다','높이가 O(N²)으로 급격히 증가'],ans:1,exp:'B+Tree는 균형 트리로 높이가 <b>O(log N)</b>입니다. 차수 100의 B+Tree에서 1억 개 데이터도 4단계 이하로 검색 가능합니다.'},
+{a:'DB',t:'트랜잭션 격리 수준',q:"'Non-Repeatable Read'를 방지하기 위한 최소 격리 수준으로 옳은 것은?",o:['Read Uncommitted','Read Committed','Repeatable Read','Serializable'],ans:2,exp:'<b>Non-Repeatable Read</b>는 같은 행을 두 번 읽었을 때 값이 달라지는 현상입니다. <b>Repeatable Read</b> 이상에서는 읽은 행을 잠금(또는 스냅샷)하여 다른 트랜잭션 수정을 차단합니다.'},
+{a:'DS',t:'Apache Kafka',q:'Kafka Consumer Group에 대한 설명으로 옳은 것은?',o:['같은 Consumer Group 내 모든 Consumer가 동일한 메시지를 중복 수신한다','같은 Consumer Group 내에서 각 Partition은 하나의 Consumer에게만 할당되어 부하가 분산된다','Consumer Group 수는 Partition 수보다 반드시 많아야 한다','Consumer Group은 Kafka 3.0 이후 폐지된 개념이다'],ans:1,exp:'<b>Consumer Group</b>은 Kafka의 수평 확장 메커니즘입니다. 그룹 내 각 Consumer는 고유한 Partition을 담당하며 메시지 중복 없이 병렬 처리합니다.'},
+{a:'DS',t:'MEC',q:'MEC와 중앙 클라우드를 비교한 내용으로 옳은 것은?',o:['MEC는 중앙 클라우드보다 더 많은 컴퓨팅 파워를 보유한다','MEC는 지연 시간이 짧은 반면 처리 가능한 데이터 규모는 중앙 클라우드 대비 제한적이다','MEC는 AI 대규모 학습에 최적화되어 있다','중앙 클라우드가 MEC보다 더 낮은 지연 시간을 제공한다'],ans:1,exp:'MEC=<b>실시간 처리(초저지연)</b>, 중앙 클라우드=<b>대규모 배치 분석</b>에 각각 적합합니다. 에지 서버의 컴퓨팅 자원은 중앙 클라우드에 비해 제한적입니다.'},
+{a:'DS',t:'클라우드 네이티브',q:'컨테이너(Container)와 가상 머신(VM)의 비교로 옳은 것은?',o:['컨테이너는 하드웨어를 완전 가상화하여 보안성이 VM보다 높다','컨테이너는 OS 커널을 공유하여 VM보다 가볍고 기동 시간이 빠르다','VM은 OS 커널을 공유하여 컨테이너보다 리소스 사용이 적다','컨테이너는 반드시 특정 OS에서만 실행 가능하다'],ans:1,exp:'컨테이너는 <b>호스트 OS 커널을 공유</b>하고 사용자 공간만 격리합니다. 컨테이너=초 단위 기동 vs VM=분 단위 기동입니다.'},
+{a:'DS',t:'AI 모델 경량화',q:'AI 모델 경량화 기법 적용 시 공통적으로 발생하는 트레이드오프로 옳은 것은?',o:['모델 크기가 줄면 항상 정확도가 향상된다','모델 크기·연산량 감소와 정확도(Accuracy) 간의 트레이드오프가 발생한다','경량화 후에는 추가 학습(Fine-tuning)이 불가능하다','경량화는 추론 속도만 향상시키고 모델 크기에는 영향을 주지 않는다'],ans:1,exp:'프루닝·양자화·지식증류 모두 <b>모델 크기와 연산 효율을 높이는 대신 일정 수준의 정확도 손실</b>을 감수합니다.'},
+{a:'SE',t:'유지보수 4유형',q:'잠재적 오류를 사전에 제거하거나 향후 유지보수성을 높이기 위해 리팩토링을 수행하는 유지보수 유형은?',o:['하자 보수(Corrective)','적응 보수(Adaptive)','완전 보수(Perfective)','예방 보수(Preventive)'],ans:3,exp:'<b>예방 보수(Preventive)</b>는 현재 문제가 없더라도 잠재적 결함을 제거하거나 구조를 개선하여 미래 유지보수 비용을 줄이는 활동입니다. 리팩토링이 대표 사례입니다.'},
+{a:'SE',t:'정보시스템 감리',q:"정보시스템 감리 '예비조사' 단계의 주요 목적으로 옳은 것은?",o:['지적 사항 시정 조치 이행 여부를 확인한다','사업 계획서, 계약서, 기존 산출물 등을 사전 검토하여 현장감리 계획을 수립한다','감리 최종 보고서를 발주처에 제출한다','개발팀 인터뷰로 기술적 문제점을 직접 확인한다'],ans:1,exp:'<b>예비조사</b>는 현장 방문 전에 관련 문서·계획서를 검토하여 감리 포인트를 파악하고, 효율적인 <b>현장감리 계획을 수립</b>하는 단계입니다.'}
+]},
+{label:'DAY 5',theme:'종합 복습\n최종 마무리',color:'#7c3aed',
+qs:[
+{a:'SE',t:'형상 관리',q:"형상 관리의 '형상 감사(Configuration Audit)' 활동으로 옳은 것은?",o:['소스 코드 버그를 자동으로 탐지하는 정적 분석 활동','베이스라인이 승인된 내용과 실제 산출물이 일치하는지 검증하는 활동','개발 환경 서버의 성능·가용성을 점검하는 활동','팀원 간 코딩 컨벤션 준수 여부를 확인하는 코드 리뷰'],ans:1,exp:'형상 감사는 <b>FCA(기능 형상 감사)와 PCA(물리 형상 감사)</b>로 나뉘며, 승인된 형상 항목과 실제 산출물의 완전성·일관성을 검증하여 베이스라인 무결성을 보장합니다.'},
+{a:'SE',t:'화이트박스 테스트',q:'구문 커버리지(Statement Coverage) 100%가 의미하는 것으로 옳은 것은?',o:['모든 가능한 실행 경로를 테스트하였다','소스 코드의 모든 실행 가능한 구문을 최소 1회 이상 실행하였다','모든 분기(Branch)의 참·거짓 결과를 모두 테스트하였다','모든 조건식이 독립적으로 결과에 영향을 미침을 확인하였다'],ans:1,exp:'구문 커버리지는 <b>모든 실행 가능 구문을 한 번 이상 실행</b>하면 100%가 됩니다. 분기의 모든 결과를 커버하지 않아 결함을 놓칠 수 있어 분기 커버리지로 보완합니다.'},
+{a:'SE',t:'테스팅 7원칙',q:"'완벽한 테스팅은 불가능하다' 원칙이 강조하는 실천적 함의로 옳은 것은?",o:['테스팅이 불가능하므로 결함 없는 소프트웨어를 목표로 삼아야 한다','입력 경우의 수가 무한하므로 리스크와 우선순위 기반으로 테스트 범위를 선정해야 한다','테스팅 비용이 너무 높으므로 최소한의 테스트만 수행해야 한다','완벽한 자동화 도구가 개발되기 전까지 테스팅을 연기해야 한다'],ans:1,exp:'모든 입력 조합을 테스트하는 것은 현실적으로 불가능합니다. 따라서 <b>리스크 기반 테스팅(Risk-Based Testing)</b>으로 중요하고 위험한 기능을 우선 테스트하는 전략을 취해야 합니다.'},
+{a:'SE',t:'결함 생명주기',q:'결함 생명주기 관리에 사용되는 BTS(Bug Tracking System)의 주요 역할로 옳은 것은?',o:['소스 코드 버전 이력을 관리하고 변경 내역을 추적한다','결함의 상태 변화를 추적하고 팀 간 커뮤니케이션을 지원하며 결함 데이터를 통계화하여 품질 분석에 활용한다','자동으로 결함을 탐지하고 수정 방안을 제안한다','배포 파이프라인을 자동화하여 테스트 결과를 즉시 배포에 반영한다'],ans:1,exp:'Jira, Bugzilla 같은 <b>BTS</b>는 결함의 전체 생명주기 상태를 추적하고 담당자 간 커뮤니케이션을 체계화합니다. 누적 결함 데이터는 품질 분석에 활용됩니다.'},
+{a:'SE',t:'정보시스템 감리',q:"정보시스템 감리 3단계 중 '시정조치 확인' 단계에서 수행하는 활동으로 옳은 것은?",o:['산출물과 개발 환경을 직접 방문하여 점검한다','현장감리에서 지적된 문제점들이 사업자에 의해 적절히 시정되었는지 확인한다','발주처와 감리법인이 감리 계약을 체결한다','감리 수행을 위한 예비 문서를 검토한다'],ans:1,exp:'<b>시정조치 확인</b>은 현장감리 지적 사항에 대해 사업자가 제출한 시정 계획·조치 결과를 검토하고, <b>이행 완료 여부를 최종 확인</b>하는 단계입니다.'},
+{a:'SE',t:'유지보수 4유형',q:'실제 소프트웨어 유지보수 비용 분포에서 가장 높은 비중을 차지하는 유형은?',o:['하자 보수(Corrective) — 버그 수정이 대부분이므로','완전 보수(Perfective) — 기능 추가·성능 개선이 가장 빈번하므로','적응 보수(Adaptive) — 환경 변화가 지속적이므로','예방 보수(Preventive) — 사전 예방이 가장 중요하므로'],ans:1,exp:'연구에 따르면 유지보수 비용의 약 <b>50~60%가 완전 보수</b>(기능 개선, 성능 향상)에 투입됩니다. 하자 보수(버그 수정)는 약 17~21%로 일반적 인식보다 낮습니다.'},
+{a:'CA',t:'RAID 5',q:'RAID 5에서 디스크 복구 중(Rebuild) 추가 디스크가 고장날 경우 발생하는 결과로 옳은 것은?',o:['이중 패리티가 있어 자동으로 복구된다','데이터 손실이 발생하며 백업 복원이 필요하다','나머지 정상 디스크만으로 자동 재구성된다','복구가 일시 중단되었다가 재개된다'],ans:1,exp:'RAID 5는 <b>1개 디스크 고장까지만 복구 가능</b>합니다. Rebuild 중 다른 디스크가 고장나면 총 2개 고장 상태가 되어 <b>백업 복원이 필요</b>합니다.'},
+{a:'CA',t:'SCAN 알고리즘',q:'C-SCAN(Circular SCAN)이 SCAN 대비 개선한 문제로 옳은 것은?',o:['한 방향으로만 처리 후 처음으로 돌아가 응답 시간 편차를 줄인다','헤드 이동 속도를 2배로 높인다','처리 대기 큐가 없어 즉시 처리가 가능하다','패리티 연산으로 데이터 신뢰성을 높인다'],ans:0,exp:'SCAN은 방향 전환 시 양 끝과 중간 실린더 응답 시간 편차가 생깁니다. <b>C-SCAN</b>은 한 방향 처리 후 끝에서 처음으로 돌아가 다시 처리하여 응답 시간을 균등화합니다.'},
+{a:'CA',t:'FTL',q:'FTL의 논리-물리 주소 매핑이 필요한 이유로 옳은 것은?',o:['SSD는 논리적 섹터가 없어 OS가 직접 주소 지정이 불가능하기 때문이다','NAND 플래시는 덮어쓰기가 불가능하므로 실제 쓰기 위치가 수시로 변경되어 OS에게 일관된 논리 주소를 제공하기 위해','하드디스크와 동일한 물리 주소 체계를 사용하기 위해','메모리 캐시와 디스크 간 주소를 통일하기 위해'],ans:1,exp:'NAND는 <b>덮어쓰기 불가</b> 특성으로 실제 데이터 위치가 수시로 변합니다. FTL은 OS가 보내는 <b>논리 주소(LBA)를 실제 물리 주소(PBA)로 변환</b>하여 OS는 HDD처럼 일관되게 SSD를 사용합니다.'},
+{a:'DB',t:'옵티마이저 힌트',q:'옵티마이저 힌트 사용 시 주의해야 할 부작용으로 가장 적절한 것은?',o:['힌트를 사용하면 SQL 문법 오류가 발생할 수 있다','데이터 분포가 변경되면 힌트가 오히려 성능을 저하시킬 수 있다','힌트는 DML에서만 사용 가능하다','힌트를 사용하면 트랜잭션 격리 수준이 자동 변경된다'],ans:1,exp:'힌트는 특정 시점의 데이터 분포를 기준으로 작성됩니다. <b>대량 데이터 변경 후 통계가 갱신되면 힌트가 오히려 비효율적</b>일 수 있어 정기적인 재검토가 필요합니다.'},
+{a:'DB',t:'B+Tree',q:'B+Tree 내부 노드(Internal Node)에 저장되는 것으로 옳은 것은?',o:['실제 데이터(레코드)와 탐색 키','탐색 키(인덱스)만 저장되며 실제 데이터는 없다','링크드 리스트 포인터만 저장된다','리프 노드의 복사본이 저장됩니다'],ans:1,exp:'B+Tree에서 <b>내부 노드는 탐색 경로(인덱스 키)만</b> 저장하고, 모든 실제 데이터는 <b>리프 노드</b>에만 저장됩니다.'},
+{a:'DB',t:'조인 알고리즘',q:'해시 조인(Hash Join)의 수행 단계로 올바른 것은?',o:['두 테이블을 정렬 후 포인터로 병합하며 비교','작은 테이블로 해시 테이블을 메모리에 구성 후 큰 테이블을 스캔하며 일치하는 값을 탐색','외부 루프 테이블 각 행마다 내부 루프 테이블 전체를 스캔','공통 인덱스로 바로 조인 키를 매핑'],ans:1,exp:'해시 조인 2단계: <b>①Build Phase</b> - 작은 테이블을 해시 테이블로 메모리에 적재, <b>②Probe Phase</b> - 큰 테이블을 순차 스캔하며 해시 테이블에서 조인 키 탐색.'},
+{a:'DS',t:'Apache Kafka',q:'Kafka의 Retention 정책에 대한 설명으로 옳은 것은?',o:['Consumer가 메시지를 읽는 즉시 자동 삭제한다','설정된 보존 기간 또는 크기 기준까지 Consumer 소비 여부와 무관하게 메시지를 디스크에 유지한다','메시지는 영구 보존되며 삭제 기능이 없다','Retention은 Producer가 지정하며 Consumer는 변경할 수 없다'],ans:1,exp:'Kafka는 Consumer 소비 여부와 무관하게 <b>Retention 기간(기본 7일)</b> 또는 크기 한도까지 메시지를 보존합니다. Consumer가 원하는 offset부터 재처리할 수 있습니다.'},
+{a:'DS',t:'MEC',q:'MEC 표준화를 주도하는 국제 표준화 기관으로 옳은 것은?',o:['IEEE','ETSI (European Telecommunications Standards Institute)','ISO','ITU-T'],ans:1,exp:'<b>ETSI MEC ISG</b>가 Mobile Edge Computing 아키텍처, API, 레퍼런스 구현 등을 표준화합니다. ETSI는 MEC를 Mobile에서 <b>Multi-access Edge Computing</b>으로 범위를 확장하였습니다.'},
+{a:'DS',t:'AI 모델 경량화',q:'FP32에서 INT8로 양자화 시 이론적인 모델 크기 감소율로 옳은 것은?',o:['2배 감소','4배 감소','8배 감소','변화 없음'],ans:1,exp:'FP32(32bit) → INT8(8bit)로 변환 시 파라미터당 메모리가 <b>1/4로 줄어 모델 크기도 약 4배 감소</b>합니다. 정수 연산은 FPU 없이 ALU로 처리 가능해 추론 속도도 향상됩니다.'},
+{a:'DS',t:'클라우드 네이티브',q:'DevOps의 핵심 목표로 가장 적절한 것은?',o:['개발팀과 운영팀을 완전히 분리하여 전문성을 극대화한다','개발과 운영 간 사일로를 제거하고 자동화·협업으로 빠른 배포와 안정적 운영을 동시에 달성한다','운영팀이 개발 업무를 대신하여 비용을 절감한다','인프라 자동화를 통해 운영팀 인력을 최소화한다'],ans:1,exp:'<b>DevOps</b>는 개발과 운영 간 문화적·기술적 장벽을 제거합니다. CI/CD 자동화, 공유된 책임, 지속적 피드백 루프를 통해 <b>배포 빈도를 높이면서도 시스템 안정성을 유지</b>하는 것이 목표입니다.'},
+{a:'SE',t:'McCabe 복잡도',q:'McCabe 순환 복잡도 계산 공식(V(G))으로 올바른 것은?',o:['V(G) = N - E + 2','V(G) = E - N + 2','V(G) = E + N - 2','V(G) = N × E ÷ 2'],ans:1,exp:'<b>V(G) = E(간선 수) − N(노드 수) + 2.</b> 소스 코드 레벨에서는 (분기문 수 + 1)로도 계산합니다.'},
+{a:'SE',t:'코드 인스펙션',q:'코드 인스펙션에서 회의를 진행하고 조율하는 역할을 담당하는 참여자는?',o:['저자(Author)','검토자(Reviewer)','진행자(Moderator)','서기(Scribe)'],ans:2,exp:'<b>Moderator(진행자)</b>는 인스펙션 프로세스 전체를 계획·조율하며 회의를 이끄는 역할입니다. 저자=산출물 작성자, 검토자=결함 발견, 서기=결함 목록 기록입니다.'},
+{a:'SE',t:'ISO/IEC 25010',q:'ISO/IEC 25010의 8대 주특성에 해당하지 않는 것은?',o:['기능 적합성(Functional Suitability)','성능 효율성(Performance Efficiency)','유지보수성(Maintainability)','재사용성(Reusability)'],ans:3,exp:'ISO/IEC 25010의 8대 주특성: <b>기능적합성, 성능효율성, 호환성, 사용성, 신뢰성, 보안성, 유지보수성, 이식성.</b> 재사용성은 별도 주특성이 아닙니다.'},
+{a:'DS',t:'빅데이터 5V',q:'빅데이터의 Velocity 특성을 처리하기 위한 아키텍처로 가장 적합한 것은?',o:['대용량 배치 처리를 위한 Hadoop MapReduce 단독 아키텍처','실시간 스트리밍 처리를 위한 Apache Kafka + Spark Streaming 또는 Flink 조합','데이터 웨어하우스 중심 야간 배치 ETL 아키텍처','관계형 DB 기반 OLTP 아키텍처'],ans:1,exp:'Velocity 처리에는 <b>스트리밍 아키텍처</b>가 필요합니다. Kafka로 실시간 메시지 수집 → Spark Streaming이나 Flink로 즉시 처리하는 파이프라인이 대표적입니다.'}
+]}
+];
+
+let dayScores={};
+let curDay=-1,curQ=-1,score=0,answered=false;
+
+function atag(a){
+  const m={SE:'tSE',CA:'tCA',DB:'tDB',DS:'tDS'};
+  const l={SE:'소프트웨어공학',CA:'CA/OS',DB:'데이터베이스',DS:'디지털서비스'};
+  return`<span class="tag ${m[a]||'tSE'}">${l[a]||a}</span>`;
+}
+
+async function loadScores(){
+  try{for(let i=0;i<5;i++){const r=await window.storage.get('quiz5l_day'+(i+1));if(r)dayScores[i]=JSON.parse(r.value);}}catch(e){}
+  renderHome();
+}
+async function saveScore(idx,sc){
+  dayScores[idx]={score:sc,total:20};
+  try{await window.storage.set('quiz5l_day'+(idx+1),JSON.stringify(dayScores[idx]));}catch(e){}
+}
+
+function renderHome(){
+  document.getElementById('hdrT').textContent='5주차 주간퀴즈';
+  document.getElementById('progWrap').style.display='none';
+  const app=document.getElementById('app');
+  app.innerHTML=`<div class="home-title">5주차 주간퀴즈</div>
+<div class="home-sub">소프트웨어공학 · CA/OS · 데이터베이스 · 디지털서비스 | 각 20문항 · 4지선다 · 즉시 정답 확인</div>
+<div class="day-grid">${DAYS.map((d,i)=>{
+  const ds=dayScores[i];
+  const done=!!ds;
+  const pct=done?Math.round(ds.score/20*100):null;
+  return`<div class="day-card${done?' done':''}" onclick="startDay(${i})">
+<div class="day-lbl">${d.label}</div>
+<div class="day-theme">${d.theme}</div>
+${done?`<div class="day-score" style="color:#059669">${ds.score}/20 (${pct}%)</div>`:'<div class="day-score" style="color:#94a3b8">미완료</div>'}
+<button class="day-btn">${done?'다시 풀기':'시작하기'}</button>
+</div>`;}).join('')}</div>`;
+}
+
+function startDay(idx){
+  curDay=idx;curQ=0;score=0;answered=false;
+  document.getElementById('hdrT').textContent=DAYS[idx].label;
+  renderQ();
+}
+
+function renderQ(){
+  const pw=document.getElementById('progWrap');
+  pw.style.display='block';
+  document.getElementById('progTxt').textContent=`${curQ+1} / 20`;
+  document.getElementById('scoreTxt').textContent=`점수: ${score}`;
+  document.getElementById('progFill').style.width=`${((curQ+1)/20)*100}%`;
+  const q=DAYS[curDay].qs[curQ];
+  document.getElementById('app').innerHTML=`<div class="q-card">
+<div class="q-meta">${atag(q.a)}<span class="tag tN">Q${curQ+1}</span><span class="tag tN">${q.t}</span>
+<button class="back-btn" onclick="renderHome()">← 목록</button></div>
+<div class="q-text">${q.q}</div>
+<div class="opts" id="opts">${q.o.map((o,i)=>`<button class="opt" id="o${i}" onclick="choose(${i})"><span class="opt-lbl">${['①','②','③','④'][i]}</span><span>${o}</span></button>`).join('')}</div>
+<div class="fb" id="fb"></div>
+</div>
+<div class="next-row"><button class="next-btn" id="nxt" onclick="nextQ()">${curQ+1<20?'다음 문제 →':'결과 보기 →'}</button></div>`;
+  answered=false;
+}
+
+function choose(idx){
+  if(answered)return;
+  answered=true;
+  const q=DAYS[curDay].qs[curQ];
+  for(let i=0;i<4;i++){
+    const b=document.getElementById('o'+i);
+    b.classList.add('dis');
+    if(i===q.ans)b.classList.add(idx===q.ans?'ok':'rv');
+  }
+  const fb=document.getElementById('fb');
+  if(idx===q.ans){
+    score++;
+    document.getElementById('o'+idx).classList.add('ok');
+    fb.className='fb ok';
+    fb.innerHTML=`<div class="fb-t">✅ 정답!</div>${q.exp}`;
+  }else{
+    document.getElementById('o'+idx).classList.add('ng');
+    fb.className='fb ng';
+    fb.innerHTML=`<div class="fb-t">❌ 오답 — 정답: ${'①②③④'[q.ans]}</div>${q.exp}`;
+  }
+  fb.style.display='block';
+  document.getElementById('nxt').style.display='inline-block';
+  document.getElementById('scoreTxt').textContent=`점수: ${score}`;
+}
+
+function nextQ(){curQ++;if(curQ>=20){showResult();}else{renderQ();}}
+
+function showResult(){
+  saveScore(curDay,score);
+  document.getElementById('progWrap').style.display='none';
+  const pct=Math.round(score/20*100);
+  const grade=pct>=90?'🏆 최우수':pct>=75?'🥇 우수':pct>=60?'🥈 보통':'🥉 분발 필요';
+  const msg=pct>=90?'완벽에 가까운 이해도입니다!':pct>=75?'핵심 개념을 잘 파악하고 있습니다.':pct>=60?'부족한 영역을 교재로 복습해보세요.':'개념 정리가 더 필요합니다. 다시 도전!';
+  document.getElementById('app').innerHTML=`<div class="result-card">
+<div style="font-size:12px;color:#94a3b8;margin-bottom:8px">${DAYS[curDay].label} 결과</div>
+<div><span class="r-score">${score}</span><span class="r-denom"> / 20</span></div>
+<div class="r-pct">정답률 ${pct}%</div>
+<div class="r-grade">${grade}</div>
+<div class="r-msg">${msg}</div>
+<div class="r-btns">
+<button class="r-btn primary" onclick="startDay(${curDay})">다시 풀기</button>
+<button class="r-btn secondary" onclick="renderHome()">목록으로</button>
+${curDay<4?`<button class="r-btn primary" onclick="startDay(${curDay+1})">다음 날 →</button>`:''}
+</div></div>`;
+}
+
+if(typeof window.storage!=='undefined'){loadScores();}else{renderHome();}
+</script>
+</body>
+</html>

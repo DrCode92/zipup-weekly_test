@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>ZIP-UP 4주차 주간퀴즈 · 3-STEP 인출 훈련</title><style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Malgun Gothic','Apple SD Gothic Neo','Segoe UI',sans-serif;background:#f4f6fa;color:#1e293b;min-height:100vh}
+.hdr{background:#fff;border-bottom:2px solid #e2e8f0;padding:12px 20px;display:flex;align-items:center;gap:10px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.logo{background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;font-weight:800;font-size:12px;padding:4px 10px;border-radius:5px;letter-spacing:1px;white-space:nowrap}
+.hdr-info{display:flex;flex-direction:column;gap:1px}
+.hdr-t{font-size:14px;font-weight:700;color:#3730a3}
+.hdr-sub{font-size:10px;color:#64748b}
+.hdr-badge{margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.hdr-year{font-size:13px;font-weight:700;color:#64748b}
+.hdr-tag{font-size:9px;background:#eef2ff;color:#4f46e5;padding:2px 7px;border-radius:4px;font-weight:700}
+.prog-wrap{background:#fff;padding:10px 20px;border-bottom:1px solid #e2e8f0}
+.prog-info{display:flex;justify-content:space-between;font-size:11px;color:#64748b;margin-bottom:5px}
+.prog-bar{height:6px;background:#e2e8f0;border-radius:99px;overflow:hidden}
+.prog-fill{height:100%;border-radius:99px;transition:width .4s}
+.con{max-width:700px;margin:0 auto;padding:24px 16px 20px}
+.home-title{text-align:center;margin:0 0 4px;font-size:22px;font-weight:800;color:#3730a3}
+.home-sub{text-align:center;font-size:12px;color:#64748b;margin-bottom:24px;line-height:1.6}
+.pipeline{display:flex;flex-direction:column;gap:0;margin-bottom:20px}
+.pipe-step{position:relative;background:#fff;border:2px solid #e2e8f0;border-radius:14px;padding:18px 18px 18px 56px;cursor:pointer;transition:all .2s}
+.pipe-step:hover{border-color:#4f46e5;box-shadow:0 4px 14px rgba(79,70,229,.1);transform:translateY(-1px)}
+.pipe-step.done{border-color:#10b981;background:#f0fdf4}
+.pipe-num{position:absolute;left:16px;top:50%;transform:translateY(-50%);width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff}
+.pn1{background:linear-gradient(135deg,#4f46e5,#7c3aed)}
+.pn2{background:linear-gradient(135deg,#059669,#10b981)}
+.pn3{background:linear-gradient(135deg,#d97706,#f59e0b)}
+.pipe-step.done .pipe-num{background:linear-gradient(135deg,#059669,#10b981)!important}
+.pipe-lbl{font-size:14px;font-weight:800;color:#1e293b;margin-bottom:2px}
+.pipe-desc{font-size:11px;color:#64748b;line-height:1.5}
+.pipe-score{font-size:11px;font-weight:700;color:#059669;margin-top:4px}
+.pipe-connector{width:2px;height:16px;background:#cbd5e1;margin:0 auto}
+.tag{font-size:10px;padding:2px 8px;border-radius:99px;font-weight:700;display:inline-block}
+.tSE{background:#dbeafe;color:#1d4ed8}.tCA{background:#dcfce7;color:#166534}.tDB{background:#fee2e2;color:#b91c1c}.tDS{background:#fef3c7;color:#92400e}.tN{background:#f1f5f9;color:#475569}
+.q-card{background:#fff;border:1px solid #e2e8f0;border-radius:13px;padding:22px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.q-meta{display:flex;gap:7px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
+.back-btn{margin-left:auto;background:#fff;border:1px solid #cbd5e1;color:#475569;padding:3px 10px;border-radius:6px;font-size:11px;cursor:pointer;transition:all .15s}
+.back-btn:hover{border-color:#4f46e5;color:#4f46e5}
+.q-text{font-size:14px;line-height:1.85;color:#1e293b;margin-bottom:16px;font-weight:500}
+.opts{display:flex;flex-direction:column;gap:8px}
+.opt{background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:9px;padding:11px 14px;text-align:left;cursor:pointer;color:#334155;font-size:13px;line-height:1.55;transition:all .18s;display:flex;align-items:flex-start;gap:9px}
+.opt:hover:not(.dis){border-color:#4f46e5;background:#eef2ff}
+.opt-lbl{font-weight:800;min-width:20px;color:#4f46e5}
+.opt.ok{border-color:#10b981;background:#f0fdf4;color:#065f46}.opt.ok .opt-lbl{color:#10b981}
+.opt.ng{border-color:#ef4444;background:#fef2f2;color:#991b1b}.opt.ng .opt-lbl{color:#ef4444}
+.opt.rv{border-color:#10b981;background:#f0fdf4;color:#065f46;opacity:.6}.opt.dis{cursor:default}
+.fb{margin-top:12px;padding:12px 14px;border-radius:9px;font-size:12px;line-height:1.7;display:none}
+.fb.ok{background:#f0fdf4;border:1px solid #86efac;color:#14532d}
+.fb.ng{background:#fef2f2;border:1px solid #fca5a5;color:#7f1d1d}
+.fb-t{font-weight:800;margin-bottom:3px}
+.next-row{text-align:right;margin-top:10px}
+.next-btn{background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;border:none;padding:9px 22px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;display:none;box-shadow:0 2px 8px rgba(79,70,229,.2)}
+.next-btn:hover{opacity:.88}
+.kw-card{background:#fff;border:1px solid #e2e8f0;border-radius:13px;padding:22px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.kw-topic{font-size:18px;font-weight:800;color:#1e293b;margin-bottom:4px}
+.kw-prompt{font-size:12px;color:#64748b;margin-bottom:16px;line-height:1.6}
+.kw-reveal-btn{display:block;width:100%;background:linear-gradient(135deg,#059669,#10b981);color:#fff;border:none;padding:12px;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:14px;transition:opacity .2s}
+.kw-reveal-btn:hover{opacity:.85}
+.kw-reveal-btn.revealed{background:#e2e8f0;color:#64748b;cursor:default}
+.kw-list{display:none;flex-direction:column;gap:8px}
+.kw-list.show{display:flex}
+.kw-item{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:9px;cursor:pointer;transition:all .18s;font-size:13px;line-height:1.55}
+.kw-item:hover{border-color:#059669;background:#f0fdf4}
+.kw-check{width:22px;height:22px;border-radius:6px;border:2px solid #cbd5e1;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;font-size:12px;color:transparent}
+.kw-item.checked .kw-check{background:#10b981;border-color:#10b981;color:#fff}
+.kw-item.missed .kw-check{background:#ef4444;border-color:#ef4444;color:#fff}
+.kw-self-row{display:none;margin-top:14px;text-align:center}
+.kw-self-row.show{display:block}
+.bl-card{background:#fff;border:1px solid #e2e8f0;border-radius:13px;padding:22px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.bl-topic{font-size:15px;font-weight:800;color:#1e293b;margin-bottom:4px}
+.bl-prompt{font-size:12px;color:#64748b;margin-bottom:14px}
+.bl-sentence{font-size:13px;line-height:2.1;color:#334155;padding:10px 0;border-bottom:1px solid #f1f5f9}
+.bl-sentence:last-of-type{border-bottom:none}
+.bl-label{font-size:10px;color:#94a3b8;display:block;margin-bottom:2px;font-weight:700}
+.bl-blank{display:inline-block;min-width:60px;padding:2px 8px;border-bottom:2px dashed #4f46e5;color:transparent;background:#eef2ff;border-radius:4px;cursor:pointer;transition:all .25s;font-weight:700;text-align:center;margin:0 2px;font-size:12px}
+.bl-blank.revealed{color:#4f46e5;background:#dbeafe;border-bottom-color:#4f46e5;border-bottom-style:solid}
+.bl-reveal-all{display:block;width:100%;background:linear-gradient(135deg,#d97706,#f59e0b);color:#fff;border:none;padding:10px;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;transition:opacity .2s;margin-top:14px}
+.bl-reveal-all:hover{opacity:.85}
+.bl-reveal-all.done{background:#e2e8f0;color:#64748b;cursor:default}
+.result-card{background:#fff;border:2px solid #c7d2fe;border-radius:16px;padding:36px 24px;text-align:center;box-shadow:0 2px 12px rgba(79,70,229,.08)}
+.r-score{font-size:52px;font-weight:800;background:linear-gradient(135deg,#4f46e5,#7c3aed);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.r-denom{font-size:18px;color:#94a3b8}
+.r-pct{font-size:13px;color:#64748b;margin:5px 0 12px}
+.r-grade{font-size:20px;font-weight:700;margin-bottom:5px;color:#1e293b}
+.r-msg{font-size:13px;color:#64748b;margin-bottom:20px;line-height:1.7}
+.r-btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.r-btn{border:none;padding:10px 22px;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;transition:opacity .2s}
+.r-btn:hover{opacity:.85}
+.r-btn.primary{background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff}
+.r-btn.green{background:linear-gradient(135deg,#059669,#10b981);color:#fff}
+.r-btn.amber{background:linear-gradient(135deg,#d97706,#f59e0b);color:#fff}
+.r-btn.secondary{background:#f1f5f9;border:1px solid #cbd5e1;color:#475569}
+.info-banner{background:linear-gradient(135deg,#eef2ff,#e0e7ff);border:1px solid #c7d2fe;border-radius:10px;padding:14px 16px;margin-bottom:18px;font-size:12px;color:#3730a3;line-height:1.7}
+.info-banner b{color:#4f46e5}
+.step-ind{display:flex;align-items:center;justify-content:center;gap:0;margin-bottom:20px}
+.step-dot{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;transition:all .2s}
+.step-dot.s1{background:#4f46e5}.step-dot.s2{background:#059669}.step-dot.s3{background:#d97706}
+.step-dot.inactive{background:#cbd5e1}
+.step-dot.current{box-shadow:0 0 0 3px rgba(79,70,229,.25);transform:scale(1.1)}
+.step-line{width:40px;height:2px;background:#cbd5e1}
+.step-line.done{background:#10b981}
+.footer{border-top:1px solid #e2e8f0;background:#fff;padding:16px 20px;text-align:center;margin-top:16px}
+.footer-name{font-size:12px;color:#475569;margin-bottom:4px;font-weight:500}
+.footer-copy{font-size:11px;color:#94a3b8}
+
+.day-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:20px}.day-card{background:#fff;border:2px solid #e2e8f0;border-radius:13px;padding:18px 14px;text-align:center;cursor:pointer;transition:all .2s}.day-card:hover{border-color:#4f46e5;box-shadow:0 4px 14px rgba(79,70,229,.1);transform:translateY(-1px)}.day-card.done{border-color:#10b981;background:#f0fdf4}.day-lbl{font-size:16px;font-weight:800;color:#3730a3;margin-bottom:6px}.day-score{font-size:11px;margin-bottom:8px}.day-btn{background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;border:none;padding:7px 16px;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer}.day-card.done .day-btn{background:linear-gradient(135deg,#059669,#10b981)}.tAI{background:#fef3c7;color:#92400e}.tNW{background:#dbeafe;color:#1d4ed8}.tMG{background:#f1f5f9;color:#475569}.tSC{background:#fee2e2;color:#b91c1c}
+.locked-section{margin-top:28px;padding-top:20px;border-top:2px dashed #e2e8f0}
+.locked-title{font-size:14px;font-weight:700;color:#64748b;text-align:center;margin-bottom:14px;letter-spacing:.5px}
+.locked-card{position:relative;background:#fff;border:2px solid #e2e8f0;border-radius:13px;padding:22px 18px;text-align:center;overflow:hidden;cursor:default}
+.locked-blur{filter:blur(3px);opacity:.5;pointer-events:none}
+.locked-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:2;background:rgba(255,255,255,.65);backdrop-filter:blur(1px)}
+.lock-icon{width:44px;height:44px;background:linear-gradient(135deg,#4f46e5,#7c3aed);border-radius:50%;display:flex;align-items:center;justify-content:center;margin-bottom:10px;box-shadow:0 4px 12px rgba(79,70,229,.2)}
+.lock-icon svg{width:20px;height:20px;fill:#fff}
+.locked-badge{display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;font-size:11px;font-weight:800;padding:5px 14px;border-radius:99px;margin-bottom:8px;letter-spacing:.5px}
+.locked-msg{font-size:12px;color:#64748b;line-height:1.6;max-width:320px}
+.locked-msg b{color:#3730a3}
+.locked-preview{display:flex;flex-direction:column;gap:6px;text-align:left;margin:0 auto;max-width:400px}
+.locked-preview-item{display:flex;align-items:center;gap:8px;font-size:12px;color:#475569;padding:6px 10px;background:#f8fafc;border-radius:7px}
+.locked-preview-num{width:22px;height:22px;background:#e2e8f0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#64748b;flex-shrink:0}
+.locked-footer{margin-top:16px;text-align:center}
+.locked-footer a{color:#4f46e5;font-size:12px;font-weight:700;text-decoration:none}
+.locked-footer a:hover{text-decoration:underline}</style></head><body>
+<div class="hdr"><span class="logo">ZIP-UP</span><div class="hdr-info"><span class="hdr-t" id="hdrT">4주차 주간퀴즈 · 3-STEP 인출 훈련</span><span class="hdr-sub">KPC 정보관리기술사 ZIP-UP 심화반</span></div><div class="hdr-badge"><span class="hdr-year">2026</span><span class="hdr-tag">3기 4주차</span></div></div>
+<div id="progWrap" class="prog-wrap" style="display:none"><div class="prog-info"><span id="progTxt"></span><span id="progScr"></span></div><div class="prog-bar"><div class="prog-fill" id="progFill"></div></div></div>
+<div class="con" id="app"></div>
+<div class="footer"><div class="footer-name">박교익PE · 132회 정보관리기술사</div><div class="footer-copy">Copyright © KPC 정보관리기술사 ZIP-UP 심화반. All rights reserved.</div></div>
+<script>
+const DAYS=[
+{label:`DAY 1`,
+qs:[
+{a:"AI",t:`ARIMA 차분`,q:`ARIMA(p,d,q)에서 'd'가 의미하는 것은?`,o:[`이동평균 차수`,`자기회귀 차수`,`데이터 차원 수`,`차분(Differencing) 횟수`],ans:3,exp:`<b>d=차분(Differencing) 횟수</b>. 비정상 시계열을 정상화하기 위해 이전 시점과의 차이를 구합니다.`},
+{a:"AI",t:`드롭아웃`,q:`드롭아웃(Dropout)이 적용되는 시점으로 옳은 것은?`,o:[`학습 시에만 적용, 추론 시 비활성화`,`데이터 전처리 단계에서만 적용`,`추론 시에만 적용`,`학습과 추론 모두 동일하게 적용`],ans:0,exp:`드롭아웃은 <b>학습 시에만</b> 노드를 비활성화하고, <b>추론 시에는 비활성화</b>합니다.`},
+{a:"AI",t:`워드 임베딩`,q:`워드 임베딩의 정의로 옳은 것은?`,o:[`단어 빈도만 세는 통계 기법`,`단어를 고정 크기의 연속적인 실수 벡터로 변환`,`문장을 요약 생성`,`단어를 이진수로 변환`],ans:1,exp:`워드 임베딩: <b>단어를 고정 크기의 연속적인 실수 벡터(밀집 벡터)로 변환</b>하는 기법입니다.`},
+{a:"AI",t:`확산 모델`,q:`확산 모델의 Forward Process에서 수행하는 작업은?`,o:[`데이터 차원 축소`,`노이즈 제거로 이미지 복원`,`생성자와 판별자 교대 학습`,`원본에 가우시안 노이즈를 점진적으로 추가`],ans:3,exp:`Forward Process: <b>원본에 가우시안 노이즈를 T 스텝에 걸쳐 점진적으로 추가</b>합니다.`},
+{a:"AI",t:`Q-Learning`,q:`Q-Learning에서 Q-value가 의미하는 것은?`,o:[`특정 상태에서 특정 행동 시 기대 누적 보상`,`손실 함수 값`,`에포크 수`,`학습률의 크기`],ans:0,exp:`<b>Q-value</b>: 특정 상태에서 특정 행동 시 <b>기대되는 누적 보상</b>입니다.`},
+{a:"AI",t:`지식 증류`,q:`지식 증류에서 학생 모델이 학습하는 대상은?`,o:[`교사 모델의 소프트 타겟(확률 분포)`,`테스트 데이터 정답`,`강화학습 보상`,`원본 훈련 데이터만`],ans:0,exp:`학생 모델은 교사 모델의 <b>소프트 타겟(소프트맥스 확률 분포)</b>을 학습합니다.`},
+{a:"AI",t:`연관규칙`,q:`향상도(Lift) > 1이 의미하는 것은?`,o:[`독립`,`양의 연관성`,`규칙 무효`,`음의 연관성`],ans:1,exp:`<b>Lift > 1</b>이면 <b>양의 연관성</b>입니다.`},
+{a:"AI",t:`TF-IDF`,q:`IDF가 높은 단어의 특성은?`,o:[`불용어`,`문서 길이가 긴 문서의 단어`,`특정 문서에만 희귀하게 등장`,`모든 문서에 자주 등장`],ans:2,exp:`IDF가 높으면 <b>전체 문서에서 희귀한 단어</b>입니다.`},
+{a:"SC",t:`RBAC`,q:`RBAC에서 인사이동 시 권한 관리 방식은?`,o:[`모든 권한 삭제 후 재부여`,`보안 등급 상향`,`역할만 변경하면 권한 자동 조정`,`파일마다 수동 변경`],ans:2,exp:`RBAC: <b>역할만 변경하면 권한이 자동 조정</b>됩니다.`},
+{a:"SC",t:`논리적 망분리`,q:`VDI의 동작 방식은?`,o:[`클라이언트에서 모든 연산`,`서버에서 가상 데스크톱 제공, 단말은 화면만 수신`,`물리적 PC 2대`,`망연계 솔루션으로 전송`],ans:1,exp:`<b>VDI</b>: <b>서버에서 가상 데스크톱을 제공</b>, 단말은 <b>화면만 수신</b>.`},
+{a:"SC",t:`CTEM`,q:`CTEM 5단계 중 '우선순위화'의 기준은?`,o:[`비용 순`,`패치 용이성`,`발견 순서`,`비즈니스 리스크와 악용 가능성`],ans:3,exp:`우선순위화: <b>실제 악용 가능성</b>과 <b>비즈니스 영향도</b> 기준.`},
+{a:"SC",t:`PKI`,q:`PKI의 핵심 구성요소로 옳지 않은 것은?`,o:[`CRL(인증서 폐지 목록)`,`RA(등록기관)`,`IDS(침입탐지시스템)`,`CA(인증기관)`],ans:2,exp:`PKI: <b>CA, RA, CRL, OCSP</b>. IDS는 PKI 구성요소가 아닙니다.`},
+{a:"SC",t:`EU CRA`,q:`EU CRA에서 취약점 발견 시 보고 기한은?`,o:[`24시간`,`7일`,`1시간`,`72시간`],ans:0,exp:`CRA: 취약점 발견 시 <b>24시간 내</b> ENISA에 보고.`},
+{a:"NW",t:`CSMA/CA`,q:`CSMA/CA에서 숨은 노드 문제 해결 메커니즘은?`,o:[`OFDMA`,`RTS/CTS`,`MU-MIMO`,`CSMA/CD`],ans:1,exp:`<b>RTS/CTS</b> 교환으로 <b>숨은 노드 문제</b>를 해결합니다.`},
+{a:"NW",t:`BGP`,q:`BGP의 라우팅 방식은?`,o:[`링크 상태`,`경로 벡터`,`거리 벡터`,`플러딩`],ans:1,exp:`BGP: <b>경로 벡터(Path Vector)</b> 방식.`},
+{a:"NW",t:`Wi-Fi 7`,q:`Wi-Fi 7의 최대 채널 폭은?`,o:[`160MHz`,`320MHz`,`80MHz`,`240MHz`],ans:1,exp:`Wi-Fi 7: 최대 <b>320MHz</b>.`},
+{a:"NW",t:`IPSec`,q:`암호화와 인증 모두 제공하는 IPSec 프로토콜은?`,o:[`SA`,`AH`,`IKE`,`ESP`],ans:3,exp:`<b>ESP</b>: 인증·무결성 + <b>기밀성(암호화)</b> 모두 제공.`},
+{a:"MG",t:`ROI`,q:`ROI의 산출 공식은?`,o:[`(투자비용÷순이익)×100`,`투자비용×할인율`,`(순이익÷투자비용)×100`,`순이익-투자비용`],ans:2,exp:`<b>ROI = (순이익 ÷ 투자비용) × 100</b>.`},
+{a:"MG",t:`ITIL 4`,q:`ITIL 4에서 '공동 가치 창출'의 의미는?`,o:[`제공자와 소비자가 함께 가치 창출`,`자동 생성`,`외부 벤더 전적 책임`,`IT 부서만 창출`],ans:0,exp:`<b>공동 가치 창출</b>: 제공자와 소비자가 <b>함께</b> 가치를 만듦.`},
+{a:"MG",t:`DRS`,q:`RTO가 가장 짧은 DRS 유형은?`,o:[`핫`,`콜드`,`미러`,`웜`],ans:2,exp:`RTO: <b>미러(≈0)</b> < 핫 < 웜 < 콜드.`}
+],
+topics:[
+{topic:`ARIMA 모델의 차분(Differencing)`,domain:`AI`,keywords:[`ARIMA = AR(자기회귀) + I(차분/적분) + MA(이동평균)의 결합 모델`,`차분(Differencing): 이전 시점과의 차이를 구하여 비정상 시계열을 정상화하는 기법`,`정상성(Stationarity): 평균, 분산, 자기공분산이 시간에 따라 일정한 성질`,`d회 차분: ARIMA(p,d,q)에서 d=차분 횟수 — d=1이면 1차 차분`,`1차 차분: Y't = Yt − Yt-1 — 추세(Trend) 제거에 효과적`,`2차 차분: Y''t = Y't − Y't-1 — 가속 추세(곡률) 제거`],blanks:[{s:`ARIMA는 {{AR(자기회귀)}} + {{I(차분/적분)}} + {{MA(이동평균)}}의 결합 모델이다.`},{s:`차분(Differencing)은 {{이전 시점과의 차이}}를 구하여 {{비정상 시계열을 정상화}}하는 기법이다.`},{s:`정상성이란 {{평균}}, {{분산}}, {{자기공분산}}이 시간에 따라 일정한 성질이다.`},{s:`1차 차분 공식: {{Y't = Yt − Yt-1}} — {{추세(Trend)}} 제거에 효과적이다.`}]},
+{topic:`드롭아웃(Dropout)`,domain:`AI`,keywords:[`정의: 신경망 학습 과정에서 무작위로 일부 노드를 비활성화하는 정규화(Regularization) 기법`,`목적: 과적합(Overfitting) 방지 — 특정 노드에 대한 의존도를 낮춤`,`앙상블 효과: 매 학습 반복마다 서로 다른 부분 네트워크를 학습 → 여러 모델의 평균 효과`,`드롭아웃 비율(p): 일반적으로 0.2~0.5 — 학습 시에만 적용, 추론 시에는 비활성화`,`추론 시 스케일링: 학습 때 비활성화된 비율만큼 가중치를 스케일링하여 출력 보정`,`적용 위치: 주로 완전연결(FC) 계층에 적용, CNN에서는 Spatial Dropout 사용`],blanks:[{s:`드롭아웃은 신경망 학습 시 {{무작위로 일부 노드를 비활성화}}하는 {{정규화(Regularization)}} 기법이다.`},{s:`드롭아웃의 목적: {{과적합(Overfitting)}} 방지 — 특정 노드에 대한 {{의존도를 낮춤}}.`},{s:`매 학습 반복마다 다른 부분 네트워크를 학습하여 {{앙상블 효과}}를 제공한다.`},{s:`드롭아웃은 {{학습 시에만}} 적용하고, {{추론 시에는 비활성화}}한다.`}]},
+{topic:`워드 임베딩(Word Embedding)`,domain:`AI`,keywords:[`정의: 단어를 고정된 크기의 연속적인 실수 벡터(밀집 벡터)로 변환하는 기법`,`목적: 단어 간 의미적·문법적 유사성을 벡터 공간의 거리로 보존`,`예시: '왕-남자+여자≈여왕' — 벡터 연산으로 의미적 관계 표현 가능`,`One-hot Encoding의 한계 극복: 차원의 저주 해소, 단어 간 유사도 계산 가능`,`대표 모델: Word2Vec(CBOW, Skip-gram), GloVe, FastText`,`Word2Vec CBOW: 주변 단어로 중심 단어 예측 / Skip-gram: 중심 단어로 주변 단어 예측`],blanks:[{s:`워드 임베딩은 단어를 {{고정 크기의 연속적인 실수 벡터(밀집 벡터)}}로 변환하는 기법이다.`},{s:`워드 임베딩은 단어 간 {{의미적·문법적 유사성}}을 {{벡터 공간의 거리}}로 보존한다.`},{s:`'{{왕}}-{{남자}}+{{여자}}≈{{여왕}}' — 벡터 연산으로 의미적 관계를 표현할 수 있다.`},{s:`Word2Vec의 두 아키텍처: {{CBOW}}(주변→중심)와 {{Skip-gram}}(중심→주변).`}]},
+{topic:`확산 모델(Diffusion Model)`,domain:`AI`,keywords:[`정의: 데이터에 점진적으로 노이즈를 추가한 후, 역으로 노이즈를 제거하며 원본을 복원하는 생성 모델`,`Forward Process(전방 과정): 원본에 가우시안 노이즈를 T 스텝에 걸쳐 점진적으로 추가`,`Reverse Process(역방향 과정): 신경망이 각 스텝에서 노이즈를 예측·제거하여 원본 복원`,`DDPM(Denoising Diffusion Probabilistic Model): 대표적 확산 모델 프레임워크`,`GAN 대비 장점: 학습 안정성 높음, 모드 붕괴(Mode Collapse) 없음, 생성 품질 우수`,`GAN 대비 단점: 수백~수천 스텝의 역확산 → 생성 속도 느림`],blanks:[{s:`확산 모델은 데이터에 {{점진적으로 노이즈를 추가}}한 후, {{역으로 노이즈를 제거}}하며 원본을 복원하는 생성 모델이다.`},{s:`Forward Process: 원본에 {{가우시안 노이즈}}를 {{T 스텝}}에 걸쳐 점진적으로 추가한다.`},{s:`Reverse Process: {{신경망}}이 각 스텝에서 {{노이즈를 예측·제거}}하여 원본을 복원한다.`},{s:`GAN 대비 장점: {{학습 안정성}} 높음, {{모드 붕괴 없음}}, 생성 품질 우수.`}]},
+{topic:`Q-Learning (강화학습)`,domain:`AI`,keywords:[`정의: 환경 모델 없이 에이전트가 상태-행동의 가치(Q-value)를 학습하는 오프 폴리시(Off-policy) 알고리즘`,`핵심 구성: 에이전트(Agent), 환경(Environment), 상태(State), 행동(Action), 보상(Reward)`,`Q-value: 특정 상태에서 특정 행동을 취했을 때 기대되는 누적 보상`,`벨만 방정식(Bellman Equation): Q(s,a) ← Q(s,a) + α[R + γ·max Q(s',a') - Q(s,a)]`,`α(학습률): 새로운 정보의 반영 비율, γ(감가율): 미래 보상의 현재 가치 할인`,`Q-Table: 상태×행동 테이블에 Q-value를 저장하여 최적 정책(Policy)을 도출`],blanks:[{s:`Q-Learning은 환경 모델 없이 에이전트가 {{Q-value(상태-행동 가치)}}를 학습하는 {{오프 폴리시}} 알고리즘이다.`},{s:`벨만 방정식: Q(s,a) ← Q(s,a) + {{α}}[{{R}} + {{γ}}·max Q(s',a') - Q(s,a)].`},{s:`α는 {{학습률}}(새 정보 반영 비율), γ는 {{감가율}}(미래 보상 할인)이다.`},{s:`Q-Table 폭발 문제를 해결한 것이 {{DQN(Deep Q-Network)}}이다.`}]},
+{topic:`지식 증류(Knowledge Distillation)`,domain:`AI`,keywords:[`정의: 거대한 교사(Teacher) 모델이 학습한 지식을 가벼운 학생(Student) 모델로 전달하는 AI 경량화 기법`,`소프트 타겟(Soft Target): 교사 모델의 확률 분포(소프트맥스 출력)를 학생 모델이 학습`,`온도(Temperature, T): 소프트맥스 출력을 부드럽게 만드는 하이퍼파라미터 — T가 높을수록 균등한 분포`,`하드 타겟(Hard Target): 원래의 정답 레이블 — 소프트 타겟과 함께 사용`,`손실 함수: 소프트 손실(교사와 학생 간) + 하드 손실(정답과 학생 간)의 가중합`,`장점: 모델 크기·연산량 대폭 감소, 추론 속도 향상, 엣지 디바이스 배포 가능`],blanks:[{s:`지식 증류는 {{교사(Teacher) 모델}}의 지식을 {{학생(Student) 모델}}로 전달하는 경량화 기법이다.`},{s:`학생 모델은 교사 모델의 {{소프트 타겟(확률 분포)}}을 학습한다.`},{s:`온도(T)가 높을수록 소프트맥스 출력이 {{부드럽고(균등한) 분포}}가 된다.`},{s:`손실 함수 = {{소프트 손실}}(교사-학생) + {{하드 손실}}(정답-학생)의 가중합.`}]},
+{topic:`연관규칙 3대 지표 (지지도, 신뢰도, 향상도)`,domain:`AI`,keywords:[`지지도(Support) = 전체 거래 중 A∩B 포함 거래 비율`,`신뢰도(Confidence) = P(B|A) = Support(A∩B) ÷ Support(A)`,`향상도(Lift) = Confidence ÷ Support(B) — Lift>1이면 양의 연관성`,`Lift=1이면 독립, Lift<1이면 음의 연관성(대체재)`,`최소 지지도·최소 신뢰도를 동시에 만족하는 규칙을 '강한 규칙'이라 함`,`Apriori 알고리즘으로 빈발 항목집합을 추출한 후 연관규칙 생성`],blanks:[{s:`지지도(Support) = 전체 거래 중 {{A∩B 포함 거래}} 비율.`},{s:`신뢰도(Confidence) = {{P(B|A)}} = {{Support(A∩B)}} ÷ {{Support(A)}}.`},{s:`향상도(Lift) = {{Confidence}} ÷ {{Support(B)}}이며, {{Lift>1}}이면 양의 연관성이다.`},{s:`Lift={{1}}이면 독립, Lift<1이면 {{음의 연관성(대체재)}}이다.`}]},
+{topic:`TF-IDF (단어 중요도 평가)`,domain:`AI`,keywords:[`TF(Term Frequency, 단어 빈도): 특정 문서에서 특정 단어가 등장하는 빈도`,`IDF(Inverse Document Frequency, 역문서 빈도): 전체 문서 중 해당 단어가 등장하는 문서의 역수에 로그를 취한 값`,`TF-IDF = TF × IDF — 특정 문서에서 중요하면서 전체에서는 희귀한 단어에 높은 가중치`,`IDF 공식: log(전체 문서 수 N ÷ 해당 단어를 포함하는 문서 수 df)`,`활용: 문서 분류, 검색 엔진 랭킹, 키워드 추출, 텍스트 마이닝`,`한계: 단어의 순서와 문맥을 고려하지 못함 → 워드 임베딩으로 보완`],blanks:[{s:`TF({{Term Frequency}})는 특정 문서에서 특정 단어가 등장하는 {{빈도}}이다.`},{s:`IDF({{Inverse Document Frequency}})는 전체 문서 중 해당 단어가 등장하는 문서의 {{역수에 로그}}를 취한 값이다.`},{s:`TF-IDF = {{TF × IDF}} — 특정 문서에서 중요하면서 전체에서 {{희귀한 단어}}에 높은 가중치를 부여한다.`},{s:`IDF 공식: {{log(N ÷ df)}} (N=전체 문서 수, df=해당 단어 포함 문서 수).`}]},
+{topic:`RBAC (역할 기반 접근 통제)`,domain:`SC`,keywords:[`정의: 사용자에게 할당된 조직 내 역할(Role)에 따라 시스템 접근 권한을 부여하는 모델`,`핵심: 사용자→역할→권한 매핑 — 인사이동 시 역할만 변경하면 권한 자동 조정`,`최소 권한 원칙(Least Privilege): 업무 수행에 필요한 최소한의 권한만 부여`,`직무 분리(SoD, Separation of Duties): 상충되는 역할을 동시에 부여하지 않음`,`MAC(강제적)과의 차이: MAC은 시스템이 보안 등급으로 강제, RBAC은 역할 기반 유연성`,`DAC(임의적)과의 차이: DAC은 소유자가 자율 부여 → 트로이목마 취약, RBAC은 중앙 관리`],blanks:[{s:`RBAC는 {{역할(Role)}}에 권한을 할당하고, 사용자에게 {{역할을 부여}}하는 방식이다.`},{s:`인사이동 시 {{역할만 변경}}하면 {{권한이 자동 조정}}된다.`},{s:`{{최소 권한 원칙(Least Privilege)}}과 {{직무 분리(SoD)}} 구현이 용이하다.`},{s:`MAC은 {{시스템}}이 강제, DAC은 {{소유자}}가 자율, RBAC은 {{역할}} 기반이다.`}]},
+{topic:`논리적 망분리 (VDI/SBC)`,domain:`SC`,keywords:[`정의: 한 대의 PC에서 가상화 기술을 이용해 업무망과 인터넷망을 논리적으로 분리하는 기술`,`VDI(Virtual Desktop Infrastructure): 서버에서 가상 데스크톱을 제공, 단말은 화면만 수신`,`SBC(Server-Based Computing): 서버에서 애플리케이션을 실행, 화면만 전송`,`물리적 망분리 대비 장점: 비용 절감, 공간 절약, 관리 유연성`,`물리적 망분리 대비 단점: 가상화 취약점, 하이퍼바이저 해킹 위험`,`최근 트렌드: 제로 트러스트 기반 논리적 망분리 완화 — 클라우드 환경 대응`],blanks:[{s:`논리적 망분리의 두 방식: {{VDI(Virtual Desktop Infrastructure)}}와 {{SBC(Server-Based Computing)}}.`},{s:`VDI는 서버에서 {{가상 데스크톱}}을 제공하고, 단말은 {{화면만 수신}}한다.`},{s:`물리적 망분리 대비 장점: {{비용 절감}}, {{관리 유연성}}.`},{s:`물리적 망분리 대비 단점: {{가상화 취약점}}, {{하이퍼바이저 해킹 위험}}.`}]},
+{topic:`CTEM (지속적 위협 노출 관리)`,domain:`SC`,keywords:[`정의: 가트너가 제시한 능동적 보안 프레임워크 — 공격 표면을 지속 모니터링하고 위협 노출을 평가`,`5단계: ①범위 설정 → ②발견 → ③우선순위화 → ④검증 → ⑤동원`,`검증: 침투 테스트, BAS(Breach and Attack Simulation)로 실제 악용 가능성 확인`,`기존 VM과 차이: 패치 중심이 아닌 비즈니스 리스크 기준 우선순위 결정`,`ASM(Attack Surface Management): CTEM의 핵심 구성요소`,`동원(Mobilization): 보안팀·IT팀·경영진 협력하여 수정 조치 실행`],blanks:[{s:`CTEM 5단계: ①{{범위 설정}} → ②{{발견}} → ③{{우선순위화}} → ④{{검증}} → ⑤{{동원}}.`},{s:`검증 단계: {{침투 테스트}}와 {{BAS}}로 악용 가능성을 확인한다.`},{s:`기존 VM과 차이: {{비즈니스 리스크 기준}}으로 우선순위를 결정한다.`},{s:`{{ASM(Attack Surface Management)}}은 CTEM의 핵심 구성요소이다.`}]},
+{topic:`PKI (공개키 기반 구조)`,domain:`SC`,keywords:[`정의: 신뢰할 수 있는 제3자 인증 기관(CA)이 발급한 전자 인증서를 통해 공개키의 소유자를 증명하는 체계`,`구성요소: CA(인증기관), RA(등록기관), CRL(인증서 폐지 목록), OCSP`,`비대칭키: 공개키(암호화/서명 검증) + 개인키(복호화/서명 생성)`,`전자 인증서: X.509 표준 — 공개키, 소유자 정보, CA 서명 포함`,`기밀성: 공개키로 암호화 → 개인키로 복호화`,`부인 방지: 개인키로 전자서명 → 공개키로 검증`],blanks:[{s:`PKI는 {{인증 기관(CA)}}이 발급한 {{전자 인증서}}로 공개키의 소유자를 증명하는 체계이다.`},{s:`구성요소: {{CA}}, {{RA}}, {{CRL}}, {{OCSP}}.`},{s:`전자 인증서 표준: {{X.509}} — {{공개키}}, {{소유자 정보}}, {{CA 서명}} 포함.`},{s:`전자서명: {{개인키}}로 서명 → {{공개키}}로 검증 — {{부인 방지}} 보장.`}]},
+{topic:`EU CRA 3대 핵심 요구사항`,domain:`SC`,keywords:[`CRA(Cyber Resilience Act): EU 시장 디지털 제품에 사이버 보안을 의무화하는 법`,`요구사항 1: Secure by Default — 설계 단계부터 보안을 내재화`,`요구사항 2: 출시 후 최소 5년간 보안 업데이트 제공 보장`,`요구사항 3: 취약점 발견 시 24시간 내 ENISA에 보고 의무`,`CE 마킹: CRA 준수 인증 없이는 EU 시장 판매 불가`,`SBOM(Software Bill of Materials): 구성 요소 목록 제출 의무`],blanks:[{s:`CRA 3대 요구사항: ①{{Secure by Default}} ②{{5년간 보안 업데이트}} ③{{24시간 내 취약점 보고}}.`},{s:`{{CE 마킹}} 인증 없이는 EU 시장 판매가 불가하다.`},{s:`{{SBOM(Software Bill of Materials)}} 제출이 의무화된다.`},{s:`취약점 발견 시 {{24시간}} 내 {{ENISA}}에 보고해야 한다.`}]},
+{topic:`CSMA/CA (무선 매체 접근 제어)`,domain:`NW`,keywords:[`정의: 반송파 감지 다중 접속 및 충돌 회피(Carrier Sense Multiple Access with Collision Avoidance)`,`무선 환경의 문제: 충돌 감지(Detection)가 어려움 → 충돌 회피(Avoidance) 방식 채택`,`동작: ①매체 감지(Listen) → ②비어있으면 랜덤 Backoff 대기 → ③전송`,`RTS/CTS: 데이터 전송 전 RTS(요청)→CTS(허가) 교환으로 숨은 노드 문제 해결`,`숨은 노드 문제(Hidden Node Problem): 서로 감지할 수 없는 두 노드가 동시에 전송하여 충돌`,`CSMA/CD(유선)와의 차이: CD는 충돌 감지 후 재전송, CA는 충돌 사전 회피`],blanks:[{s:`CSMA/CA는 {{충돌 감지}}가 어려운 무선 환경에서 {{충돌 회피}} 방식을 채택한다.`},{s:`동작: ①{{매체 감지}} → ②{{랜덤 Backoff 대기}} → ③전송.`},{s:`{{RTS/CTS}} 교환으로 {{숨은 노드 문제(Hidden Node Problem)}}를 해결한다.`},{s:`CSMA/{{CD}}는 충돌 {{감지}} 후 재전송, CSMA/{{CA}}는 충돌 {{회피}}.`}]},
+{topic:`BGP (Border Gateway Protocol)`,domain:`NW`,keywords:[`정의: 자율 시스템(AS) 간 라우팅을 수행하는 외부 게이트웨이 프로토콜(EGP)`,`경로 벡터(Path Vector) 방식: AS 경유 경로 전체를 교환하여 루핑 방지`,`정책 기반 라우팅: ISP 간 비즈니스 관계에 따른 경로 선택`,`BGP 메시지: OPEN, UPDATE, KEEPALIVE, NOTIFICATION`,`AS-PATH 속성: 경유 AS 번호를 순서대로 기록 — 루프 탐지에 활용`,`eBGP(외부 AS 간) vs iBGP(같은 AS 내부)`],blanks:[{s:`BGP는 {{자율 시스템(AS)}} 간 라우팅을 수행하는 {{외부 게이트웨이 프로토콜(EGP)}}이다.`},{s:`BGP는 {{경로 벡터(Path Vector)}} 방식으로 {{루핑}}을 방지한다.`},{s:`BGP 4가지 메시지: {{OPEN}}, {{UPDATE}}, {{KEEPALIVE}}, {{NOTIFICATION}}.`},{s:`{{eBGP}}는 외부 AS 간, {{iBGP}}는 같은 AS 내부 라우팅이다.`}]},
+{topic:`Wi-Fi 7 (802.11be)`,domain:`NW`,keywords:[`표준: IEEE 802.11be — EHT(Extremely High Throughput)`,`MLO(Multi-Link Operation): 2.4/5/6GHz 대역 동시 묶어 사용 — 대역폭↑ 지연↓`,`320MHz 채널 폭: Wi-Fi 6E(160MHz)의 2배`,`4K-QAM(4096-QAM): 한 심볼 12비트 — Wi-Fi 6(1024-QAM, 10비트) 대비 20% 향상`,`최대 이론 속도: 약 46Gbps`,`적용 사례: AR/VR 스트리밍, 클라우드 게이밍, 산업용 IoT 초저지연`],blanks:[{s:`Wi-Fi 7 표준: {{IEEE 802.11be}}, 별칭 {{EHT(Extremely High Throughput)}}.`},{s:`MLO({{Multi-Link Operation}}): {{2.4/5/6GHz}} 대역을 동시에 묶어 사용한다.`},{s:`{{4K-QAM}}으로 한 심볼에 {{12비트}}를 전송하여 20% 효율 증가.`},{s:`최대 채널 폭 {{320MHz}}로 Wi-Fi 6E({{160MHz}})의 2배이다.`}]},
+{topic:`IPSec 핵심 프로토콜 (AH, ESP, IKE)`,domain:`NW`,keywords:[`AH(Authentication Header): 인증·무결성 보장 (암호화 없음)`,`ESP(Encapsulating Security Payload): 인증·무결성 + 기밀성(암호화) — 가장 많이 사용`,`IKE(Internet Key Exchange): SA 설정을 위한 자동 키 교환 프로토콜`,`SA(Security Association): 보안 파라미터 합의 — 단방향 논리적 연결`,`전송 모드: IP 페이로드만 암호화 / 터널 모드: 전체 패킷 암호화 + 새 IP 헤더`,`IKE 2단계: Phase 1(IKE SA) → Phase 2(IPSec SA)`],blanks:[{s:`AH는 {{인증·무결성}}만 보장하고, ESP는 추가로 {{기밀성(암호화)}}을 제공한다.`},{s:`IKE는 {{SA(Security Association)}} 설정을 위한 {{자동 키 교환}} 프로토콜이다.`},{s:`전송 모드: {{IP 페이로드만}} 암호화, 터널 모드: {{전체 패킷}} 암호화.`},{s:`IKE 2단계: Phase 1({{IKE SA}}) → Phase 2({{IPSec SA}}).`}]},
+{topic:`ROI (투자 수익률)`,domain:`MG`,keywords:[`정의: 투자한 비용 대비 창출된 순이익의 비율 — IT 투자 타당성 평가의 기본 지표`,`공식: ROI = (순이익 ÷ 투자비용) × 100`,`장점: 계산이 직관적이고 이해 쉬움, 여러 대안 간 비교 용이`,`단점: 화폐의 시간가치(Time Value of Money) 미반영, 투자 기간 무시`,`NPV(순현재가치): ROI의 시간가치 미반영 한계를 보완하는 지표`,`IRR(내부수익률): NPV=0이 되는 할인율 — IRR > 요구수익률이면 투자`],blanks:[{s:`ROI = ({{순이익}} ÷ {{투자비용}}) × 100.`},{s:`ROI의 장점: {{직관적}}이고 여러 대안 간 {{비교 용이}}.`},{s:`ROI의 단점: {{화폐의 시간가치}} 미반영, {{투자 기간}} 무시.`},{s:`ROI의 한계를 보완: {{NPV(순현재가치)}}는 시간가치 반영, {{IRR(내부수익률)}}은 NPV=0 할인율.`}]},
+{topic:`ITIL 4 SVS (서비스 가치 체계)`,domain:`MG`,keywords:[`정의: 수요(Demand)를 가치(Value)로 전환하는 ITIL 4의 핵심 프레임워크`,`SVS 구성: 서비스 가치 사슬(SVC), 지도 원칙, 거버넌스, 지속적 개선, 관리 관행(Practice)`,`서비스 가치 사슬(SVC) 6활동: 계획, 개선, 참여, 설계·전환, 획득·구축, 전달·지원`,`공동 가치 창출(Value Co-creation): 서비스 제공자와 소비자가 함께 가치를 만드는 개념`,`ITIL v3 → v4 전환: 서비스 라이프사이클 → SVS, DevOps/Agile 수용`,`4차원 모델: 조직과 사람, 정보와 기술, 파트너와 공급자, 가치 흐름과 프로세스`],blanks:[{s:`SVS는 {{수요(Demand)}}를 {{가치(Value)}}로 전환하는 ITIL 4의 핵심 프레임워크이다.`},{s:`SVC 6활동: {{계획}}, {{개선}}, {{참여}}, {{설계·전환}}, {{획득·구축}}, {{전달·지원}}.`},{s:`{{공동 가치 창출(Value Co-creation)}}은 제공자와 소비자가 {{함께 가치를 만드는}} 개념이다.`},{s:`4차원 모델: {{조직과 사람}}, {{정보와 기술}}, {{파트너와 공급자}}, {{가치 흐름과 프로세스}}.`}]},
+{topic:`DRS 4유형 (Mirror, Hot, Warm, Cold)`,domain:`MG`,keywords:[`DRS(Disaster Recovery System): 재해 복구 시스템 — BCP(업무 연속성 계획)의 핵심 인프라`,`미러 사이트(Mirror Site): 주센터와 동일한 시스템을 실시간 동기화 — RTO ≈ 0, 비용 최대`,`핫 사이트(Hot Site): 대부분의 장비·데이터가 준비, 수시간 내 복구 — RTO: 수시간`,`웜 사이트(Warm Site): 주요 장비 준비, 데이터 일부 동기화 — RTO: 수일`,`콜드 사이트(Cold Site): 공간·전력만 확보, 장비·데이터는 별도 확보 — RTO: 수주, 비용 최소`,`RTO(Recovery Time Objective): 서비스 복구 목표 시간 — 미러<핫<웜<콜드`],blanks:[{s:`DRS 4유형 (RTO 기준): {{미러 사이트}}(≈0) < {{핫 사이트}}(수시간) < {{웜 사이트}}(수일) < {{콜드 사이트}}(수주).`},{s:`미러 사이트는 주센터와 {{동일 시스템}}을 {{실시간 동기화}}한다.`},{s:`콜드 사이트는 {{공간·전력만}} 확보하고 장비·데이터는 별도 확보한다.`},{s:`RTO({{Recovery Time Objective}})는 {{서비스 복구 목표 시간}}이다.`}]}
+]},
+{label:`DAY 2`,
+qs:[
+{a:"AI",t:`ARIMA`,q:`1차 차분의 공식은?`,o:[`Yt÷Yt-1`,`Yt×Yt-1`,`Yt−Yt-1`,`Yt+Yt-1`],ans:2,exp:`<b>1차 차분: Y't = Yt − Yt-1</b>.`},
+{a:"AI",t:`드롭아웃`,q:`드롭아웃이 제공하는 효과는?`,o:[`앙상블 효과로 과적합 방지`,`속도 2배 향상`,`데이터 증강`,`그래디언트 소실 방지`],ans:0,exp:`<b>앙상블 효과</b>로 <b>과적합을 방지</b>합니다.`},
+{a:"AI",t:`워드 임베딩`,q:`Skip-gram이 수행하는 작업은?`,o:[`주변→중심 예측`,`감성 점수 계산`,`다음 단어 예측`,`중심→주변 예측`],ans:3,exp:`<b>Skip-gram</b>: <b>중심 단어로 주변 단어를 예측</b>.`},
+{a:"AI",t:`Q-Learning`,q:`벨만 방정식에서 γ의 역할은?`,o:[`에포크 수`,`학습률`,`미래 보상 할인(감가율)`,`탐험 비율`],ans:2,exp:`<b>γ(감가율)</b>: <b>미래 보상의 현재 가치를 할인</b>.`},
+{a:"AI",t:`지식 증류`,q:`DistilBERT의 성과는?`,o:[`파라미터 40% 감소, 성능 97% 유지`,`변화 없이 속도만 향상`,`파라미터 90% 감소, 성능 50%`,`파라미터 10% 감소, 100%`],ans:0,exp:`<b>DistilBERT</b>: 파라미터 <b>40% 감소, 성능 97% 유지</b>.`},
+{a:"AI",t:`앙상블`,q:`부스팅의 동작 방식은?`,o:[`병렬 학습 후 다수결`,`이전 모델이 틀린 데이터에 가중치, 순차 학습`,`메타 모델이 결합`,`랜덤 피처로 트리 생성`],ans:1,exp:`<b>부스팅</b>: 이전 모델이 <b>틀린 데이터에 가중치</b>, <b>순차 학습</b>.`},
+{a:"AI",t:`SVM 커널`,q:`가우시안 RBF에서 γ가 클 때?`,o:[`하나의 군집`,`경계 복잡`,`경계 단순`,`학습시간 0`],ans:1,exp:`γ 크면 <b>결정 경계가 복잡</b>해집니다.`},
+{a:"AI",t:`정상성 검정`,q:`ADF 검정의 귀무가설과 결론은?`,o:[`귀무:비정상(단위근)→기각시 정상`,`귀무:정상→기각시 비정상`,`귀무:등분산→기각시 이분산`,`귀무:독립→기각시 종속`],ans:0,exp:`ADF: 귀무가설 '<b>단위근 존재(비정상)</b>' → <b>기각 시 정상</b>.`},
+{a:"SC",t:`접근 통제`,q:`BLP 모델의 핵심 원칙은?`,o:[`읽기쓰기 동일 등급`,`No Read Down, No Write Up(무결성)`,`소유자 자유 부여`,`No Read Up, No Write Down(기밀성)`],ans:3,exp:`<b>BLP</b>: <b>기밀성</b> — No Read Up, No Write Down.`},
+{a:"SC",t:`측면 이동`,q:`자격 증명 탈취에 사용되는 도구는?`,o:[`Nmap`,`Burp Suite`,`Mimikatz`,`Wireshark`],ans:2,exp:`<b>Mimikatz</b>로 계정 정보를 획득합니다.`},
+{a:"SC",t:`침해사고`,q:`초기 대응의 핵심 활동은?`,o:[`최종 보고서`,`네트워크 격리와 증거 보전`,`공격 경로 분석`,`대응 팀 구성`],ans:1,exp:`초기 대응: <b>네트워크 격리</b>와 <b>증거 보전</b>.`},
+{a:"SC",t:`EU CRA`,q:`Secure by Default가 의미하는 것은?`,o:[`설계 단계부터 보안 내재화`,`오픈소스만 사용`,`출시 후 패치`,`사용자 직접 설정`],ans:0,exp:`<b>Secure by Default</b>: <b>설계 단계부터 보안 내재화</b>.`},
+{a:"SC",t:`PKI`,q:`전자서명의 부인 방지 메커니즘은?`,o:[`해시값만으로 서명`,`개인키로 서명, 공개키로 검증`,`대칭키로 암호화 후 서명`,`공개키로 서명, 개인키로 검증`],ans:1,exp:`<b>개인키로 서명 → 공개키로 검증</b> → 부인 방지.`},
+{a:"NW",t:`CSMA/CA`,q:`CSMA/CD와 CSMA/CA의 차이는?`,o:[`CD:무선, CA:유선`,`CD:전이중, CA:반이중만`,`CD:충돌 감지 후 재전송, CA:충돌 사전 회피`,`동일 방식`],ans:2,exp:`<b>CD: 충돌 감지, CA: 충돌 회피</b>.`},
+{a:"NW",t:`핸드오버`,q:`핸드오버 3단계 순서는?`,o:[`측정→실행→결정`,`결정→측정→실행`,`실행→측정→결정`,`측정→결정→실행`],ans:3,exp:`<b>①측정 → ②결정 → ③실행</b>.`},
+{a:"NW",t:`페이딩`,q:`OFDM이 페이딩에 강건한 이유는?`,o:[`단일 주파수 사용`,`전력 최대화`,`안테나 1개`,`광대역을 여러 부반송파로 분할`],ans:3,exp:`OFDM: <b>여러 부반송파로 분할</b>하여 주파수 선택적 페이딩에 강건.`},
+{a:"NW",t:`Wi-Fi 7`,q:`4K-QAM이 한 심볼에 전송하는 비트 수는?`,o:[`8`,`12`,`10`,`14`],ans:1,exp:`<b>4K-QAM: 12비트</b>/심볼.`},
+{a:"MG",t:`ROI`,q:`ROI의 한계는?`,o:[`화폐의 시간가치 미반영`,`할인율 설정 필요`,`산출 복잡`,`미래 예측 필요`],ans:0,exp:`ROI 한계: <b>화폐의 시간가치 미반영</b>.`},
+{a:"MG",t:`DPP`,q:`DPP 핵심 기록 정보에 해당하지 않는 것은?`,o:[`원산지`,`재활용 비율`,`직원 수`,`탄소발자국`],ans:2,exp:`DPP: ①원산지 ②탄소발자국 ③재활용 비율. <b>직원 수 해당 안됨</b>.`},
+{a:"MG",t:`DRS`,q:`콜드 사이트의 특징은?`,o:[`주요 장비+일부 동기화`,`실시간 동기화`,`대부분 장비 준비`,`공간·전력만 확보, 장비 별도`],ans:3,exp:`<b>콜드 사이트</b>: 공간·전력만 확보, RTO: 수주, 비용 최소.`}
+],
+topics:[
+{topic:`확산 모델(Diffusion Model)`,domain:`AI`,keywords:[`Reverse Process(역방향 과정): 신경망이 각 스텝에서 노이즈를 예측·제거하여 원본 복원`,`DDPM(Denoising Diffusion Probabilistic Model): 대표적 확산 모델 프레임워크`,`GAN 대비 장점: 학습 안정성 높음, 모드 붕괴(Mode Collapse) 없음, 생성 품질 우수`,`GAN 대비 단점: 수백~수천 스텝의 역확산 → 생성 속도 느림`,`상용 서비스: Stable Diffusion, DALL-E, Midjourney의 기반 기술`,`가이던스(Guidance): 조건부 생성 시 텍스트 프롬프트로 생성 방향을 제어`],blanks:[{s:`Forward Process: 원본에 {{가우시안 노이즈}}를 {{T 스텝}}에 걸쳐 점진적으로 추가한다.`},{s:`Reverse Process: {{신경망}}이 각 스텝에서 {{노이즈를 예측·제거}}하여 원본을 복원한다.`},{s:`GAN 대비 장점: {{학습 안정성}} 높음, {{모드 붕괴 없음}}, 생성 품질 우수.`},{s:`GAN 대비 단점: {{수백~수천 스텝}}의 역확산으로 {{생성 속도가 느리다}}.`}]},
+{topic:`Q-Learning (강화학습)`,domain:`AI`,keywords:[`Q-value: 특정 상태에서 특정 행동을 취했을 때 기대되는 누적 보상`,`벨만 방정식(Bellman Equation): Q(s,a) ← Q(s,a) + α[R + γ·max Q(s',a') - Q(s,a)]`,`α(학습률): 새로운 정보의 반영 비율, γ(감가율): 미래 보상의 현재 가치 할인`,`Q-Table: 상태×행동 테이블에 Q-value를 저장하여 최적 정책(Policy)을 도출`,`탐험-활용 딜레마(Exploration-Exploitation): ε-greedy 전략으로 탐험과 활용을 균형`,`한계: 상태·행동 공간이 크면 Q-Table 폭발 → DQN(Deep Q-Network)으로 해결`],blanks:[{s:`벨만 방정식: Q(s,a) ← Q(s,a) + {{α}}[{{R}} + {{γ}}·max Q(s',a') - Q(s,a)].`},{s:`α는 {{학습률}}(새 정보 반영 비율), γ는 {{감가율}}(미래 보상 할인)이다.`},{s:`Q-Table 폭발 문제를 해결한 것이 {{DQN(Deep Q-Network)}}이다.`},{s:`{{ε-greedy}} 전략으로 {{탐험(Exploration)}}과 {{활용(Exploitation)}}을 균형잡는다.`}]},
+{topic:`지식 증류(Knowledge Distillation)`,domain:`AI`,keywords:[`온도(Temperature, T): 소프트맥스 출력을 부드럽게 만드는 하이퍼파라미터 — T가 높을수록 균등한 분포`,`하드 타겟(Hard Target): 원래의 정답 레이블 — 소프트 타겟과 함께 사용`,`손실 함수: 소프트 손실(교사와 학생 간) + 하드 손실(정답과 학생 간)의 가중합`,`장점: 모델 크기·연산량 대폭 감소, 추론 속도 향상, 엣지 디바이스 배포 가능`,`적용 사례: BERT → DistilBERT(파라미터 40% 감소, 성능 97% 유지)`,`다른 경량화 기법: 프루닝(Pruning), 양자화(Quantization), 저랭크 분해(Low-rank Factorization)`],blanks:[{s:`학생 모델은 교사 모델의 {{소프트 타겟(확률 분포)}}을 학습한다.`},{s:`온도(T)가 높을수록 소프트맥스 출력이 {{부드럽고(균등한) 분포}}가 된다.`},{s:`손실 함수 = {{소프트 손실}}(교사-학생) + {{하드 손실}}(정답-학생)의 가중합.`},{s:`대표 사례: BERT → {{DistilBERT}} (파라미터 {{40%}} 감소, 성능 {{97%}} 유지).`}]},
+{topic:`연관규칙 3대 지표 (지지도, 신뢰도, 향상도)`,domain:`AI`,keywords:[`지지도(Support) = 전체 거래 중 A∩B 포함 거래 비율`,`신뢰도(Confidence) = P(B|A) = Support(A∩B) ÷ Support(A)`,`향상도(Lift) = Confidence ÷ Support(B) — Lift>1이면 양의 연관성`,`Lift=1이면 독립, Lift<1이면 음의 연관성(대체재)`,`최소 지지도·최소 신뢰도를 동시에 만족하는 규칙을 '강한 규칙'이라 함`,`Apriori 알고리즘으로 빈발 항목집합을 추출한 후 연관규칙 생성`],blanks:[{s:`지지도(Support) = 전체 거래 중 {{A∩B 포함 거래}} 비율.`},{s:`신뢰도(Confidence) = {{P(B|A)}} = {{Support(A∩B)}} ÷ {{Support(A)}}.`},{s:`향상도(Lift) = {{Confidence}} ÷ {{Support(B)}}이며, {{Lift>1}}이면 양의 연관성이다.`},{s:`Lift={{1}}이면 독립, Lift<1이면 {{음의 연관성(대체재)}}이다.`}]},
+{topic:`TF-IDF (단어 중요도 평가)`,domain:`AI`,keywords:[`TF(Term Frequency, 단어 빈도): 특정 문서에서 특정 단어가 등장하는 빈도`,`IDF(Inverse Document Frequency, 역문서 빈도): 전체 문서 중 해당 단어가 등장하는 문서의 역수에 로그를 취한 값`,`TF-IDF = TF × IDF — 특정 문서에서 중요하면서 전체에서는 희귀한 단어에 높은 가중치`,`IDF 공식: log(전체 문서 수 N ÷ 해당 단어를 포함하는 문서 수 df)`,`활용: 문서 분류, 검색 엔진 랭킹, 키워드 추출, 텍스트 마이닝`,`한계: 단어의 순서와 문맥을 고려하지 못함 → 워드 임베딩으로 보완`],blanks:[{s:`IDF({{Inverse Document Frequency}})는 전체 문서 중 해당 단어가 등장하는 문서의 {{역수에 로그}}를 취한 값이다.`},{s:`TF-IDF = {{TF × IDF}} — 특정 문서에서 중요하면서 전체에서 {{희귀한 단어}}에 높은 가중치를 부여한다.`},{s:`IDF 공식: {{log(N ÷ df)}} (N=전체 문서 수, df=해당 단어 포함 문서 수).`},{s:`TF-IDF의 한계: 단어의 {{순서와 문맥}}을 고려하지 못하므로 {{워드 임베딩}}으로 보완한다.`}]},
+{topic:`앙상블 기법 (배깅, 부스팅, 스태킹)`,domain:`AI`,keywords:[`대표 모델: 랜덤 포레스트(Random Forest) — 배깅 + 피처 랜덤 서브셋 선택`,`부스팅(Boosting): 이전 모델이 틀린 데이터에 가중치 → 순차 학습 → 가중 결합`,`대표 모델: AdaBoost, Gradient Boosting, XGBoost, LightGBM`,`스태킹(Stacking): 여러 기본 모델의 예측값을 입력으로 메타 모델(Meta-learner)이 최종 예측`,`배깅은 분산(Variance) 감소, 부스팅은 편향(Bias) 감소에 효과적`,`편향-분산 트레이드오프(Bias-Variance Tradeoff): 모델 복잡도에 따른 과적합/과소적합 균형`],blanks:[{s:`부스팅(Boosting): 이전 모델이 {{틀린 데이터에 가중치}} → {{순차 학습}} → 가중 결합.`},{s:`스태킹(Stacking): 기본 모델들의 {{예측값}}을 입력으로 {{메타 모델(Meta-learner)}}이 최종 예측.`},{s:`배깅은 {{분산(Variance)}} 감소, 부스팅은 {{편향(Bias)}} 감소에 효과적이다.`},{s:`랜덤 포레스트는 {{배깅}} + {{피처 랜덤 서브셋 선택}}을 결합한 모델이다.`}]},
+{topic:`SVM 커널 함수 3유형`,domain:`AI`,keywords:[`커널 트릭: 저차원 데이터를 고차원 공간으로 매핑하여 비선형 분류를 가능하게 하는 기법`,`다항식 커널(Polynomial): K(x,y) = (x·y + c)^d — d차 다항식으로 매핑`,`가우시안 RBF 커널(Radial Basis Function): K(x,y) = exp(-γ||x-y||²) — 가장 범용적으로 사용`,`시그모이드 커널(Sigmoid): K(x,y) = tanh(αx·y + c) — 신경망의 활성화 함수와 유사`,`선형 커널(Linear): K(x,y) = x·y — 선형 분리 가능 데이터에 사용`,`γ(감마) 파라미터: RBF 커널의 영향 범위 — γ가 크면 결정 경계가 복잡`],blanks:[{s:`SVM의 3가지 비선형 커널: {{다항식(Polynomial)}}, {{가우시안 RBF}}, {{시그모이드(Sigmoid)}}.`},{s:`가우시안 RBF 커널: K(x,y) = {{exp(-γ||x-y||²)}} — 가장 {{범용적}}으로 사용된다.`},{s:`다항식 커널: K(x,y) = {{(x·y + c)^d}} — {{d차 다항식}}으로 매핑한다.`},{s:`γ(감마)가 {{크면}} 결정 경계가 복잡해지고, {{작으면}} 단순해진다.`}]},
+{topic:`정상성 검정 (ADF, KPSS)`,domain:`AI`,keywords:[`정상성(Stationarity): 시계열의 평균, 분산, 자기공분산이 시간에 따라 일정`,`ADF 검정(Augmented Dickey-Fuller): 귀무가설 '단위근 존재(비정상)' → 기각 시 정상`,`KPSS 검정: 귀무가설 '정상성' → 기각 시 비정상 — ADF와 반대 방향`,`ADF + KPSS 교차 검증: 두 검정을 함께 사용하여 정상성을 확실하게 판단`,`p-value < 0.05이면 귀무가설 기각 (ADF: 정상, KPSS: 비정상)`,`차분(Differencing): 비정상 시계열을 정상화하는 대표적 방법`],blanks:[{s:`ADF 검정의 귀무가설: '{{단위근 존재(비정상)}}' → 기각 시 {{정상}}으로 판단.`},{s:`KPSS 검정의 귀무가설: '{{정상성}}' → 기각 시 {{비정상}}으로 판단.`},{s:`ADF와 KPSS는 귀무가설 방향이 {{반대}}이므로 {{교차 검증}}에 활용한다.`},{s:`p-value < {{0.05}}이면 귀무가설을 기각한다.`}]},
+{topic:`CTEM (지속적 위협 노출 관리)`,domain:`SC`,keywords:[`정의: 가트너가 제시한 능동적 보안 프레임워크 — 공격 표면을 지속 모니터링하고 위협 노출을 평가`,`5단계: ①범위 설정 → ②발견 → ③우선순위화 → ④검증 → ⑤동원`,`검증: 침투 테스트, BAS(Breach and Attack Simulation)로 실제 악용 가능성 확인`,`기존 VM과 차이: 패치 중심이 아닌 비즈니스 리스크 기준 우선순위 결정`,`ASM(Attack Surface Management): CTEM의 핵심 구성요소`,`동원(Mobilization): 보안팀·IT팀·경영진 협력하여 수정 조치 실행`],blanks:[{s:`CTEM 5단계: ①{{범위 설정}} → ②{{발견}} → ③{{우선순위화}} → ④{{검증}} → ⑤{{동원}}.`},{s:`검증 단계: {{침투 테스트}}와 {{BAS}}로 악용 가능성을 확인한다.`},{s:`기존 VM과 차이: {{비즈니스 리스크 기준}}으로 우선순위를 결정한다.`},{s:`{{ASM(Attack Surface Management)}}은 CTEM의 핵심 구성요소이다.`}]},
+{topic:`PKI (공개키 기반 구조)`,domain:`SC`,keywords:[`정의: 신뢰할 수 있는 제3자 인증 기관(CA)이 발급한 전자 인증서를 통해 공개키의 소유자를 증명하는 체계`,`구성요소: CA(인증기관), RA(등록기관), CRL(인증서 폐지 목록), OCSP`,`비대칭키: 공개키(암호화/서명 검증) + 개인키(복호화/서명 생성)`,`전자 인증서: X.509 표준 — 공개키, 소유자 정보, CA 서명 포함`,`기밀성: 공개키로 암호화 → 개인키로 복호화`,`부인 방지: 개인키로 전자서명 → 공개키로 검증`],blanks:[{s:`PKI는 {{인증 기관(CA)}}이 발급한 {{전자 인증서}}로 공개키의 소유자를 증명하는 체계이다.`},{s:`구성요소: {{CA}}, {{RA}}, {{CRL}}, {{OCSP}}.`},{s:`전자 인증서 표준: {{X.509}} — {{공개키}}, {{소유자 정보}}, {{CA 서명}} 포함.`},{s:`전자서명: {{개인키}}로 서명 → {{공개키}}로 검증 — {{부인 방지}} 보장.`}]},
+{topic:`EU CRA 3대 핵심 요구사항`,domain:`SC`,keywords:[`CRA(Cyber Resilience Act): EU 시장 디지털 제품에 사이버 보안을 의무화하는 법`,`요구사항 1: Secure by Default — 설계 단계부터 보안을 내재화`,`요구사항 2: 출시 후 최소 5년간 보안 업데이트 제공 보장`,`요구사항 3: 취약점 발견 시 24시간 내 ENISA에 보고 의무`,`CE 마킹: CRA 준수 인증 없이는 EU 시장 판매 불가`,`SBOM(Software Bill of Materials): 구성 요소 목록 제출 의무`],blanks:[{s:`CRA 3대 요구사항: ①{{Secure by Default}} ②{{5년간 보안 업데이트}} ③{{24시간 내 취약점 보고}}.`},{s:`{{CE 마킹}} 인증 없이는 EU 시장 판매가 불가하다.`},{s:`{{SBOM(Software Bill of Materials)}} 제출이 의무화된다.`},{s:`취약점 발견 시 {{24시간}} 내 {{ENISA}}에 보고해야 한다.`}]},
+{topic:`접근 통제 3대 모델 (MAC, DAC, RBAC)`,domain:`SC`,keywords:[`MAC(Mandatory Access Control, 강제적): 시스템/관리자가 보안 등급으로 강제 통제`,`DAC(Discretionary Access Control, 임의적): 데이터 소유자가 자율적으로 권한 부여`,`RBAC(Role-Based Access Control, 역할 기반): 직무/조직 역할에 따라 권한 할당`,`MAC 모델: BLP(기밀성), Biba(무결성)`,`DAC 한계: 트로이목마 공격에 취약 — 소유자의 자의적 권한 부여`,`RBAC 장점: 최소 권한, 직무 분리(SoD) 구현 용이`],blanks:[{s:`MAC: {{시스템/관리자}}가 {{보안 등급}}으로 강제 통제.`},{s:`DAC: {{데이터 소유자}}가 자율적으로 {{권한 부여}} — {{트로이목마}}에 취약.`},{s:`RBAC: {{역할(Role)}}에 따라 권한 할당 — {{최소 권한}}과 {{직무 분리}} 용이.`},{s:`MAC의 기밀성 모델: {{BLP(Bell-LaPadula)}}, 무결성 모델: {{Biba}}.`}]},
+{topic:`측면 이동(Lateral Movement) 공격 3단계`,domain:`SC`,keywords:[`정의: 초기 침투 후 내부 시스템 간 이동하며 권한을 상승시키는 공격 기법`,`3단계: ①내부망 정찰(Reconnaissance) → ②자격 증명 탈취(Credential Dumping) → ③권한 확장 및 이동`,`정찰: 네트워크 스캐닝, AD(Active Directory) 정보 수집`,`자격 증명 탈취: Pass-the-Hash, Mimikatz 등 도구로 계정 정보 획득`,`권한 확장: 관리자 계정 탈취 → 도메인 컨트롤러 장악 → 전체 시스템 통제`,`대응: 제로 트러스트, 마이크로 세그멘테이션, PAM(특권 접근 관리)`],blanks:[{s:`측면 이동 3단계: ①{{내부망 정찰}} → ②{{자격 증명 탈취}} → ③{{권한 확장 및 이동}}.`},{s:`자격 증명 탈취 도구: {{Pass-the-Hash}}, {{Mimikatz}} 등.`},{s:`최종 목표: {{도메인 컨트롤러}} 장악 → 전체 시스템 통제.`},{s:`대응 기술: {{제로 트러스트}}, {{마이크로 세그멘테이션}}, {{PAM(특권 접근 관리)}}.`}]},
+{topic:`Wi-Fi 7 (802.11be)`,domain:`NW`,keywords:[`표준: IEEE 802.11be — EHT(Extremely High Throughput)`,`MLO(Multi-Link Operation): 2.4/5/6GHz 대역 동시 묶어 사용 — 대역폭↑ 지연↓`,`320MHz 채널 폭: Wi-Fi 6E(160MHz)의 2배`,`4K-QAM(4096-QAM): 한 심볼 12비트 — Wi-Fi 6(1024-QAM, 10비트) 대비 20% 향상`,`최대 이론 속도: 약 46Gbps`,`적용 사례: AR/VR 스트리밍, 클라우드 게이밍, 산업용 IoT 초저지연`],blanks:[{s:`Wi-Fi 7 표준: {{IEEE 802.11be}}, 별칭 {{EHT(Extremely High Throughput)}}.`},{s:`MLO({{Multi-Link Operation}}): {{2.4/5/6GHz}} 대역을 동시에 묶어 사용한다.`},{s:`{{4K-QAM}}으로 한 심볼에 {{12비트}}를 전송하여 20% 효율 증가.`},{s:`최대 채널 폭 {{320MHz}}로 Wi-Fi 6E({{160MHz}})의 2배이다.`}]},
+{topic:`IPSec 핵심 프로토콜 (AH, ESP, IKE)`,domain:`NW`,keywords:[`AH(Authentication Header): 인증·무결성 보장 (암호화 없음)`,`ESP(Encapsulating Security Payload): 인증·무결성 + 기밀성(암호화) — 가장 많이 사용`,`IKE(Internet Key Exchange): SA 설정을 위한 자동 키 교환 프로토콜`,`SA(Security Association): 보안 파라미터 합의 — 단방향 논리적 연결`,`전송 모드: IP 페이로드만 암호화 / 터널 모드: 전체 패킷 암호화 + 새 IP 헤더`,`IKE 2단계: Phase 1(IKE SA) → Phase 2(IPSec SA)`],blanks:[{s:`AH는 {{인증·무결성}}만 보장하고, ESP는 추가로 {{기밀성(암호화)}}을 제공한다.`},{s:`IKE는 {{SA(Security Association)}} 설정을 위한 {{자동 키 교환}} 프로토콜이다.`},{s:`전송 모드: {{IP 페이로드만}} 암호화, 터널 모드: {{전체 패킷}} 암호화.`},{s:`IKE 2단계: Phase 1({{IKE SA}}) → Phase 2({{IPSec SA}}).`}]},
+{topic:`핸드오버(Handover) 3단계`,domain:`NW`,keywords:[`정의: 이동 단말이 다른 셀로 이동할 때 통화가 끊기지 않도록 기지국을 전환하는 절차`,`3단계: ①측정(Measurement) → ②결정(Decision) → ③실행(Execution)`,`측정: 단말이 현재 기지국과 인접 기지국의 신호 품질(RSSI, RSRP 등)을 측정`,`결정: 네트워크(또는 단말)가 핸드오버 여부를 판단 — 히스테리시스, A3 이벤트 등`,`실행: 타겟 기지국으로 세션 전환 — 소프트 핸드오버(Make Before Break) vs 하드 핸드오버(Break Before Make)`,`소프트 핸드오버: 새 기지국 연결 후 기존 해제 (끊김 없음, CDMA 계열)`],blanks:[{s:`핸드오버 3단계: ①{{측정(Measurement)}} → ②{{결정(Decision)}} → ③{{실행(Execution)}}.`},{s:`측정 단계: 현재·인접 기지국의 {{신호 품질(RSSI, RSRP 등)}}을 측정한다.`},{s:`소프트 핸드오버: {{새 기지국 연결 후}} 기존 해제 ({{끊김 없음}}).`},{s:`하드 핸드오버: {{기존 해제 후}} 새 기지국 연결 ({{순간 끊김}}).`}]},
+{topic:`페이딩 극복 기술 (다이버시티, 이퀄라이저, OFDM)`,domain:`NW`,keywords:[`페이딩(Fading): 전파가 건물 등에 반사·회절되어 다중 경로를 거치면서 수신 신호가 약해지거나 왜곡되는 현상`,`다이버시티(Diversity): 여러 경로의 신호를 수신하여 가장 좋은 것을 선택하거나 결합`,`다이버시티 유형: 공간(안테나 복수), 시간(반복 전송), 주파수(다른 주파수 동시 전송)`,`이퀄라이저(Equalizer, 등화기): 채널 왜곡을 보상하여 원래 신호를 복원하는 수신기 장치`,`OFDM(Orthogonal Frequency Division Multiplexing): 직교 주파수 분할 다중화 — 광대역을 여러 부반송파로 나누어 주파수 선택적 페이딩에 강건`,`MIMO와 결합: 다이버시티 + OFDM + MIMO → 현대 무선 통신(LTE, 5G, Wi-Fi)의 핵심`],blanks:[{s:`페이딩은 전파가 {{다중 경로}}를 거치면서 수신 신호가 {{약해지거나 왜곡}}되는 현상이다.`},{s:`페이딩 극복 3대 기술: {{다이버시티}}, {{이퀄라이저(등화기)}}, {{OFDM}}.`},{s:`다이버시티 유형: {{공간}}(안테나 복수), {{시간}}(반복 전송), {{주파수}}(다른 주파수).`},{s:`OFDM은 광대역을 여러 {{부반송파}}로 나누어 {{주파수 선택적 페이딩}}에 강건하다.`}]},
+{topic:`ITIL 4 SVS (서비스 가치 체계)`,domain:`MG`,keywords:[`정의: 수요(Demand)를 가치(Value)로 전환하는 ITIL 4의 핵심 프레임워크`,`SVS 구성: 서비스 가치 사슬(SVC), 지도 원칙, 거버넌스, 지속적 개선, 관리 관행(Practice)`,`서비스 가치 사슬(SVC) 6활동: 계획, 개선, 참여, 설계·전환, 획득·구축, 전달·지원`,`공동 가치 창출(Value Co-creation): 서비스 제공자와 소비자가 함께 가치를 만드는 개념`,`ITIL v3 → v4 전환: 서비스 라이프사이클 → SVS, DevOps/Agile 수용`,`4차원 모델: 조직과 사람, 정보와 기술, 파트너와 공급자, 가치 흐름과 프로세스`],blanks:[{s:`SVS는 {{수요(Demand)}}를 {{가치(Value)}}로 전환하는 ITIL 4의 핵심 프레임워크이다.`},{s:`SVC 6활동: {{계획}}, {{개선}}, {{참여}}, {{설계·전환}}, {{획득·구축}}, {{전달·지원}}.`},{s:`{{공동 가치 창출(Value Co-creation)}}은 제공자와 소비자가 {{함께 가치를 만드는}} 개념이다.`},{s:`4차원 모델: {{조직과 사람}}, {{정보와 기술}}, {{파트너와 공급자}}, {{가치 흐름과 프로세스}}.`}]},
+{topic:`DRS 4유형 (Mirror, Hot, Warm, Cold)`,domain:`MG`,keywords:[`DRS(Disaster Recovery System): 재해 복구 시스템 — BCP(업무 연속성 계획)의 핵심 인프라`,`미러 사이트(Mirror Site): 주센터와 동일한 시스템을 실시간 동기화 — RTO ≈ 0, 비용 최대`,`핫 사이트(Hot Site): 대부분의 장비·데이터가 준비, 수시간 내 복구 — RTO: 수시간`,`웜 사이트(Warm Site): 주요 장비 준비, 데이터 일부 동기화 — RTO: 수일`,`콜드 사이트(Cold Site): 공간·전력만 확보, 장비·데이터는 별도 확보 — RTO: 수주, 비용 최소`,`RTO(Recovery Time Objective): 서비스 복구 목표 시간 — 미러<핫<웜<콜드`],blanks:[{s:`미러 사이트는 주센터와 {{동일 시스템}}을 {{실시간 동기화}}한다.`},{s:`콜드 사이트는 {{공간·전력만}} 확보하고 장비·데이터는 별도 확보한다.`},{s:`RTO({{Recovery Time Objective}})는 {{서비스 복구 목표 시간}}이다.`},{s:`RPO({{Recovery Point Objective}})는 {{데이터 손실 허용 시점}}이다.`}]},
+{topic:`DPP 핵심 기록 정보`,domain:`MG`,keywords:[`DPP(Digital Product Passport): 제품 생애주기 정보를 디지털화한 전자 기록`,`핵심 기록 정보 3가지: ①원산지(원재료 출처) ②탄소발자국(온실가스 배출량) ③재활용 비율(재생 원료 사용 비율)`,`법적 근거: EU 에코디자인 규정(ESPR)`,`목적: 순환경제(Circular Economy) 실현 — 자원 효율성 향상, 탄소 배출 감축`,`기술 기반: 블록체인(위변조 방지), IoT(실시간 추적), QR코드/NFC(소비자 접근)`,`배터리 분야 2027년 의무화 예정 — 섬유, 전자제품 등 단계적 확대`],blanks:[{s:`DPP 핵심 기록 정보 3가지: ①{{원산지(원재료 출처)}} ②{{탄소발자국(온실가스 배출량)}} ③{{재활용 비율}}.`},{s:`DPP의 법적 근거: EU {{에코디자인 규정(ESPR)}}.`},{s:`DPP의 목적: {{순환경제(Circular Economy)}} 실현.`},{s:`기술 기반: {{블록체인}}, {{IoT}}, {{QR코드/NFC}}.`}]}
+]},
+{label:`DAY 3`,
+qs:[
+{a:"AI",t:`확산 모델`,q:`확산 모델이 GAN 대비 갖는 장점으로 옳은 것은?`,o:[`학습이 안정적이고 모드 붕괴가 없다`,`파라미터 수가 적다`,`생성 속도가 빠르다`,`레이블 데이터가 불필요하다`],ans:0,exp:`확산 모델: GAN 대비 <b>학습 안정적</b>, <b>모드 붕괴 없음</b>, 생성 품질 우수합니다.`},
+{a:"AI",t:`Q-Learning`,q:`Q-Learning에서 ε-greedy 전략이 해결하는 문제는?`,o:[`과적합 문제`,`그래디언트 소실`,`탐험-활용 딜레마`,`차원의 저주`],ans:2,exp:`<b>ε-greedy</b>: <b>탐험(Exploration)과 활용(Exploitation)의 균형</b>을 잡는 전략입니다.`},
+{a:"AI",t:`CoT`,q:`Zero-shot CoT에서 사용하는 핵심 프롬프트는?`,o:[`더 짧게 답해줘`,`정답만 말해줘`,`예시를 보여줄게`,`Let's think step by step`],ans:3,exp:`<b>Zero-shot CoT</b>: '<b>Let's think step by step</b>'이라는 한 줄로 추론을 유도합니다.`},
+{a:"AI",t:`연관규칙`,q:`신뢰도(Confidence)의 산출 공식은?`,o:[`Support(A∩B) × Support(B)`,`Support(A) ÷ Support(B)`,`Support(B) ÷ Support(A)`,`Support(A∩B) ÷ Support(A)`],ans:3,exp:`<b>신뢰도 = Support(A∩B) ÷ Support(A) = P(B|A)</b>.`},
+{a:"AI",t:`TF-IDF`,q:`TF-IDF 공식에서 IDF의 역할은?`,o:[`단어 순서를 반영`,`문서 길이를 정규화`,`자주 등장하는 단어에 높은 가중치`,`전체 문서에서 희귀한 단어에 높은 가중치`],ans:3,exp:`<b>IDF</b>: <b>전체 문서에서 희귀한 단어에 높은 가중치</b>를 부여합니다.`},
+{a:"AI",t:`앙상블`,q:`랜덤 포레스트가 결합한 두 기법은?`,o:[`프루닝 + 양자화`,`K-Means + DBSCAN`,`배깅 + 피처 랜덤 서브셋 선택`,`부스팅 + 스태킹`],ans:2,exp:`<b>랜덤 포레스트 = 배깅(Bagging) + 피처 랜덤 서브셋 선택</b>.`},
+{a:"AI",t:`SVM 커널`,q:`SVM 커널 함수 중 가장 범용적으로 사용되는 것은?`,o:[`시그모이드 커널`,`선형 커널`,`다항식 커널`,`가우시안 RBF 커널`],ans:3,exp:`<b>가우시안 RBF 커널</b>: 가장 <b>범용적</b>으로 사용되는 SVM 커널 함수입니다.`},
+{a:"AI",t:`정상성 검정`,q:`KPSS 검정의 귀무가설은?`,o:[`등분산`,`비정상(단위근 존재)`,`독립`,`정상성`],ans:3,exp:`KPSS 검정: 귀무가설 '<b>정상성</b>' → 기각 시 비정상. ADF와 <b>반대 방향</b>입니다.`},
+{a:"SC",t:`RBAC`,q:`RBAC가 구현하기 용이한 두 가지 보안 원칙은?`,o:[`인증과 인가`,`암호화와 해싱`,`기밀성과 가용성`,`최소 권한과 직무 분리`],ans:3,exp:`RBAC: <b>최소 권한 원칙(Least Privilege)</b>과 <b>직무 분리(SoD)</b> 구현이 용이합니다.`},
+{a:"SC",t:`논리적 망분리`,q:`논리적 망분리의 위험 요소는?`,o:[`가상화 취약점과 하이퍼바이저 해킹`,`업무 공간 부족`,`높은 구축 비용`,`전력 소모 증가`],ans:0,exp:`논리적 망분리 위험: <b>가상화 취약점</b>과 <b>하이퍼바이저 해킹</b> 위험이 존재합니다.`},
+{a:"SC",t:`침해사고`,q:`디지털 포렌식이 수행되는 침해사고 대응 단계는?`,o:[`사전 준비`,`조사/분석`,`초기 대응`,`사후 보고`],ans:1,exp:`<b>조사/분석</b> 단계: <b>디지털 포렌식</b>으로 공격 경로와 원인을 규명합니다.`},
+{a:"SC",t:`측면 이동`,q:`측면 이동 공격의 최종 목표는?`,o:[`이메일 서버 해킹`,`DNS 서버 변조`,`도메인 컨트롤러 장악`,`외부 방화벽 우회`],ans:2,exp:`측면 이동의 최종 목표: <b>도메인 컨트롤러(AD) 장악</b> → 전체 시스템 통제.`},
+{a:"SC",t:`CTEM`,q:`CTEM에서 BAS의 역할은?`,o:[`실제 공격을 시뮬레이션하여 방어 체계 검증`,`데이터베이스 성능 테스트`,`백업 자동 수행`,`네트워크 대역폭 측정`],ans:0,exp:`<b>BAS(Breach and Attack Simulation)</b>: <b>실제 공격을 시뮬레이션</b>하여 방어 체계를 자동 검증합니다.`},
+{a:"NW",t:`CSMA/CA`,q:`NAV(Network Allocation Vector)의 역할은?`,o:[`데이터를 암호화`,`매체 점유 시간을 예약하여 충돌 방지`,`라우팅 테이블 관리`,`IP 주소를 할당`],ans:1,exp:`<b>NAV</b>: <b>매체 점유 시간을 예약</b>하여 다른 노드의 전송을 지연시키고 충돌을 방지합니다.`},
+{a:"NW",t:`핸드오버`,q:`소프트 핸드오버의 특징으로 옳은 것은?`,o:[`새 기지국 연결 후 기존 해제 (끊김 없음)`,`두 기지국 모두 해제 후 재연결`,`기존 해제 후 새 기지국 연결`,`핸드오버 없이 동일 기지국 유지`],ans:0,exp:`<b>소프트 핸드오버</b>: <b>새 기지국 연결 후 기존 해제</b> — Make Before Break, 끊김 없음.`},
+{a:"NW",t:`페이딩`,q:`다이버시티(Diversity) 기법의 3가지 유형에 해당하지 않는 것은?`,o:[`전력 다이버시티`,`주파수 다이버시티`,`시간 다이버시티`,`공간 다이버시티`],ans:0,exp:`다이버시티 유형: <b>공간(안테나 복수)</b>, <b>시간(반복 전송)</b>, <b>주파수(다른 주파수)</b>입니다.`},
+{a:"NW",t:`IPSec`,q:`IPSec에서 AH와 ESP의 차이로 옳은 것은?`,o:[`AH는 인증만, ESP는 인증+암호화`,`AH는 암호화 제공, ESP는 인증만`,`AH는 L7, ESP는 L3`,`둘 다 동일한 기능`],ans:0,exp:`<b>AH: 인증·무결성만</b> / <b>ESP: 인증·무결성 + 기밀성(암호화)</b>.`},
+{a:"MG",t:`ITIL 4`,q:`ITIL 4의 SVC(서비스 가치 사슬) 활동에 해당하지 않는 것은?`,o:[`계획`,`설계·전환`,`인시던트 관리`,`참여`],ans:2,exp:`SVC 6활동: 계획, 개선, 참여, 설계·전환, 획득·구축, 전달·지원. <b>인시던트 관리는 관리 관행(Practice)</b>입니다.`},
+{a:"MG",t:`DRS`,q:`핫 사이트(Hot Site)의 RTO는?`,o:[`≈0`,`수주`,`수시간`,`수일`],ans:2,exp:`<b>핫 사이트</b>: 대부분 장비·데이터 준비 완료, RTO: <b>수시간</b>.`},
+{a:"MG",t:`DPP`,q:`DPP의 기술 기반으로 옳은 것은?`,o:[`양자 컴퓨팅, 6G`,`AI, VR, 5G`,`블록체인, IoT, QR코드/NFC`,`빅데이터, AR, 엣지`],ans:2,exp:`DPP 기술 기반: <b>블록체인</b>(위변조 방지), <b>IoT</b>(실시간 추적), <b>QR코드/NFC</b>(소비자 접근).`}
+],
+topics:[
+{topic:`연관규칙 3대 지표 (지지도, 신뢰도, 향상도)`,domain:`AI`,keywords:[`지지도(Support) = 전체 거래 중 A∩B 포함 거래 비율`,`신뢰도(Confidence) = P(B|A) = Support(A∩B) ÷ Support(A)`,`향상도(Lift) = Confidence ÷ Support(B) — Lift>1이면 양의 연관성`,`Lift=1이면 독립, Lift<1이면 음의 연관성(대체재)`,`최소 지지도·최소 신뢰도를 동시에 만족하는 규칙을 '강한 규칙'이라 함`,`Apriori 알고리즘으로 빈발 항목집합을 추출한 후 연관규칙 생성`],blanks:[{s:`지지도(Support) = 전체 거래 중 {{A∩B 포함 거래}} 비율.`},{s:`신뢰도(Confidence) = {{P(B|A)}} = {{Support(A∩B)}} ÷ {{Support(A)}}.`},{s:`향상도(Lift) = {{Confidence}} ÷ {{Support(B)}}이며, {{Lift>1}}이면 양의 연관성이다.`},{s:`Lift={{1}}이면 독립, Lift<1이면 {{음의 연관성(대체재)}}이다.`}]},
+{topic:`TF-IDF (단어 중요도 평가)`,domain:`AI`,keywords:[`TF(Term Frequency, 단어 빈도): 특정 문서에서 특정 단어가 등장하는 빈도`,`IDF(Inverse Document Frequency, 역문서 빈도): 전체 문서 중 해당 단어가 등장하는 문서의 역수에 로그를 취한 값`,`TF-IDF = TF × IDF — 특정 문서에서 중요하면서 전체에서는 희귀한 단어에 높은 가중치`,`IDF 공식: log(전체 문서 수 N ÷ 해당 단어를 포함하는 문서 수 df)`,`활용: 문서 분류, 검색 엔진 랭킹, 키워드 추출, 텍스트 마이닝`,`한계: 단어의 순서와 문맥을 고려하지 못함 → 워드 임베딩으로 보완`],blanks:[{s:`TF({{Term Frequency}})는 특정 문서에서 특정 단어가 등장하는 {{빈도}}이다.`},{s:`IDF({{Inverse Document Frequency}})는 전체 문서 중 해당 단어가 등장하는 문서의 {{역수에 로그}}를 취한 값이다.`},{s:`TF-IDF = {{TF × IDF}} — 특정 문서에서 중요하면서 전체에서 {{희귀한 단어}}에 높은 가중치를 부여한다.`},{s:`IDF 공식: {{log(N ÷ df)}} (N=전체 문서 수, df=해당 단어 포함 문서 수).`}]},
+{topic:`앙상블 기법 (배깅, 부스팅, 스태킹)`,domain:`AI`,keywords:[`배깅(Bagging, Bootstrap Aggregating): 부트스트랩 샘플링 → 병렬 학습 → 다수결/평균으로 결합`,`대표 모델: 랜덤 포레스트(Random Forest) — 배깅 + 피처 랜덤 서브셋 선택`,`부스팅(Boosting): 이전 모델이 틀린 데이터에 가중치 → 순차 학습 → 가중 결합`,`대표 모델: AdaBoost, Gradient Boosting, XGBoost, LightGBM`,`스태킹(Stacking): 여러 기본 모델의 예측값을 입력으로 메타 모델(Meta-learner)이 최종 예측`,`배깅은 분산(Variance) 감소, 부스팅은 편향(Bias) 감소에 효과적`],blanks:[{s:`배깅(Bagging): {{부트스트랩 샘플링}} → {{병렬 학습}} → {{다수결/평균}}으로 결합.`},{s:`부스팅(Boosting): 이전 모델이 {{틀린 데이터에 가중치}} → {{순차 학습}} → 가중 결합.`},{s:`스태킹(Stacking): 기본 모델들의 {{예측값}}을 입력으로 {{메타 모델(Meta-learner)}}이 최종 예측.`},{s:`배깅은 {{분산(Variance)}} 감소, 부스팅은 {{편향(Bias)}} 감소에 효과적이다.`}]},
+{topic:`SVM 커널 함수 3유형`,domain:`AI`,keywords:[`커널 트릭: 저차원 데이터를 고차원 공간으로 매핑하여 비선형 분류를 가능하게 하는 기법`,`다항식 커널(Polynomial): K(x,y) = (x·y + c)^d — d차 다항식으로 매핑`,`가우시안 RBF 커널(Radial Basis Function): K(x,y) = exp(-γ||x-y||²) — 가장 범용적으로 사용`,`시그모이드 커널(Sigmoid): K(x,y) = tanh(αx·y + c) — 신경망의 활성화 함수와 유사`,`선형 커널(Linear): K(x,y) = x·y — 선형 분리 가능 데이터에 사용`,`γ(감마) 파라미터: RBF 커널의 영향 범위 — γ가 크면 결정 경계가 복잡`],blanks:[{s:`SVM의 3가지 비선형 커널: {{다항식(Polynomial)}}, {{가우시안 RBF}}, {{시그모이드(Sigmoid)}}.`},{s:`가우시안 RBF 커널: K(x,y) = {{exp(-γ||x-y||²)}} — 가장 {{범용적}}으로 사용된다.`},{s:`다항식 커널: K(x,y) = {{(x·y + c)^d}} — {{d차 다항식}}으로 매핑한다.`},{s:`γ(감마)가 {{크면}} 결정 경계가 복잡해지고, {{작으면}} 단순해진다.`}]},
+{topic:`정상성 검정 (ADF, KPSS)`,domain:`AI`,keywords:[`정상성(Stationarity): 시계열의 평균, 분산, 자기공분산이 시간에 따라 일정`,`ADF 검정(Augmented Dickey-Fuller): 귀무가설 '단위근 존재(비정상)' → 기각 시 정상`,`KPSS 검정: 귀무가설 '정상성' → 기각 시 비정상 — ADF와 반대 방향`,`ADF + KPSS 교차 검증: 두 검정을 함께 사용하여 정상성을 확실하게 판단`,`p-value < 0.05이면 귀무가설 기각 (ADF: 정상, KPSS: 비정상)`,`차분(Differencing): 비정상 시계열을 정상화하는 대표적 방법`],blanks:[{s:`ADF 검정의 귀무가설: '{{단위근 존재(비정상)}}' → 기각 시 {{정상}}으로 판단.`},{s:`KPSS 검정의 귀무가설: '{{정상성}}' → 기각 시 {{비정상}}으로 판단.`},{s:`ADF와 KPSS는 귀무가설 방향이 {{반대}}이므로 {{교차 검증}}에 활용한다.`},{s:`p-value < {{0.05}}이면 귀무가설을 기각한다.`}]},
+{topic:`CoT(Chain of Thought) 프롬프팅`,domain:`AI`,keywords:[`정의: LLM이 최종 답변 전에 중간 추론 과정을 명시적으로 생성하여 논리적 오류를 줄이는 기법`,`CoT 3단계: ①문제 이해 및 분해 → ②단계별 중간 사고(추론) 생성 → ③최종 결론 도출`,`Zero-shot CoT: '단계별로 생각해 보자(Let's think step by step)' 한 줄만으로 추론 유도`,`Few-shot CoT: 추론 과정이 포함된 예시를 제시하여 모델이 패턴을 학습`,`효과: 수학, 논리 추론, 코딩 등 복잡한 문제에서 정확도 대폭 향상`,`OpenAI o1 등 추론 모델: CoT를 내재화하여 테스트 타임 컴퓨팅으로 활용`],blanks:[{s:`CoT 3단계: ①{{문제 이해 및 분해}} → ②{{단계별 중간 사고 생성}} → ③{{최종 결론 도출}}.`},{s:`Zero-shot CoT는 '{{Let's think step by step}}'이라는 한 줄만으로 추론을 유도한다.`},{s:`Few-shot CoT는 {{추론 과정이 포함된 예시}}를 제시하여 모델이 패턴을 학습하게 한다.`},{s:`CoT는 {{수학}}, {{논리 추론}}, {{코딩}} 등 복잡한 문제에서 효과적이다.`}]},
+{topic:`ARIMA 모델의 차분(Differencing)`,domain:`AI`,keywords:[`차분(Differencing): 이전 시점과의 차이를 구하여 비정상 시계열을 정상화하는 기법`,`정상성(Stationarity): 평균, 분산, 자기공분산이 시간에 따라 일정한 성질`,`d회 차분: ARIMA(p,d,q)에서 d=차분 횟수 — d=1이면 1차 차분`,`1차 차분: Y't = Yt − Yt-1 — 추세(Trend) 제거에 효과적`,`2차 차분: Y''t = Y't − Y't-1 — 가속 추세(곡률) 제거`,`차분 후 정상성 확인: ADF 검정(Augmented Dickey-Fuller Test)으로 검증`],blanks:[{s:`ARIMA는 {{AR(자기회귀)}} + {{I(차분/적분)}} + {{MA(이동평균)}}의 결합 모델이다.`},{s:`차분(Differencing)은 {{이전 시점과의 차이}}를 구하여 {{비정상 시계열을 정상화}}하는 기법이다.`},{s:`정상성이란 {{평균}}, {{분산}}, {{자기공분산}}이 시간에 따라 일정한 성질이다.`},{s:`1차 차분 공식: {{Y't = Yt − Yt-1}} — {{추세(Trend)}} 제거에 효과적이다.`}]},
+{topic:`드롭아웃(Dropout)`,domain:`AI`,keywords:[`목적: 과적합(Overfitting) 방지 — 특정 노드에 대한 의존도를 낮춤`,`앙상블 효과: 매 학습 반복마다 서로 다른 부분 네트워크를 학습 → 여러 모델의 평균 효과`,`드롭아웃 비율(p): 일반적으로 0.2~0.5 — 학습 시에만 적용, 추론 시에는 비활성화`,`추론 시 스케일링: 학습 때 비활성화된 비율만큼 가중치를 스케일링하여 출력 보정`,`적용 위치: 주로 완전연결(FC) 계층에 적용, CNN에서는 Spatial Dropout 사용`,`Hinton et al.(2012): 드롭아웃을 최초 제안한 논문`],blanks:[{s:`드롭아웃은 신경망 학습 시 {{무작위로 일부 노드를 비활성화}}하는 {{정규화(Regularization)}} 기법이다.`},{s:`드롭아웃의 목적: {{과적합(Overfitting)}} 방지 — 특정 노드에 대한 {{의존도를 낮춤}}.`},{s:`매 학습 반복마다 다른 부분 네트워크를 학습하여 {{앙상블 효과}}를 제공한다.`},{s:`드롭아웃은 {{학습 시에만}} 적용하고, {{추론 시에는 비활성화}}한다.`}]},
+{topic:`EU CRA 3대 핵심 요구사항`,domain:`SC`,keywords:[`CRA(Cyber Resilience Act): EU 시장 디지털 제품에 사이버 보안을 의무화하는 법`,`요구사항 1: Secure by Default — 설계 단계부터 보안을 내재화`,`요구사항 2: 출시 후 최소 5년간 보안 업데이트 제공 보장`,`요구사항 3: 취약점 발견 시 24시간 내 ENISA에 보고 의무`,`CE 마킹: CRA 준수 인증 없이는 EU 시장 판매 불가`,`SBOM(Software Bill of Materials): 구성 요소 목록 제출 의무`],blanks:[{s:`CRA 3대 요구사항: ①{{Secure by Default}} ②{{5년간 보안 업데이트}} ③{{24시간 내 취약점 보고}}.`},{s:`{{CE 마킹}} 인증 없이는 EU 시장 판매가 불가하다.`},{s:`{{SBOM(Software Bill of Materials)}} 제출이 의무화된다.`},{s:`취약점 발견 시 {{24시간}} 내 {{ENISA}}에 보고해야 한다.`}]},
+{topic:`접근 통제 3대 모델 (MAC, DAC, RBAC)`,domain:`SC`,keywords:[`MAC(Mandatory Access Control, 강제적): 시스템/관리자가 보안 등급으로 강제 통제`,`DAC(Discretionary Access Control, 임의적): 데이터 소유자가 자율적으로 권한 부여`,`RBAC(Role-Based Access Control, 역할 기반): 직무/조직 역할에 따라 권한 할당`,`MAC 모델: BLP(기밀성), Biba(무결성)`,`DAC 한계: 트로이목마 공격에 취약 — 소유자의 자의적 권한 부여`,`RBAC 장점: 최소 권한, 직무 분리(SoD) 구현 용이`],blanks:[{s:`MAC: {{시스템/관리자}}가 {{보안 등급}}으로 강제 통제.`},{s:`DAC: {{데이터 소유자}}가 자율적으로 {{권한 부여}} — {{트로이목마}}에 취약.`},{s:`RBAC: {{역할(Role)}}에 따라 권한 할당 — {{최소 권한}}과 {{직무 분리}} 용이.`},{s:`MAC의 기밀성 모델: {{BLP(Bell-LaPadula)}}, 무결성 모델: {{Biba}}.`}]},
+{topic:`측면 이동(Lateral Movement) 공격 3단계`,domain:`SC`,keywords:[`정의: 초기 침투 후 내부 시스템 간 이동하며 권한을 상승시키는 공격 기법`,`3단계: ①내부망 정찰(Reconnaissance) → ②자격 증명 탈취(Credential Dumping) → ③권한 확장 및 이동`,`정찰: 네트워크 스캐닝, AD(Active Directory) 정보 수집`,`자격 증명 탈취: Pass-the-Hash, Mimikatz 등 도구로 계정 정보 획득`,`권한 확장: 관리자 계정 탈취 → 도메인 컨트롤러 장악 → 전체 시스템 통제`,`대응: 제로 트러스트, 마이크로 세그멘테이션, PAM(특권 접근 관리)`],blanks:[{s:`측면 이동 3단계: ①{{내부망 정찰}} → ②{{자격 증명 탈취}} → ③{{권한 확장 및 이동}}.`},{s:`자격 증명 탈취 도구: {{Pass-the-Hash}}, {{Mimikatz}} 등.`},{s:`최종 목표: {{도메인 컨트롤러}} 장악 → 전체 시스템 통제.`},{s:`대응 기술: {{제로 트러스트}}, {{마이크로 세그멘테이션}}, {{PAM(특권 접근 관리)}}.`}]},
+{topic:`침해사고 대응 7단계`,domain:`SC`,keywords:[`7단계: ①사전 준비 → ②탐지/식별 → ③초기 대응 → ④대응 전략 수립 → ⑤조사/분석 → ⑥복구/해결 → ⑦사후 보고`,`사전 준비: CERT/CSIRT 구성, 매뉴얼 정비, 도구·장비 확보`,`초기 대응: 네트워크 격리, 증거 보전(포렌식 이미징)`,`조사/분석: 디지털 포렌식으로 공격 경로·원인 규명`,`복구/해결: 시스템 재설치·패치, 백업 복원, 서비스 재개`,`사후 보고: 최종 보고서 작성, 재발 방지 대책 수립`],blanks:[{s:`7단계: ①{{사전 준비}} → ②{{탐지/식별}} → ③{{초기 대응}} → ④{{대응 전략 수립}} → ⑤{{조사/분석}} → ⑥{{복구/해결}} → ⑦{{사후 보고}}.`},{s:`초기 대응의 핵심: {{네트워크 격리}}와 {{증거 보전(포렌식 이미징)}}.`},{s:`조사/분석: {{디지털 포렌식}}으로 {{공격 경로}}와 원인을 규명한다.`},{s:`사전 준비: {{CERT/CSIRT}} 구성, 매뉴얼 정비, 도구 확보.`}]},
+{topic:`RBAC (역할 기반 접근 통제)`,domain:`SC`,keywords:[`정의: 사용자에게 할당된 조직 내 역할(Role)에 따라 시스템 접근 권한을 부여하는 모델`,`핵심: 사용자→역할→권한 매핑 — 인사이동 시 역할만 변경하면 권한 자동 조정`,`최소 권한 원칙(Least Privilege): 업무 수행에 필요한 최소한의 권한만 부여`,`직무 분리(SoD, Separation of Duties): 상충되는 역할을 동시에 부여하지 않음`,`MAC(강제적)과의 차이: MAC은 시스템이 보안 등급으로 강제, RBAC은 역할 기반 유연성`,`DAC(임의적)과의 차이: DAC은 소유자가 자율 부여 → 트로이목마 취약, RBAC은 중앙 관리`],blanks:[{s:`RBAC는 {{역할(Role)}}에 권한을 할당하고, 사용자에게 {{역할을 부여}}하는 방식이다.`},{s:`인사이동 시 {{역할만 변경}}하면 {{권한이 자동 조정}}된다.`},{s:`{{최소 권한 원칙(Least Privilege)}}과 {{직무 분리(SoD)}} 구현이 용이하다.`},{s:`MAC은 {{시스템}}이 강제, DAC은 {{소유자}}가 자율, RBAC은 {{역할}} 기반이다.`}]},
+{topic:`핸드오버(Handover) 3단계`,domain:`NW`,keywords:[`정의: 이동 단말이 다른 셀로 이동할 때 통화가 끊기지 않도록 기지국을 전환하는 절차`,`3단계: ①측정(Measurement) → ②결정(Decision) → ③실행(Execution)`,`측정: 단말이 현재 기지국과 인접 기지국의 신호 품질(RSSI, RSRP 등)을 측정`,`결정: 네트워크(또는 단말)가 핸드오버 여부를 판단 — 히스테리시스, A3 이벤트 등`,`실행: 타겟 기지국으로 세션 전환 — 소프트 핸드오버(Make Before Break) vs 하드 핸드오버(Break Before Make)`,`소프트 핸드오버: 새 기지국 연결 후 기존 해제 (끊김 없음, CDMA 계열)`],blanks:[{s:`핸드오버 3단계: ①{{측정(Measurement)}} → ②{{결정(Decision)}} → ③{{실행(Execution)}}.`},{s:`측정 단계: 현재·인접 기지국의 {{신호 품질(RSSI, RSRP 등)}}을 측정한다.`},{s:`소프트 핸드오버: {{새 기지국 연결 후}} 기존 해제 ({{끊김 없음}}).`},{s:`하드 핸드오버: {{기존 해제 후}} 새 기지국 연결 ({{순간 끊김}}).`}]},
+{topic:`페이딩 극복 기술 (다이버시티, 이퀄라이저, OFDM)`,domain:`NW`,keywords:[`페이딩(Fading): 전파가 건물 등에 반사·회절되어 다중 경로를 거치면서 수신 신호가 약해지거나 왜곡되는 현상`,`다이버시티(Diversity): 여러 경로의 신호를 수신하여 가장 좋은 것을 선택하거나 결합`,`다이버시티 유형: 공간(안테나 복수), 시간(반복 전송), 주파수(다른 주파수 동시 전송)`,`이퀄라이저(Equalizer, 등화기): 채널 왜곡을 보상하여 원래 신호를 복원하는 수신기 장치`,`OFDM(Orthogonal Frequency Division Multiplexing): 직교 주파수 분할 다중화 — 광대역을 여러 부반송파로 나누어 주파수 선택적 페이딩에 강건`,`MIMO와 결합: 다이버시티 + OFDM + MIMO → 현대 무선 통신(LTE, 5G, Wi-Fi)의 핵심`],blanks:[{s:`페이딩은 전파가 {{다중 경로}}를 거치면서 수신 신호가 {{약해지거나 왜곡}}되는 현상이다.`},{s:`페이딩 극복 3대 기술: {{다이버시티}}, {{이퀄라이저(등화기)}}, {{OFDM}}.`},{s:`다이버시티 유형: {{공간}}(안테나 복수), {{시간}}(반복 전송), {{주파수}}(다른 주파수).`},{s:`OFDM은 광대역을 여러 {{부반송파}}로 나누어 {{주파수 선택적 페이딩}}에 강건하다.`}]},
+{topic:`CSMA/CA (무선 매체 접근 제어)`,domain:`NW`,keywords:[`무선 환경의 문제: 충돌 감지(Detection)가 어려움 → 충돌 회피(Avoidance) 방식 채택`,`동작: ①매체 감지(Listen) → ②비어있으면 랜덤 Backoff 대기 → ③전송`,`RTS/CTS: 데이터 전송 전 RTS(요청)→CTS(허가) 교환으로 숨은 노드 문제 해결`,`숨은 노드 문제(Hidden Node Problem): 서로 감지할 수 없는 두 노드가 동시에 전송하여 충돌`,`CSMA/CD(유선)와의 차이: CD는 충돌 감지 후 재전송, CA는 충돌 사전 회피`,`NAV(Network Allocation Vector): 매체 점유 시간을 예약하여 다른 노드의 전송을 지연`],blanks:[{s:`CSMA/CA는 {{충돌 감지}}가 어려운 무선 환경에서 {{충돌 회피}} 방식을 채택한다.`},{s:`동작: ①{{매체 감지}} → ②{{랜덤 Backoff 대기}} → ③전송.`},{s:`{{RTS/CTS}} 교환으로 {{숨은 노드 문제(Hidden Node Problem)}}를 해결한다.`},{s:`CSMA/{{CD}}는 충돌 {{감지}} 후 재전송, CSMA/{{CA}}는 충돌 {{회피}}.`}]},
+{topic:`BGP (Border Gateway Protocol)`,domain:`NW`,keywords:[`정의: 자율 시스템(AS) 간 라우팅을 수행하는 외부 게이트웨이 프로토콜(EGP)`,`경로 벡터(Path Vector) 방식: AS 경유 경로 전체를 교환하여 루핑 방지`,`정책 기반 라우팅: ISP 간 비즈니스 관계에 따른 경로 선택`,`BGP 메시지: OPEN, UPDATE, KEEPALIVE, NOTIFICATION`,`AS-PATH 속성: 경유 AS 번호를 순서대로 기록 — 루프 탐지에 활용`,`eBGP(외부 AS 간) vs iBGP(같은 AS 내부)`],blanks:[{s:`BGP는 {{자율 시스템(AS)}} 간 라우팅을 수행하는 {{외부 게이트웨이 프로토콜(EGP)}}이다.`},{s:`BGP는 {{경로 벡터(Path Vector)}} 방식으로 {{루핑}}을 방지한다.`},{s:`BGP 4가지 메시지: {{OPEN}}, {{UPDATE}}, {{KEEPALIVE}}, {{NOTIFICATION}}.`},{s:`{{eBGP}}는 외부 AS 간, {{iBGP}}는 같은 AS 내부 라우팅이다.`}]},
+{topic:`DRS 4유형 (Mirror, Hot, Warm, Cold)`,domain:`MG`,keywords:[`DRS(Disaster Recovery System): 재해 복구 시스템 — BCP(업무 연속성 계획)의 핵심 인프라`,`미러 사이트(Mirror Site): 주센터와 동일한 시스템을 실시간 동기화 — RTO ≈ 0, 비용 최대`,`핫 사이트(Hot Site): 대부분의 장비·데이터가 준비, 수시간 내 복구 — RTO: 수시간`,`웜 사이트(Warm Site): 주요 장비 준비, 데이터 일부 동기화 — RTO: 수일`,`콜드 사이트(Cold Site): 공간·전력만 확보, 장비·데이터는 별도 확보 — RTO: 수주, 비용 최소`,`RTO(Recovery Time Objective): 서비스 복구 목표 시간 — 미러<핫<웜<콜드`],blanks:[{s:`DRS 4유형 (RTO 기준): {{미러 사이트}}(≈0) < {{핫 사이트}}(수시간) < {{웜 사이트}}(수일) < {{콜드 사이트}}(수주).`},{s:`미러 사이트는 주센터와 {{동일 시스템}}을 {{실시간 동기화}}한다.`},{s:`콜드 사이트는 {{공간·전력만}} 확보하고 장비·데이터는 별도 확보한다.`},{s:`RTO({{Recovery Time Objective}})는 {{서비스 복구 목표 시간}}이다.`}]},
+{topic:`DPP 핵심 기록 정보`,domain:`MG`,keywords:[`DPP(Digital Product Passport): 제품 생애주기 정보를 디지털화한 전자 기록`,`핵심 기록 정보 3가지: ①원산지(원재료 출처) ②탄소발자국(온실가스 배출량) ③재활용 비율(재생 원료 사용 비율)`,`법적 근거: EU 에코디자인 규정(ESPR)`,`목적: 순환경제(Circular Economy) 실현 — 자원 효율성 향상, 탄소 배출 감축`,`기술 기반: 블록체인(위변조 방지), IoT(실시간 추적), QR코드/NFC(소비자 접근)`,`배터리 분야 2027년 의무화 예정 — 섬유, 전자제품 등 단계적 확대`],blanks:[{s:`DPP 핵심 기록 정보 3가지: ①{{원산지(원재료 출처)}} ②{{탄소발자국(온실가스 배출량)}} ③{{재활용 비율}}.`},{s:`DPP의 법적 근거: EU {{에코디자인 규정(ESPR)}}.`},{s:`DPP의 목적: {{순환경제(Circular Economy)}} 실현.`},{s:`기술 기반: {{블록체인}}, {{IoT}}, {{QR코드/NFC}}.`}]},
+{topic:`ROI (투자 수익률)`,domain:`MG`,keywords:[`정의: 투자한 비용 대비 창출된 순이익의 비율 — IT 투자 타당성 평가의 기본 지표`,`공식: ROI = (순이익 ÷ 투자비용) × 100`,`장점: 계산이 직관적이고 이해 쉬움, 여러 대안 간 비교 용이`,`단점: 화폐의 시간가치(Time Value of Money) 미반영, 투자 기간 무시`,`NPV(순현재가치): ROI의 시간가치 미반영 한계를 보완하는 지표`,`IRR(내부수익률): NPV=0이 되는 할인율 — IRR > 요구수익률이면 투자`],blanks:[{s:`ROI = ({{순이익}} ÷ {{투자비용}}) × 100.`},{s:`ROI의 장점: {{직관적}}이고 여러 대안 간 {{비교 용이}}.`},{s:`ROI의 단점: {{화폐의 시간가치}} 미반영, {{투자 기간}} 무시.`},{s:`ROI의 한계를 보완: {{NPV(순현재가치)}}는 시간가치 반영, {{IRR(내부수익률)}}은 NPV=0 할인율.`}]}
+]},
+{label:`DAY 4`,
+qs:[
+{a:"AI",t:`ARIMA`,q:`ARIMA에서 MA(q)의 역할은?`,o:[`q회 차분으로 정상화`,`과거 q개 시점의 오차(잔차)로 현재 값 보정`,`q차 다항식으로 근사`,`과거 q개 시점의 자기 값으로 예측`],ans:1,exp:`<b>MA(q)</b>: 과거 <b>q개 시점의 오차(잔차)</b>로 현재 값을 보정합니다.`},
+{a:"AI",t:`드롭아웃`,q:`드롭아웃의 일반적인 비율(p) 범위는?`,o:[`0.2~0.5`,`0.95~1.0`,`0.01~0.05`,`0.7~0.9`],ans:0,exp:`드롭아웃 비율: 일반적으로 <b>0.2~0.5</b> 범위를 사용합니다.`},
+{a:"AI",t:`확산 모델`,q:`확산 모델의 단점으로 옳은 것은?`,o:[`수백~수천 스텝 역확산으로 생성 속도가 느리다`,`학습이 불안정하다`,`모드 붕괴가 심각하다`,`생성 품질이 GAN보다 낮다`],ans:0,exp:`확산 모델 단점: <b>수백~수천 스텝의 역확산</b>으로 <b>생성 속도가 느립니다</b>.`},
+{a:"AI",t:`지식 증류`,q:`지식 증류에서 온도(T)를 높이면 발생하는 변화는?`,o:[`모델 크기가 증가한다`,`확률 분포가 더 날카로워진다`,`학습 속도가 빨라진다`,`확률 분포가 더 균등해진다`],ans:3,exp:`온도(T)가 높을수록 소프트맥스 출력이 <b>부드럽고 균등한 분포</b>가 됩니다.`},
+{a:"AI",t:`CoT`,q:`CoT 3단계의 순서로 옳은 것은?`,o:[`결론 → 분해 → 중간 추론`,`분해 → 결론 → 중간 추론`,`문제 이해·분해 → 중간 사고 생성 → 최종 결론`,`중간 사고 → 문제 분해 → 결론`],ans:2,exp:`CoT 3단계: ①<b>문제 이해·분해</b> → ②<b>중간 사고 생성</b> → ③<b>최종 결론 도출</b>.`},
+{a:"AI",t:`TF-IDF`,q:`TF-IDF의 한계로 옳은 것은?`,o:[`문서 분류에 사용할 수 없다`,`영어에만 적용 가능하다`,`단어의 순서와 문맥을 고려하지 못한다`,`계산이 너무 복잡하다`],ans:2,exp:`TF-IDF 한계: <b>단어의 순서와 문맥을 고려하지 못합니다</b>. 워드 임베딩으로 보완합니다.`},
+{a:"AI",t:`앙상블`,q:`배깅(Bagging)이 주로 감소시키는 오류는?`,o:[`노이즈`,`분산(Variance)`,`편향(Bias)`,`결측치`],ans:1,exp:`<b>배깅</b>은 <b>분산(Variance) 감소</b>에 효과적이고, 부스팅은 편향 감소에 효과적입니다.`},
+{a:"AI",t:`워드 임베딩`,q:`문맥 기반 임베딩(ELMo, BERT)의 장점은?`,o:[`학습 데이터 불필요`,`동일 단어도 문맥에 따라 다른 벡터 생성`,`항상 동일한 벡터 생성`,`차원이 항상 1차원`],ans:1,exp:`문맥 기반 임베딩: <b>동일 단어도 문맥에 따라 다른 벡터</b>를 생성합니다 (다의어 처리 가능).`},
+{a:"SC",t:`접근 통제`,q:`DAC의 취약점으로 옳은 것은?`,o:[`보안 등급을 강제할 수 없다`,`중앙 관리가 너무 엄격하다`,`역할 변경이 불가능하다`,`트로이목마 공격에 취약하다`],ans:3,exp:`DAC 취약점: 소유자의 자의적 권한 부여로 <b>트로이목마 공격</b>에 취약합니다.`},
+{a:"SC",t:`PKI`,q:`X.509 인증서에 포함되는 정보로 옳지 않은 것은?`,o:[`공개키`,`CA 서명`,`소유자 정보`,`개인키`],ans:3,exp:`X.509: <b>공개키, 소유자 정보, CA 서명</b> 포함. <b>개인키는 절대 포함하지 않습니다</b>.`},
+{a:"SC",t:`측면 이동`,q:`측면 이동 공격의 1단계인 '정찰'의 활동은?`,o:[`자격 증명 탈취`,`악성코드 배포`,`네트워크 스캐닝, AD 정보 수집`,`데이터 암호화`],ans:2,exp:`정찰(Reconnaissance): <b>네트워크 스캐닝</b>, <b>AD(Active Directory) 정보 수집</b>.`},
+{a:"SC",t:`침해사고`,q:`CERT/CSIRT의 역할로 옳은 것은?`,o:[`침해사고 대응 팀으로서 보안 사고에 대응`,`IT 투자 타당성 분석`,`네트워크 설계 최적화`,`소프트웨어 품질 인증`],ans:0,exp:`<b>CERT/CSIRT</b>: <b>침해사고 대응 팀</b>으로서 사이버 보안 사고에 체계적으로 대응합니다.`},
+{a:"SC",t:`논리적 망분리`,q:`최근 망분리 정책의 변화 트렌드는?`,o:[`제로 트러스트 기반 논리적 망분리 완화`,`클라우드 전면 금지`,`물리적 망분리 강화`,`모든 기관 망분리 폐지`],ans:0,exp:`최근 트렌드: <b>제로 트러스트 기반 논리적 망분리 완화</b> — 클라우드 환경 대응.`},
+{a:"NW",t:`BGP`,q:`BGP 메시지 유형에 해당하지 않는 것은?`,o:[`OPEN`,`HELLO`,`NOTIFICATION`,`UPDATE`],ans:1,exp:`BGP 메시지: <b>OPEN, UPDATE, KEEPALIVE, NOTIFICATION</b>. HELLO는 OSPF.`},
+{a:"NW",t:`핸드오버`,q:`하드 핸드오버의 특징은?`,o:[`핸드오버 없이 유지`,`끊김 없이 전환`,`기존 해제 후 새 기지국 연결 (순간 끊김)`,`두 기지국 동시 연결`],ans:2,exp:`<b>하드 핸드오버</b>: <b>기존 해제 후 새 기지국 연결</b> — Break Before Make, 순간 끊김.`},
+{a:"NW",t:`CSMA/CA`,q:`CSMA/CA가 채택된 무선 표준은?`,o:[`Bluetooth(802.15)`,`LTE`,`Ethernet(802.3)`,`Wi-Fi(802.11)`],ans:3,exp:`<b>IEEE 802.11(Wi-Fi)</b> 표준에서 CSMA/CA를 기본 매체 접근 방식으로 채택했습니다.`},
+{a:"NW",t:`페이딩`,q:`이퀄라이저(등화기)의 역할은?`,o:[`채널 왜곡을 보상하여 원래 신호 복원`,`안테나 방향 조절`,`신호를 증폭`,`주파수를 변환`],ans:0,exp:`<b>이퀄라이저(Equalizer)</b>: <b>채널 왜곡을 보상</b>하여 원래 신호를 복원하는 수신기 장치.`},
+{a:"MG",t:`ROI`,q:`NPV가 ROI를 보완하는 핵심 포인트는?`,o:[`계산이 더 단순`,`화폐의 시간가치를 반영`,`직관적 비교가 용이`,`투자 기간 무시`],ans:1,exp:`<b>NPV</b>: 미래 현금흐름을 할인율로 현재가치화하여 <b>화폐의 시간가치를 반영</b>합니다.`},
+{a:"MG",t:`DRS`,q:`RPO(Recovery Point Objective)의 의미는?`,o:[`서비스 복구 목표 시간`,`백업 빈도`,`데이터 손실 허용 시점`,`네트워크 대역폭 목표`],ans:2,exp:`<b>RPO(Recovery Point Objective)</b>: <b>데이터 손실 허용 시점</b>입니다.`},
+{a:"MG",t:`ITIL 4`,q:`ITIL v3에서 ITIL 4로의 핵심 변화는?`,o:[`서비스 데스크 폐지`,`프로세스 수가 증가`,`폭포수 방법론 채택`,`서비스 라이프사이클에서 SVS로 전환`],ans:3,exp:`ITIL 4 핵심 변화: <b>서비스 라이프사이클(v3) → SVS(서비스 가치 체계)</b> 전환.`}
+],
+topics:[
+{topic:`SVM 커널 함수 3유형`,domain:`AI`,keywords:[`커널 트릭: 저차원 데이터를 고차원 공간으로 매핑하여 비선형 분류를 가능하게 하는 기법`,`다항식 커널(Polynomial): K(x,y) = (x·y + c)^d — d차 다항식으로 매핑`,`가우시안 RBF 커널(Radial Basis Function): K(x,y) = exp(-γ||x-y||²) — 가장 범용적으로 사용`,`시그모이드 커널(Sigmoid): K(x,y) = tanh(αx·y + c) — 신경망의 활성화 함수와 유사`,`선형 커널(Linear): K(x,y) = x·y — 선형 분리 가능 데이터에 사용`,`γ(감마) 파라미터: RBF 커널의 영향 범위 — γ가 크면 결정 경계가 복잡`],blanks:[{s:`SVM의 3가지 비선형 커널: {{다항식(Polynomial)}}, {{가우시안 RBF}}, {{시그모이드(Sigmoid)}}.`},{s:`가우시안 RBF 커널: K(x,y) = {{exp(-γ||x-y||²)}} — 가장 {{범용적}}으로 사용된다.`},{s:`다항식 커널: K(x,y) = {{(x·y + c)^d}} — {{d차 다항식}}으로 매핑한다.`},{s:`γ(감마)가 {{크면}} 결정 경계가 복잡해지고, {{작으면}} 단순해진다.`}]},
+{topic:`정상성 검정 (ADF, KPSS)`,domain:`AI`,keywords:[`정상성(Stationarity): 시계열의 평균, 분산, 자기공분산이 시간에 따라 일정`,`ADF 검정(Augmented Dickey-Fuller): 귀무가설 '단위근 존재(비정상)' → 기각 시 정상`,`KPSS 검정: 귀무가설 '정상성' → 기각 시 비정상 — ADF와 반대 방향`,`ADF + KPSS 교차 검증: 두 검정을 함께 사용하여 정상성을 확실하게 판단`,`p-value < 0.05이면 귀무가설 기각 (ADF: 정상, KPSS: 비정상)`,`차분(Differencing): 비정상 시계열을 정상화하는 대표적 방법`],blanks:[{s:`ADF 검정의 귀무가설: '{{단위근 존재(비정상)}}' → 기각 시 {{정상}}으로 판단.`},{s:`KPSS 검정의 귀무가설: '{{정상성}}' → 기각 시 {{비정상}}으로 판단.`},{s:`ADF와 KPSS는 귀무가설 방향이 {{반대}}이므로 {{교차 검증}}에 활용한다.`},{s:`p-value < {{0.05}}이면 귀무가설을 기각한다.`}]},
+{topic:`CoT(Chain of Thought) 프롬프팅`,domain:`AI`,keywords:[`정의: LLM이 최종 답변 전에 중간 추론 과정을 명시적으로 생성하여 논리적 오류를 줄이는 기법`,`CoT 3단계: ①문제 이해 및 분해 → ②단계별 중간 사고(추론) 생성 → ③최종 결론 도출`,`Zero-shot CoT: '단계별로 생각해 보자(Let's think step by step)' 한 줄만으로 추론 유도`,`Few-shot CoT: 추론 과정이 포함된 예시를 제시하여 모델이 패턴을 학습`,`효과: 수학, 논리 추론, 코딩 등 복잡한 문제에서 정확도 대폭 향상`,`OpenAI o1 등 추론 모델: CoT를 내재화하여 테스트 타임 컴퓨팅으로 활용`],blanks:[{s:`CoT 3단계: ①{{문제 이해 및 분해}} → ②{{단계별 중간 사고 생성}} → ③{{최종 결론 도출}}.`},{s:`Zero-shot CoT는 '{{Let's think step by step}}'이라는 한 줄만으로 추론을 유도한다.`},{s:`Few-shot CoT는 {{추론 과정이 포함된 예시}}를 제시하여 모델이 패턴을 학습하게 한다.`},{s:`CoT는 {{수학}}, {{논리 추론}}, {{코딩}} 등 복잡한 문제에서 효과적이다.`}]},
+{topic:`ARIMA 모델의 차분(Differencing)`,domain:`AI`,keywords:[`ARIMA = AR(자기회귀) + I(차분/적분) + MA(이동평균)의 결합 모델`,`차분(Differencing): 이전 시점과의 차이를 구하여 비정상 시계열을 정상화하는 기법`,`정상성(Stationarity): 평균, 분산, 자기공분산이 시간에 따라 일정한 성질`,`d회 차분: ARIMA(p,d,q)에서 d=차분 횟수 — d=1이면 1차 차분`,`1차 차분: Y't = Yt − Yt-1 — 추세(Trend) 제거에 효과적`,`2차 차분: Y''t = Y't − Y't-1 — 가속 추세(곡률) 제거`],blanks:[{s:`차분(Differencing)은 {{이전 시점과의 차이}}를 구하여 {{비정상 시계열을 정상화}}하는 기법이다.`},{s:`정상성이란 {{평균}}, {{분산}}, {{자기공분산}}이 시간에 따라 일정한 성질이다.`},{s:`1차 차분 공식: {{Y't = Yt − Yt-1}} — {{추세(Trend)}} 제거에 효과적이다.`},{s:`차분 후 정상성은 {{ADF 검정(Augmented Dickey-Fuller Test)}}으로 확인한다.`}]},
+{topic:`드롭아웃(Dropout)`,domain:`AI`,keywords:[`정의: 신경망 학습 과정에서 무작위로 일부 노드를 비활성화하는 정규화(Regularization) 기법`,`목적: 과적합(Overfitting) 방지 — 특정 노드에 대한 의존도를 낮춤`,`앙상블 효과: 매 학습 반복마다 서로 다른 부분 네트워크를 학습 → 여러 모델의 평균 효과`,`드롭아웃 비율(p): 일반적으로 0.2~0.5 — 학습 시에만 적용, 추론 시에는 비활성화`,`추론 시 스케일링: 학습 때 비활성화된 비율만큼 가중치를 스케일링하여 출력 보정`,`적용 위치: 주로 완전연결(FC) 계층에 적용, CNN에서는 Spatial Dropout 사용`],blanks:[{s:`드롭아웃의 목적: {{과적합(Overfitting)}} 방지 — 특정 노드에 대한 {{의존도를 낮춤}}.`},{s:`매 학습 반복마다 다른 부분 네트워크를 학습하여 {{앙상블 효과}}를 제공한다.`},{s:`드롭아웃은 {{학습 시에만}} 적용하고, {{추론 시에는 비활성화}}한다.`},{s:`드롭아웃 비율(p)은 일반적으로 {{0.2~0.5}} 범위를 사용한다.`}]},
+{topic:`워드 임베딩(Word Embedding)`,domain:`AI`,keywords:[`정의: 단어를 고정된 크기의 연속적인 실수 벡터(밀집 벡터)로 변환하는 기법`,`목적: 단어 간 의미적·문법적 유사성을 벡터 공간의 거리로 보존`,`예시: '왕-남자+여자≈여왕' — 벡터 연산으로 의미적 관계 표현 가능`,`One-hot Encoding의 한계 극복: 차원의 저주 해소, 단어 간 유사도 계산 가능`,`대표 모델: Word2Vec(CBOW, Skip-gram), GloVe, FastText`,`Word2Vec CBOW: 주변 단어로 중심 단어 예측 / Skip-gram: 중심 단어로 주변 단어 예측`],blanks:[{s:`워드 임베딩은 단어 간 {{의미적·문법적 유사성}}을 {{벡터 공간의 거리}}로 보존한다.`},{s:`'{{왕}}-{{남자}}+{{여자}}≈{{여왕}}' — 벡터 연산으로 의미적 관계를 표현할 수 있다.`},{s:`Word2Vec의 두 아키텍처: {{CBOW}}(주변→중심)와 {{Skip-gram}}(중심→주변).`},{s:`문맥 기반 임베딩({{ELMo}}, {{BERT}})은 동일 단어도 문맥에 따라 다른 벡터를 생성한다.`}]},
+{topic:`확산 모델(Diffusion Model)`,domain:`AI`,keywords:[`정의: 데이터에 점진적으로 노이즈를 추가한 후, 역으로 노이즈를 제거하며 원본을 복원하는 생성 모델`,`Forward Process(전방 과정): 원본에 가우시안 노이즈를 T 스텝에 걸쳐 점진적으로 추가`,`Reverse Process(역방향 과정): 신경망이 각 스텝에서 노이즈를 예측·제거하여 원본 복원`,`DDPM(Denoising Diffusion Probabilistic Model): 대표적 확산 모델 프레임워크`,`GAN 대비 장점: 학습 안정성 높음, 모드 붕괴(Mode Collapse) 없음, 생성 품질 우수`,`GAN 대비 단점: 수백~수천 스텝의 역확산 → 생성 속도 느림`],blanks:[{s:`Forward Process: 원본에 {{가우시안 노이즈}}를 {{T 스텝}}에 걸쳐 점진적으로 추가한다.`},{s:`Reverse Process: {{신경망}}이 각 스텝에서 {{노이즈를 예측·제거}}하여 원본을 복원한다.`},{s:`GAN 대비 장점: {{학습 안정성}} 높음, {{모드 붕괴 없음}}, 생성 품질 우수.`},{s:`GAN 대비 단점: {{수백~수천 스텝}}의 역확산으로 {{생성 속도가 느리다}}.`}]},
+{topic:`Q-Learning (강화학습)`,domain:`AI`,keywords:[`Q-value: 특정 상태에서 특정 행동을 취했을 때 기대되는 누적 보상`,`벨만 방정식(Bellman Equation): Q(s,a) ← Q(s,a) + α[R + γ·max Q(s',a') - Q(s,a)]`,`α(학습률): 새로운 정보의 반영 비율, γ(감가율): 미래 보상의 현재 가치 할인`,`Q-Table: 상태×행동 테이블에 Q-value를 저장하여 최적 정책(Policy)을 도출`,`탐험-활용 딜레마(Exploration-Exploitation): ε-greedy 전략으로 탐험과 활용을 균형`,`한계: 상태·행동 공간이 크면 Q-Table 폭발 → DQN(Deep Q-Network)으로 해결`],blanks:[{s:`벨만 방정식: Q(s,a) ← Q(s,a) + {{α}}[{{R}} + {{γ}}·max Q(s',a') - Q(s,a)].`},{s:`α는 {{학습률}}(새 정보 반영 비율), γ는 {{감가율}}(미래 보상 할인)이다.`},{s:`Q-Table 폭발 문제를 해결한 것이 {{DQN(Deep Q-Network)}}이다.`},{s:`{{ε-greedy}} 전략으로 {{탐험(Exploration)}}과 {{활용(Exploitation)}}을 균형잡는다.`}]},
+{topic:`측면 이동(Lateral Movement) 공격 3단계`,domain:`SC`,keywords:[`정의: 초기 침투 후 내부 시스템 간 이동하며 권한을 상승시키는 공격 기법`,`3단계: ①내부망 정찰(Reconnaissance) → ②자격 증명 탈취(Credential Dumping) → ③권한 확장 및 이동`,`정찰: 네트워크 스캐닝, AD(Active Directory) 정보 수집`,`자격 증명 탈취: Pass-the-Hash, Mimikatz 등 도구로 계정 정보 획득`,`권한 확장: 관리자 계정 탈취 → 도메인 컨트롤러 장악 → 전체 시스템 통제`,`대응: 제로 트러스트, 마이크로 세그멘테이션, PAM(특권 접근 관리)`],blanks:[{s:`측면 이동 3단계: ①{{내부망 정찰}} → ②{{자격 증명 탈취}} → ③{{권한 확장 및 이동}}.`},{s:`자격 증명 탈취 도구: {{Pass-the-Hash}}, {{Mimikatz}} 등.`},{s:`최종 목표: {{도메인 컨트롤러}} 장악 → 전체 시스템 통제.`},{s:`대응 기술: {{제로 트러스트}}, {{마이크로 세그멘테이션}}, {{PAM(특권 접근 관리)}}.`}]},
+{topic:`침해사고 대응 7단계`,domain:`SC`,keywords:[`7단계: ①사전 준비 → ②탐지/식별 → ③초기 대응 → ④대응 전략 수립 → ⑤조사/분석 → ⑥복구/해결 → ⑦사후 보고`,`사전 준비: CERT/CSIRT 구성, 매뉴얼 정비, 도구·장비 확보`,`초기 대응: 네트워크 격리, 증거 보전(포렌식 이미징)`,`조사/분석: 디지털 포렌식으로 공격 경로·원인 규명`,`복구/해결: 시스템 재설치·패치, 백업 복원, 서비스 재개`,`사후 보고: 최종 보고서 작성, 재발 방지 대책 수립`],blanks:[{s:`7단계: ①{{사전 준비}} → ②{{탐지/식별}} → ③{{초기 대응}} → ④{{대응 전략 수립}} → ⑤{{조사/분석}} → ⑥{{복구/해결}} → ⑦{{사후 보고}}.`},{s:`초기 대응의 핵심: {{네트워크 격리}}와 {{증거 보전(포렌식 이미징)}}.`},{s:`조사/분석: {{디지털 포렌식}}으로 {{공격 경로}}와 원인을 규명한다.`},{s:`사전 준비: {{CERT/CSIRT}} 구성, 매뉴얼 정비, 도구 확보.`}]},
+{topic:`RBAC (역할 기반 접근 통제)`,domain:`SC`,keywords:[`정의: 사용자에게 할당된 조직 내 역할(Role)에 따라 시스템 접근 권한을 부여하는 모델`,`핵심: 사용자→역할→권한 매핑 — 인사이동 시 역할만 변경하면 권한 자동 조정`,`최소 권한 원칙(Least Privilege): 업무 수행에 필요한 최소한의 권한만 부여`,`직무 분리(SoD, Separation of Duties): 상충되는 역할을 동시에 부여하지 않음`,`MAC(강제적)과의 차이: MAC은 시스템이 보안 등급으로 강제, RBAC은 역할 기반 유연성`,`DAC(임의적)과의 차이: DAC은 소유자가 자율 부여 → 트로이목마 취약, RBAC은 중앙 관리`],blanks:[{s:`RBAC는 {{역할(Role)}}에 권한을 할당하고, 사용자에게 {{역할을 부여}}하는 방식이다.`},{s:`인사이동 시 {{역할만 변경}}하면 {{권한이 자동 조정}}된다.`},{s:`{{최소 권한 원칙(Least Privilege)}}과 {{직무 분리(SoD)}} 구현이 용이하다.`},{s:`MAC은 {{시스템}}이 강제, DAC은 {{소유자}}가 자율, RBAC은 {{역할}} 기반이다.`}]},
+{topic:`논리적 망분리 (VDI/SBC)`,domain:`SC`,keywords:[`정의: 한 대의 PC에서 가상화 기술을 이용해 업무망과 인터넷망을 논리적으로 분리하는 기술`,`VDI(Virtual Desktop Infrastructure): 서버에서 가상 데스크톱을 제공, 단말은 화면만 수신`,`SBC(Server-Based Computing): 서버에서 애플리케이션을 실행, 화면만 전송`,`물리적 망분리 대비 장점: 비용 절감, 공간 절약, 관리 유연성`,`물리적 망분리 대비 단점: 가상화 취약점, 하이퍼바이저 해킹 위험`,`최근 트렌드: 제로 트러스트 기반 논리적 망분리 완화 — 클라우드 환경 대응`],blanks:[{s:`논리적 망분리의 두 방식: {{VDI(Virtual Desktop Infrastructure)}}와 {{SBC(Server-Based Computing)}}.`},{s:`VDI는 서버에서 {{가상 데스크톱}}을 제공하고, 단말은 {{화면만 수신}}한다.`},{s:`물리적 망분리 대비 장점: {{비용 절감}}, {{관리 유연성}}.`},{s:`물리적 망분리 대비 단점: {{가상화 취약점}}, {{하이퍼바이저 해킹 위험}}.`}]},
+{topic:`CTEM (지속적 위협 노출 관리)`,domain:`SC`,keywords:[`정의: 가트너가 제시한 능동적 보안 프레임워크 — 공격 표면을 지속 모니터링하고 위협 노출을 평가`,`5단계: ①범위 설정 → ②발견 → ③우선순위화 → ④검증 → ⑤동원`,`검증: 침투 테스트, BAS(Breach and Attack Simulation)로 실제 악용 가능성 확인`,`기존 VM과 차이: 패치 중심이 아닌 비즈니스 리스크 기준 우선순위 결정`,`ASM(Attack Surface Management): CTEM의 핵심 구성요소`,`동원(Mobilization): 보안팀·IT팀·경영진 협력하여 수정 조치 실행`],blanks:[{s:`CTEM 5단계: ①{{범위 설정}} → ②{{발견}} → ③{{우선순위화}} → ④{{검증}} → ⑤{{동원}}.`},{s:`검증 단계: {{침투 테스트}}와 {{BAS}}로 악용 가능성을 확인한다.`},{s:`기존 VM과 차이: {{비즈니스 리스크 기준}}으로 우선순위를 결정한다.`},{s:`{{ASM(Attack Surface Management)}}은 CTEM의 핵심 구성요소이다.`}]},
+{topic:`CSMA/CA (무선 매체 접근 제어)`,domain:`NW`,keywords:[`정의: 반송파 감지 다중 접속 및 충돌 회피(Carrier Sense Multiple Access with Collision Avoidance)`,`무선 환경의 문제: 충돌 감지(Detection)가 어려움 → 충돌 회피(Avoidance) 방식 채택`,`동작: ①매체 감지(Listen) → ②비어있으면 랜덤 Backoff 대기 → ③전송`,`RTS/CTS: 데이터 전송 전 RTS(요청)→CTS(허가) 교환으로 숨은 노드 문제 해결`,`숨은 노드 문제(Hidden Node Problem): 서로 감지할 수 없는 두 노드가 동시에 전송하여 충돌`,`CSMA/CD(유선)와의 차이: CD는 충돌 감지 후 재전송, CA는 충돌 사전 회피`],blanks:[{s:`동작: ①{{매체 감지}} → ②{{랜덤 Backoff 대기}} → ③전송.`},{s:`{{RTS/CTS}} 교환으로 {{숨은 노드 문제(Hidden Node Problem)}}를 해결한다.`},{s:`CSMA/{{CD}}는 충돌 {{감지}} 후 재전송, CSMA/{{CA}}는 충돌 {{회피}}.`},{s:`NAV({{Network Allocation Vector}})는 매체 {{점유 시간을 예약}}하여 충돌을 방지한다.`}]},
+{topic:`BGP (Border Gateway Protocol)`,domain:`NW`,keywords:[`정의: 자율 시스템(AS) 간 라우팅을 수행하는 외부 게이트웨이 프로토콜(EGP)`,`경로 벡터(Path Vector) 방식: AS 경유 경로 전체를 교환하여 루핑 방지`,`정책 기반 라우팅: ISP 간 비즈니스 관계에 따른 경로 선택`,`BGP 메시지: OPEN, UPDATE, KEEPALIVE, NOTIFICATION`,`AS-PATH 속성: 경유 AS 번호를 순서대로 기록 — 루프 탐지에 활용`,`eBGP(외부 AS 간) vs iBGP(같은 AS 내부)`],blanks:[{s:`BGP는 {{자율 시스템(AS)}} 간 라우팅을 수행하는 {{외부 게이트웨이 프로토콜(EGP)}}이다.`},{s:`BGP는 {{경로 벡터(Path Vector)}} 방식으로 {{루핑}}을 방지한다.`},{s:`BGP 4가지 메시지: {{OPEN}}, {{UPDATE}}, {{KEEPALIVE}}, {{NOTIFICATION}}.`},{s:`{{eBGP}}는 외부 AS 간, {{iBGP}}는 같은 AS 내부 라우팅이다.`}]},
+{topic:`Wi-Fi 7 (802.11be)`,domain:`NW`,keywords:[`표준: IEEE 802.11be — EHT(Extremely High Throughput)`,`MLO(Multi-Link Operation): 2.4/5/6GHz 대역 동시 묶어 사용 — 대역폭↑ 지연↓`,`320MHz 채널 폭: Wi-Fi 6E(160MHz)의 2배`,`4K-QAM(4096-QAM): 한 심볼 12비트 — Wi-Fi 6(1024-QAM, 10비트) 대비 20% 향상`,`최대 이론 속도: 약 46Gbps`,`적용 사례: AR/VR 스트리밍, 클라우드 게이밍, 산업용 IoT 초저지연`],blanks:[{s:`Wi-Fi 7 표준: {{IEEE 802.11be}}, 별칭 {{EHT(Extremely High Throughput)}}.`},{s:`MLO({{Multi-Link Operation}}): {{2.4/5/6GHz}} 대역을 동시에 묶어 사용한다.`},{s:`{{4K-QAM}}으로 한 심볼에 {{12비트}}를 전송하여 20% 효율 증가.`},{s:`최대 채널 폭 {{320MHz}}로 Wi-Fi 6E({{160MHz}})의 2배이다.`}]},
+{topic:`IPSec 핵심 프로토콜 (AH, ESP, IKE)`,domain:`NW`,keywords:[`AH(Authentication Header): 인증·무결성 보장 (암호화 없음)`,`ESP(Encapsulating Security Payload): 인증·무결성 + 기밀성(암호화) — 가장 많이 사용`,`IKE(Internet Key Exchange): SA 설정을 위한 자동 키 교환 프로토콜`,`SA(Security Association): 보안 파라미터 합의 — 단방향 논리적 연결`,`전송 모드: IP 페이로드만 암호화 / 터널 모드: 전체 패킷 암호화 + 새 IP 헤더`,`IKE 2단계: Phase 1(IKE SA) → Phase 2(IPSec SA)`],blanks:[{s:`AH는 {{인증·무결성}}만 보장하고, ESP는 추가로 {{기밀성(암호화)}}을 제공한다.`},{s:`IKE는 {{SA(Security Association)}} 설정을 위한 {{자동 키 교환}} 프로토콜이다.`},{s:`전송 모드: {{IP 페이로드만}} 암호화, 터널 모드: {{전체 패킷}} 암호화.`},{s:`IKE 2단계: Phase 1({{IKE SA}}) → Phase 2({{IPSec SA}}).`}]},
+{topic:`DPP 핵심 기록 정보`,domain:`MG`,keywords:[`DPP(Digital Product Passport): 제품 생애주기 정보를 디지털화한 전자 기록`,`핵심 기록 정보 3가지: ①원산지(원재료 출처) ②탄소발자국(온실가스 배출량) ③재활용 비율(재생 원료 사용 비율)`,`법적 근거: EU 에코디자인 규정(ESPR)`,`목적: 순환경제(Circular Economy) 실현 — 자원 효율성 향상, 탄소 배출 감축`,`기술 기반: 블록체인(위변조 방지), IoT(실시간 추적), QR코드/NFC(소비자 접근)`,`배터리 분야 2027년 의무화 예정 — 섬유, 전자제품 등 단계적 확대`],blanks:[{s:`DPP 핵심 기록 정보 3가지: ①{{원산지(원재료 출처)}} ②{{탄소발자국(온실가스 배출량)}} ③{{재활용 비율}}.`},{s:`DPP의 법적 근거: EU {{에코디자인 규정(ESPR)}}.`},{s:`DPP의 목적: {{순환경제(Circular Economy)}} 실현.`},{s:`기술 기반: {{블록체인}}, {{IoT}}, {{QR코드/NFC}}.`}]},
+{topic:`ROI (투자 수익률)`,domain:`MG`,keywords:[`정의: 투자한 비용 대비 창출된 순이익의 비율 — IT 투자 타당성 평가의 기본 지표`,`공식: ROI = (순이익 ÷ 투자비용) × 100`,`장점: 계산이 직관적이고 이해 쉬움, 여러 대안 간 비교 용이`,`단점: 화폐의 시간가치(Time Value of Money) 미반영, 투자 기간 무시`,`NPV(순현재가치): ROI의 시간가치 미반영 한계를 보완하는 지표`,`IRR(내부수익률): NPV=0이 되는 할인율 — IRR > 요구수익률이면 투자`],blanks:[{s:`ROI = ({{순이익}} ÷ {{투자비용}}) × 100.`},{s:`ROI의 장점: {{직관적}}이고 여러 대안 간 {{비교 용이}}.`},{s:`ROI의 단점: {{화폐의 시간가치}} 미반영, {{투자 기간}} 무시.`},{s:`ROI의 한계를 보완: {{NPV(순현재가치)}}는 시간가치 반영, {{IRR(내부수익률)}}은 NPV=0 할인율.`}]},
+{topic:`ITIL 4 SVS (서비스 가치 체계)`,domain:`MG`,keywords:[`정의: 수요(Demand)를 가치(Value)로 전환하는 ITIL 4의 핵심 프레임워크`,`SVS 구성: 서비스 가치 사슬(SVC), 지도 원칙, 거버넌스, 지속적 개선, 관리 관행(Practice)`,`서비스 가치 사슬(SVC) 6활동: 계획, 개선, 참여, 설계·전환, 획득·구축, 전달·지원`,`공동 가치 창출(Value Co-creation): 서비스 제공자와 소비자가 함께 가치를 만드는 개념`,`ITIL v3 → v4 전환: 서비스 라이프사이클 → SVS, DevOps/Agile 수용`,`4차원 모델: 조직과 사람, 정보와 기술, 파트너와 공급자, 가치 흐름과 프로세스`],blanks:[{s:`SVS는 {{수요(Demand)}}를 {{가치(Value)}}로 전환하는 ITIL 4의 핵심 프레임워크이다.`},{s:`SVC 6활동: {{계획}}, {{개선}}, {{참여}}, {{설계·전환}}, {{획득·구축}}, {{전달·지원}}.`},{s:`{{공동 가치 창출(Value Co-creation)}}은 제공자와 소비자가 {{함께 가치를 만드는}} 개념이다.`},{s:`4차원 모델: {{조직과 사람}}, {{정보와 기술}}, {{파트너와 공급자}}, {{가치 흐름과 프로세스}}.`}]}
+]},
+{label:`DAY 5`,
+qs:[
+{a:"AI",t:`ARIMA`,q:`과도한 차분의 부작용은?`,o:[`과적합 방지`,`모델이 더 정확해진다`,`정보 손실 발생`,`학습 속도 향상`],ans:2,exp:`필요 이상 차분하면 <b>정보 손실</b>이 발생합니다. 적절한 d 값을 ADF 검정으로 확인해야 합니다.`},
+{a:"AI",t:`드롭아웃`,q:`드롭아웃의 대안 정규화 기법이 아닌 것은?`,o:[`배치 정규화`,`조기 종료`,`L1/L2 정규화`,`역전파`],ans:3,exp:`<b>역전파(Backpropagation)</b>는 학습 알고리즘이지 정규화 기법이 아닙니다.`},
+{a:"AI",t:`Q-Learning`,q:`Q-Table 크기 폭발 문제를 해결한 기법은?`,o:[`Linear Regression`,`DQN(Deep Q-Network)`,`Decision Tree`,`K-Means`],ans:1,exp:`<b>DQN(Deep Q-Network)</b>: 신경망으로 Q-value를 근사하여 <b>Q-Table 폭발 문제</b>를 해결합니다.`},
+{a:"AI",t:`지식 증류`,q:`지식 증류 외 AI 경량화 기법이 아닌 것은?`,o:[`양자화(Quantization)`,`프루닝(Pruning)`,`저랭크 분해`,`어텐션(Attention)`],ans:3,exp:`<b>어텐션(Attention)</b>은 경량화 기법이 아닌 신경망 아키텍처입니다. 경량화: 프루닝, 양자화, 저랭크 분해.`},
+{a:"AI",t:`SVM 커널`,q:`다항식 커널의 공식으로 옳은 것은?`,o:[`K(x,y) = x·y`,`K(x,y) = exp(-γ||x-y||²)`,`K(x,y) = (x·y + c)^d`,`K(x,y) = tanh(αx·y + c)`],ans:2,exp:`<b>다항식 커널: K(x,y) = (x·y + c)^d</b> — d차 다항식으로 매핑합니다.`},
+{a:"AI",t:`연관규칙`,q:`Lift=1이 의미하는 것은?`,o:[`규칙 무효`,`A와 B가 독립`,`양의 연관성`,`음의 연관성`],ans:1,exp:`<b>Lift=1</b>이면 A와 B는 <b>독립</b>입니다. Lift>1 양의 연관, Lift<1 음의 연관.`},
+{a:"AI",t:`CoT`,q:`CoT가 가장 효과적인 문제 유형은?`,o:[`음성 인식`,`이미지 분류`,`단순 키워드 검색`,`수학, 논리 추론, 코딩 등 복잡한 문제`],ans:3,exp:`CoT는 <b>수학, 논리 추론, 코딩</b> 등 <b>복잡한 문제</b>에서 정확도를 대폭 향상시킵니다.`},
+{a:"AI",t:`앙상블`,q:`스태킹(Stacking)에서 메타 모델이 입력받는 것은?`,o:[`하이퍼파라미터 설정값`,`테스트 데이터의 정답`,`기본 모델들의 예측값`,`원본 훈련 데이터`],ans:2,exp:`<b>스태킹</b>: <b>기본 모델들의 예측값</b>을 입력으로 <b>메타 모델(Meta-learner)</b>이 최종 예측.`},
+{a:"SC",t:`RBAC`,q:`ABAC가 RBAC 대비 진화한 점은?`,o:[`암호화 키를 관리`,`시간, 위치 등 속성 기반 동적 접근 제어`,`보안 등급으로 강제 통제`,`소유자가 자율 부여`],ans:1,exp:`<b>ABAC</b>: <b>속성(시간, 위치, 부서 등)</b> 기반 <b>동적 접근 제어</b> — RBAC의 진화형.`},
+{a:"SC",t:`EU CRA`,q:`CRA 준수 인증 없이 EU 시장에서 필요한 것은?`,o:[`CE 마킹`,`ISO 인증`,`SOC 2 인증`,`PCI DSS`],ans:0,exp:`<b>CE 마킹</b> 인증 없이는 EU 시장에서 디지털 제품 판매가 불가합니다.`},
+{a:"SC",t:`접근 통제`,q:`Biba 모델의 핵심 원칙은?`,o:[`No Read Up, No Write Down (기밀성)`,`역할 기반 통제`,`자유로운 읽기/쓰기`,`No Read Down, No Write Up (무결성)`],ans:3,exp:`<b>Biba</b>: <b>무결성 중심</b> — <b>No Read Down, No Write Up</b>.`},
+{a:"SC",t:`CTEM`,q:`CTEM 5단계의 첫 번째 단계는?`,o:[`범위 설정(Scoping)`,`동원`,`발견`,`검증`],ans:0,exp:`CTEM 5단계: ①<b>범위 설정(Scoping)</b> → ②발견 → ③우선순위화 → ④검증 → ⑤동원.`},
+{a:"SC",t:`침해사고`,q:`침해사고 대응에서 증거 보전의 3원칙은?`,o:[`무결성, 연계 보관성, 적법성`,`정확성, 완전성, 신뢰성`,`기밀성, 무결성, 가용성`,`예방, 탐지, 대응`],ans:0,exp:`증거 보전 3원칙: <b>무결성(Hash)</b>, <b>연계 보관성(Chain of Custody)</b>, <b>적법성</b>.`},
+{a:"NW",t:`BGP`,q:`AS-PATH 속성의 역할은?`,o:[`대역폭 제어`,`데이터 암호화`,`IP 주소 할당`,`경유 AS 번호를 기록하여 루프 탐지`],ans:3,exp:`<b>AS-PATH</b>: 경유하는 <b>AS 번호를 순서대로 기록</b>하여 경로 선택과 <b>루프 탐지</b>에 활용.`},
+{a:"NW",t:`Wi-Fi 7`,q:`Wi-Fi 7의 MLO가 동시에 사용하는 주파수 대역은?`,o:[`5GHz만`,`2.4/5/6GHz 동시`,`2.4GHz만`,`6GHz만`],ans:1,exp:`<b>MLO</b>: <b>2.4GHz, 5GHz, 6GHz</b> 대역을 <b>동시에 묶어</b> 사용합니다.`},
+{a:"NW",t:`IPSec`,q:`IKE Phase 1에서 수립하는 것은?`,o:[`IPSec SA`,`라우팅 테이블`,`IKE SA (안전한 채널)`,`ACL`],ans:2,exp:`IKE Phase 1: <b>IKE SA</b> — 안전한 채널을 수립합니다. Phase 2에서 IPSec SA를 협상합니다.`},
+{a:"NW",t:`핸드오버`,q:`핸드오버 측정 단계에서 측정하는 것은?`,o:[`사용자 인증 정보`,`현재·인접 기지국의 신호 품질(RSSI, RSRP)`,`데이터 전송 속도`,`패킷 손실률`],ans:1,exp:`측정 단계: <b>현재·인접 기지국의 신호 품질(RSSI, RSRP 등)</b>을 측정합니다.`},
+{a:"MG",t:`DPP`,q:`DPP 의무화가 배터리 분야에서 예정된 시기는?`,o:[`2025년`,`2035년`,`2027년`,`2030년`],ans:2,exp:`배터리 분야: <b>2027년</b> DPP 의무화 예정, 이후 단계적 확대.`},
+{a:"MG",t:`DRS`,q:`웜 사이트(Warm Site)의 특징은?`,o:[`주요 장비 준비, 데이터 일부 동기화, 수일 복구`,`공간만 확보, 수주 복구`,`실시간 동기화, RTO ≈ 0`,`대부분 장비 준비, 수시간 복구`],ans:0,exp:`<b>웜 사이트</b>: <b>주요 장비 준비, 데이터 일부 동기화</b>, RTO: <b>수일</b>.`},
+{a:"MG",t:`ITIL 4`,q:`ITIL 4의 4차원 모델에 해당하지 않는 것은?`,o:[`비용과 일정`,`정보와 기술`,`조직과 사람`,`파트너와 공급자`],ans:0,exp:`4차원 모델: ①조직과 사람 ②정보와 기술 ③<b>파트너와 공급자</b> ④가치 흐름과 프로세스. '<b>비용과 일정</b>'은 해당 없음.`}
+],
+topics:[
+{topic:`ARIMA 모델의 차분(Differencing)`,domain:`AI`,keywords:[`정상성(Stationarity): 평균, 분산, 자기공분산이 시간에 따라 일정한 성질`,`d회 차분: ARIMA(p,d,q)에서 d=차분 횟수 — d=1이면 1차 차분`,`1차 차분: Y't = Yt − Yt-1 — 추세(Trend) 제거에 효과적`,`2차 차분: Y''t = Y't − Y't-1 — 가속 추세(곡률) 제거`,`차분 후 정상성 확인: ADF 검정(Augmented Dickey-Fuller Test)으로 검증`,`과도한 차분 주의: 필요 이상 차분하면 정보 손실 발생`],blanks:[{s:`ARIMA는 {{AR(자기회귀)}} + {{I(차분/적분)}} + {{MA(이동평균)}}의 결합 모델이다.`},{s:`차분(Differencing)은 {{이전 시점과의 차이}}를 구하여 {{비정상 시계열을 정상화}}하는 기법이다.`},{s:`정상성이란 {{평균}}, {{분산}}, {{자기공분산}}이 시간에 따라 일정한 성질이다.`},{s:`1차 차분 공식: {{Y't = Yt − Yt-1}} — {{추세(Trend)}} 제거에 효과적이다.`}]},
+{topic:`드롭아웃(Dropout)`,domain:`AI`,keywords:[`앙상블 효과: 매 학습 반복마다 서로 다른 부분 네트워크를 학습 → 여러 모델의 평균 효과`,`드롭아웃 비율(p): 일반적으로 0.2~0.5 — 학습 시에만 적용, 추론 시에는 비활성화`,`추론 시 스케일링: 학습 때 비활성화된 비율만큼 가중치를 스케일링하여 출력 보정`,`적용 위치: 주로 완전연결(FC) 계층에 적용, CNN에서는 Spatial Dropout 사용`,`Hinton et al.(2012): 드롭아웃을 최초 제안한 논문`,`대안 기법: 배치 정규화(Batch Normalization), L1/L2 정규화, 조기 종료(Early Stopping)`],blanks:[{s:`드롭아웃은 신경망 학습 시 {{무작위로 일부 노드를 비활성화}}하는 {{정규화(Regularization)}} 기법이다.`},{s:`드롭아웃의 목적: {{과적합(Overfitting)}} 방지 — 특정 노드에 대한 {{의존도를 낮춤}}.`},{s:`매 학습 반복마다 다른 부분 네트워크를 학습하여 {{앙상블 효과}}를 제공한다.`},{s:`드롭아웃은 {{학습 시에만}} 적용하고, {{추론 시에는 비활성화}}한다.`}]},
+{topic:`워드 임베딩(Word Embedding)`,domain:`AI`,keywords:[`예시: '왕-남자+여자≈여왕' — 벡터 연산으로 의미적 관계 표현 가능`,`One-hot Encoding의 한계 극복: 차원의 저주 해소, 단어 간 유사도 계산 가능`,`대표 모델: Word2Vec(CBOW, Skip-gram), GloVe, FastText`,`Word2Vec CBOW: 주변 단어로 중심 단어 예측 / Skip-gram: 중심 단어로 주변 단어 예측`,`문맥 기반 임베딩: ELMo, BERT — 동일 단어도 문맥에 따라 다른 벡터 생성`,`활용: 감성 분석, 기계 번역, 문서 분류, 질의 응답 시스템의 입력 표현`],blanks:[{s:`워드 임베딩은 단어를 {{고정 크기의 연속적인 실수 벡터(밀집 벡터)}}로 변환하는 기법이다.`},{s:`워드 임베딩은 단어 간 {{의미적·문법적 유사성}}을 {{벡터 공간의 거리}}로 보존한다.`},{s:`'{{왕}}-{{남자}}+{{여자}}≈{{여왕}}' — 벡터 연산으로 의미적 관계를 표현할 수 있다.`},{s:`Word2Vec의 두 아키텍처: {{CBOW}}(주변→중심)와 {{Skip-gram}}(중심→주변).`}]},
+{topic:`확산 모델(Diffusion Model)`,domain:`AI`,keywords:[`Reverse Process(역방향 과정): 신경망이 각 스텝에서 노이즈를 예측·제거하여 원본 복원`,`DDPM(Denoising Diffusion Probabilistic Model): 대표적 확산 모델 프레임워크`,`GAN 대비 장점: 학습 안정성 높음, 모드 붕괴(Mode Collapse) 없음, 생성 품질 우수`,`GAN 대비 단점: 수백~수천 스텝의 역확산 → 생성 속도 느림`,`상용 서비스: Stable Diffusion, DALL-E, Midjourney의 기반 기술`,`가이던스(Guidance): 조건부 생성 시 텍스트 프롬프트로 생성 방향을 제어`],blanks:[{s:`확산 모델은 데이터에 {{점진적으로 노이즈를 추가}}한 후, {{역으로 노이즈를 제거}}하며 원본을 복원하는 생성 모델이다.`},{s:`Forward Process: 원본에 {{가우시안 노이즈}}를 {{T 스텝}}에 걸쳐 점진적으로 추가한다.`},{s:`Reverse Process: {{신경망}}이 각 스텝에서 {{노이즈를 예측·제거}}하여 원본을 복원한다.`},{s:`GAN 대비 장점: {{학습 안정성}} 높음, {{모드 붕괴 없음}}, 생성 품질 우수.`}]},
+{topic:`Q-Learning (강화학습)`,domain:`AI`,keywords:[`정의: 환경 모델 없이 에이전트가 상태-행동의 가치(Q-value)를 학습하는 오프 폴리시(Off-policy) 알고리즘`,`핵심 구성: 에이전트(Agent), 환경(Environment), 상태(State), 행동(Action), 보상(Reward)`,`Q-value: 특정 상태에서 특정 행동을 취했을 때 기대되는 누적 보상`,`벨만 방정식(Bellman Equation): Q(s,a) ← Q(s,a) + α[R + γ·max Q(s',a') - Q(s,a)]`,`α(학습률): 새로운 정보의 반영 비율, γ(감가율): 미래 보상의 현재 가치 할인`,`Q-Table: 상태×행동 테이블에 Q-value를 저장하여 최적 정책(Policy)을 도출`],blanks:[{s:`Q-Learning은 환경 모델 없이 에이전트가 {{Q-value(상태-행동 가치)}}를 학습하는 {{오프 폴리시}} 알고리즘이다.`},{s:`벨만 방정식: Q(s,a) ← Q(s,a) + {{α}}[{{R}} + {{γ}}·max Q(s',a') - Q(s,a)].`},{s:`α는 {{학습률}}(새 정보 반영 비율), γ는 {{감가율}}(미래 보상 할인)이다.`},{s:`Q-Table 폭발 문제를 해결한 것이 {{DQN(Deep Q-Network)}}이다.`}]},
+{topic:`지식 증류(Knowledge Distillation)`,domain:`AI`,keywords:[`온도(Temperature, T): 소프트맥스 출력을 부드럽게 만드는 하이퍼파라미터 — T가 높을수록 균등한 분포`,`하드 타겟(Hard Target): 원래의 정답 레이블 — 소프트 타겟과 함께 사용`,`손실 함수: 소프트 손실(교사와 학생 간) + 하드 손실(정답과 학생 간)의 가중합`,`장점: 모델 크기·연산량 대폭 감소, 추론 속도 향상, 엣지 디바이스 배포 가능`,`적용 사례: BERT → DistilBERT(파라미터 40% 감소, 성능 97% 유지)`,`다른 경량화 기법: 프루닝(Pruning), 양자화(Quantization), 저랭크 분해(Low-rank Factorization)`],blanks:[{s:`지식 증류는 {{교사(Teacher) 모델}}의 지식을 {{학생(Student) 모델}}로 전달하는 경량화 기법이다.`},{s:`학생 모델은 교사 모델의 {{소프트 타겟(확률 분포)}}을 학습한다.`},{s:`온도(T)가 높을수록 소프트맥스 출력이 {{부드럽고(균등한) 분포}}가 된다.`},{s:`손실 함수 = {{소프트 손실}}(교사-학생) + {{하드 손실}}(정답-학생)의 가중합.`}]},
+{topic:`연관규칙 3대 지표 (지지도, 신뢰도, 향상도)`,domain:`AI`,keywords:[`지지도(Support) = 전체 거래 중 A∩B 포함 거래 비율`,`신뢰도(Confidence) = P(B|A) = Support(A∩B) ÷ Support(A)`,`향상도(Lift) = Confidence ÷ Support(B) — Lift>1이면 양의 연관성`,`Lift=1이면 독립, Lift<1이면 음의 연관성(대체재)`,`최소 지지도·최소 신뢰도를 동시에 만족하는 규칙을 '강한 규칙'이라 함`,`Apriori 알고리즘으로 빈발 항목집합을 추출한 후 연관규칙 생성`],blanks:[{s:`지지도(Support) = 전체 거래 중 {{A∩B 포함 거래}} 비율.`},{s:`신뢰도(Confidence) = {{P(B|A)}} = {{Support(A∩B)}} ÷ {{Support(A)}}.`},{s:`향상도(Lift) = {{Confidence}} ÷ {{Support(B)}}이며, {{Lift>1}}이면 양의 연관성이다.`},{s:`Lift={{1}}이면 독립, Lift<1이면 {{음의 연관성(대체재)}}이다.`}]},
+{topic:`TF-IDF (단어 중요도 평가)`,domain:`AI`,keywords:[`TF(Term Frequency, 단어 빈도): 특정 문서에서 특정 단어가 등장하는 빈도`,`IDF(Inverse Document Frequency, 역문서 빈도): 전체 문서 중 해당 단어가 등장하는 문서의 역수에 로그를 취한 값`,`TF-IDF = TF × IDF — 특정 문서에서 중요하면서 전체에서는 희귀한 단어에 높은 가중치`,`IDF 공식: log(전체 문서 수 N ÷ 해당 단어를 포함하는 문서 수 df)`,`활용: 문서 분류, 검색 엔진 랭킹, 키워드 추출, 텍스트 마이닝`,`한계: 단어의 순서와 문맥을 고려하지 못함 → 워드 임베딩으로 보완`],blanks:[{s:`TF({{Term Frequency}})는 특정 문서에서 특정 단어가 등장하는 {{빈도}}이다.`},{s:`IDF({{Inverse Document Frequency}})는 전체 문서 중 해당 단어가 등장하는 문서의 {{역수에 로그}}를 취한 값이다.`},{s:`TF-IDF = {{TF × IDF}} — 특정 문서에서 중요하면서 전체에서 {{희귀한 단어}}에 높은 가중치를 부여한다.`},{s:`IDF 공식: {{log(N ÷ df)}} (N=전체 문서 수, df=해당 단어 포함 문서 수).`}]},
+{topic:`RBAC (역할 기반 접근 통제)`,domain:`SC`,keywords:[`정의: 사용자에게 할당된 조직 내 역할(Role)에 따라 시스템 접근 권한을 부여하는 모델`,`핵심: 사용자→역할→권한 매핑 — 인사이동 시 역할만 변경하면 권한 자동 조정`,`최소 권한 원칙(Least Privilege): 업무 수행에 필요한 최소한의 권한만 부여`,`직무 분리(SoD, Separation of Duties): 상충되는 역할을 동시에 부여하지 않음`,`MAC(강제적)과의 차이: MAC은 시스템이 보안 등급으로 강제, RBAC은 역할 기반 유연성`,`DAC(임의적)과의 차이: DAC은 소유자가 자율 부여 → 트로이목마 취약, RBAC은 중앙 관리`],blanks:[{s:`RBAC는 {{역할(Role)}}에 권한을 할당하고, 사용자에게 {{역할을 부여}}하는 방식이다.`},{s:`인사이동 시 {{역할만 변경}}하면 {{권한이 자동 조정}}된다.`},{s:`{{최소 권한 원칙(Least Privilege)}}과 {{직무 분리(SoD)}} 구현이 용이하다.`},{s:`MAC은 {{시스템}}이 강제, DAC은 {{소유자}}가 자율, RBAC은 {{역할}} 기반이다.`}]},
+{topic:`논리적 망분리 (VDI/SBC)`,domain:`SC`,keywords:[`정의: 한 대의 PC에서 가상화 기술을 이용해 업무망과 인터넷망을 논리적으로 분리하는 기술`,`VDI(Virtual Desktop Infrastructure): 서버에서 가상 데스크톱을 제공, 단말은 화면만 수신`,`SBC(Server-Based Computing): 서버에서 애플리케이션을 실행, 화면만 전송`,`물리적 망분리 대비 장점: 비용 절감, 공간 절약, 관리 유연성`,`물리적 망분리 대비 단점: 가상화 취약점, 하이퍼바이저 해킹 위험`,`최근 트렌드: 제로 트러스트 기반 논리적 망분리 완화 — 클라우드 환경 대응`],blanks:[{s:`논리적 망분리의 두 방식: {{VDI(Virtual Desktop Infrastructure)}}와 {{SBC(Server-Based Computing)}}.`},{s:`VDI는 서버에서 {{가상 데스크톱}}을 제공하고, 단말은 {{화면만 수신}}한다.`},{s:`물리적 망분리 대비 장점: {{비용 절감}}, {{관리 유연성}}.`},{s:`물리적 망분리 대비 단점: {{가상화 취약점}}, {{하이퍼바이저 해킹 위험}}.`}]},
+{topic:`CTEM (지속적 위협 노출 관리)`,domain:`SC`,keywords:[`정의: 가트너가 제시한 능동적 보안 프레임워크 — 공격 표면을 지속 모니터링하고 위협 노출을 평가`,`5단계: ①범위 설정 → ②발견 → ③우선순위화 → ④검증 → ⑤동원`,`검증: 침투 테스트, BAS(Breach and Attack Simulation)로 실제 악용 가능성 확인`,`기존 VM과 차이: 패치 중심이 아닌 비즈니스 리스크 기준 우선순위 결정`,`ASM(Attack Surface Management): CTEM의 핵심 구성요소`,`동원(Mobilization): 보안팀·IT팀·경영진 협력하여 수정 조치 실행`],blanks:[{s:`CTEM 5단계: ①{{범위 설정}} → ②{{발견}} → ③{{우선순위화}} → ④{{검증}} → ⑤{{동원}}.`},{s:`검증 단계: {{침투 테스트}}와 {{BAS}}로 악용 가능성을 확인한다.`},{s:`기존 VM과 차이: {{비즈니스 리스크 기준}}으로 우선순위를 결정한다.`},{s:`{{ASM(Attack Surface Management)}}은 CTEM의 핵심 구성요소이다.`}]},
+{topic:`PKI (공개키 기반 구조)`,domain:`SC`,keywords:[`정의: 신뢰할 수 있는 제3자 인증 기관(CA)이 발급한 전자 인증서를 통해 공개키의 소유자를 증명하는 체계`,`구성요소: CA(인증기관), RA(등록기관), CRL(인증서 폐지 목록), OCSP`,`비대칭키: 공개키(암호화/서명 검증) + 개인키(복호화/서명 생성)`,`전자 인증서: X.509 표준 — 공개키, 소유자 정보, CA 서명 포함`,`기밀성: 공개키로 암호화 → 개인키로 복호화`,`부인 방지: 개인키로 전자서명 → 공개키로 검증`],blanks:[{s:`PKI는 {{인증 기관(CA)}}이 발급한 {{전자 인증서}}로 공개키의 소유자를 증명하는 체계이다.`},{s:`구성요소: {{CA}}, {{RA}}, {{CRL}}, {{OCSP}}.`},{s:`전자 인증서 표준: {{X.509}} — {{공개키}}, {{소유자 정보}}, {{CA 서명}} 포함.`},{s:`전자서명: {{개인키}}로 서명 → {{공개키}}로 검증 — {{부인 방지}} 보장.`}]},
+{topic:`EU CRA 3대 핵심 요구사항`,domain:`SC`,keywords:[`CRA(Cyber Resilience Act): EU 시장 디지털 제품에 사이버 보안을 의무화하는 법`,`요구사항 1: Secure by Default — 설계 단계부터 보안을 내재화`,`요구사항 2: 출시 후 최소 5년간 보안 업데이트 제공 보장`,`요구사항 3: 취약점 발견 시 24시간 내 ENISA에 보고 의무`,`CE 마킹: CRA 준수 인증 없이는 EU 시장 판매 불가`,`SBOM(Software Bill of Materials): 구성 요소 목록 제출 의무`],blanks:[{s:`CRA 3대 요구사항: ①{{Secure by Default}} ②{{5년간 보안 업데이트}} ③{{24시간 내 취약점 보고}}.`},{s:`{{CE 마킹}} 인증 없이는 EU 시장 판매가 불가하다.`},{s:`{{SBOM(Software Bill of Materials)}} 제출이 의무화된다.`},{s:`취약점 발견 시 {{24시간}} 내 {{ENISA}}에 보고해야 한다.`}]},
+{topic:`Wi-Fi 7 (802.11be)`,domain:`NW`,keywords:[`표준: IEEE 802.11be — EHT(Extremely High Throughput)`,`MLO(Multi-Link Operation): 2.4/5/6GHz 대역 동시 묶어 사용 — 대역폭↑ 지연↓`,`320MHz 채널 폭: Wi-Fi 6E(160MHz)의 2배`,`4K-QAM(4096-QAM): 한 심볼 12비트 — Wi-Fi 6(1024-QAM, 10비트) 대비 20% 향상`,`최대 이론 속도: 약 46Gbps`,`적용 사례: AR/VR 스트리밍, 클라우드 게이밍, 산업용 IoT 초저지연`],blanks:[{s:`Wi-Fi 7 표준: {{IEEE 802.11be}}, 별칭 {{EHT(Extremely High Throughput)}}.`},{s:`MLO({{Multi-Link Operation}}): {{2.4/5/6GHz}} 대역을 동시에 묶어 사용한다.`},{s:`{{4K-QAM}}으로 한 심볼에 {{12비트}}를 전송하여 20% 효율 증가.`},{s:`최대 채널 폭 {{320MHz}}로 Wi-Fi 6E({{160MHz}})의 2배이다.`}]},
+{topic:`IPSec 핵심 프로토콜 (AH, ESP, IKE)`,domain:`NW`,keywords:[`AH(Authentication Header): 인증·무결성 보장 (암호화 없음)`,`ESP(Encapsulating Security Payload): 인증·무결성 + 기밀성(암호화) — 가장 많이 사용`,`IKE(Internet Key Exchange): SA 설정을 위한 자동 키 교환 프로토콜`,`SA(Security Association): 보안 파라미터 합의 — 단방향 논리적 연결`,`전송 모드: IP 페이로드만 암호화 / 터널 모드: 전체 패킷 암호화 + 새 IP 헤더`,`IKE 2단계: Phase 1(IKE SA) → Phase 2(IPSec SA)`],blanks:[{s:`AH는 {{인증·무결성}}만 보장하고, ESP는 추가로 {{기밀성(암호화)}}을 제공한다.`},{s:`IKE는 {{SA(Security Association)}} 설정을 위한 {{자동 키 교환}} 프로토콜이다.`},{s:`전송 모드: {{IP 페이로드만}} 암호화, 터널 모드: {{전체 패킷}} 암호화.`},{s:`IKE 2단계: Phase 1({{IKE SA}}) → Phase 2({{IPSec SA}}).`}]},
+{topic:`핸드오버(Handover) 3단계`,domain:`NW`,keywords:[`정의: 이동 단말이 다른 셀로 이동할 때 통화가 끊기지 않도록 기지국을 전환하는 절차`,`3단계: ①측정(Measurement) → ②결정(Decision) → ③실행(Execution)`,`측정: 단말이 현재 기지국과 인접 기지국의 신호 품질(RSSI, RSRP 등)을 측정`,`결정: 네트워크(또는 단말)가 핸드오버 여부를 판단 — 히스테리시스, A3 이벤트 등`,`실행: 타겟 기지국으로 세션 전환 — 소프트 핸드오버(Make Before Break) vs 하드 핸드오버(Break Before Make)`,`소프트 핸드오버: 새 기지국 연결 후 기존 해제 (끊김 없음, CDMA 계열)`],blanks:[{s:`핸드오버 3단계: ①{{측정(Measurement)}} → ②{{결정(Decision)}} → ③{{실행(Execution)}}.`},{s:`측정 단계: 현재·인접 기지국의 {{신호 품질(RSSI, RSRP 등)}}을 측정한다.`},{s:`소프트 핸드오버: {{새 기지국 연결 후}} 기존 해제 ({{끊김 없음}}).`},{s:`하드 핸드오버: {{기존 해제 후}} 새 기지국 연결 ({{순간 끊김}}).`}]},
+{topic:`페이딩 극복 기술 (다이버시티, 이퀄라이저, OFDM)`,domain:`NW`,keywords:[`페이딩(Fading): 전파가 건물 등에 반사·회절되어 다중 경로를 거치면서 수신 신호가 약해지거나 왜곡되는 현상`,`다이버시티(Diversity): 여러 경로의 신호를 수신하여 가장 좋은 것을 선택하거나 결합`,`다이버시티 유형: 공간(안테나 복수), 시간(반복 전송), 주파수(다른 주파수 동시 전송)`,`이퀄라이저(Equalizer, 등화기): 채널 왜곡을 보상하여 원래 신호를 복원하는 수신기 장치`,`OFDM(Orthogonal Frequency Division Multiplexing): 직교 주파수 분할 다중화 — 광대역을 여러 부반송파로 나누어 주파수 선택적 페이딩에 강건`,`MIMO와 결합: 다이버시티 + OFDM + MIMO → 현대 무선 통신(LTE, 5G, Wi-Fi)의 핵심`],blanks:[{s:`페이딩은 전파가 {{다중 경로}}를 거치면서 수신 신호가 {{약해지거나 왜곡}}되는 현상이다.`},{s:`페이딩 극복 3대 기술: {{다이버시티}}, {{이퀄라이저(등화기)}}, {{OFDM}}.`},{s:`다이버시티 유형: {{공간}}(안테나 복수), {{시간}}(반복 전송), {{주파수}}(다른 주파수).`},{s:`OFDM은 광대역을 여러 {{부반송파}}로 나누어 {{주파수 선택적 페이딩}}에 강건하다.`}]},
+{topic:`ROI (투자 수익률)`,domain:`MG`,keywords:[`정의: 투자한 비용 대비 창출된 순이익의 비율 — IT 투자 타당성 평가의 기본 지표`,`공식: ROI = (순이익 ÷ 투자비용) × 100`,`장점: 계산이 직관적이고 이해 쉬움, 여러 대안 간 비교 용이`,`단점: 화폐의 시간가치(Time Value of Money) 미반영, 투자 기간 무시`,`NPV(순현재가치): ROI의 시간가치 미반영 한계를 보완하는 지표`,`IRR(내부수익률): NPV=0이 되는 할인율 — IRR > 요구수익률이면 투자`],blanks:[{s:`ROI = ({{순이익}} ÷ {{투자비용}}) × 100.`},{s:`ROI의 장점: {{직관적}}이고 여러 대안 간 {{비교 용이}}.`},{s:`ROI의 단점: {{화폐의 시간가치}} 미반영, {{투자 기간}} 무시.`},{s:`ROI의 한계를 보완: {{NPV(순현재가치)}}는 시간가치 반영, {{IRR(내부수익률)}}은 NPV=0 할인율.`}]},
+{topic:`ITIL 4 SVS (서비스 가치 체계)`,domain:`MG`,keywords:[`정의: 수요(Demand)를 가치(Value)로 전환하는 ITIL 4의 핵심 프레임워크`,`SVS 구성: 서비스 가치 사슬(SVC), 지도 원칙, 거버넌스, 지속적 개선, 관리 관행(Practice)`,`서비스 가치 사슬(SVC) 6활동: 계획, 개선, 참여, 설계·전환, 획득·구축, 전달·지원`,`공동 가치 창출(Value Co-creation): 서비스 제공자와 소비자가 함께 가치를 만드는 개념`,`ITIL v3 → v4 전환: 서비스 라이프사이클 → SVS, DevOps/Agile 수용`,`4차원 모델: 조직과 사람, 정보와 기술, 파트너와 공급자, 가치 흐름과 프로세스`],blanks:[{s:`SVS는 {{수요(Demand)}}를 {{가치(Value)}}로 전환하는 ITIL 4의 핵심 프레임워크이다.`},{s:`SVC 6활동: {{계획}}, {{개선}}, {{참여}}, {{설계·전환}}, {{획득·구축}}, {{전달·지원}}.`},{s:`{{공동 가치 창출(Value Co-creation)}}은 제공자와 소비자가 {{함께 가치를 만드는}} 개념이다.`},{s:`4차원 모델: {{조직과 사람}}, {{정보와 기술}}, {{파트너와 공급자}}, {{가치 흐름과 프로세스}}.`}]},
+{topic:`DRS 4유형 (Mirror, Hot, Warm, Cold)`,domain:`MG`,keywords:[`DRS(Disaster Recovery System): 재해 복구 시스템 — BCP(업무 연속성 계획)의 핵심 인프라`,`미러 사이트(Mirror Site): 주센터와 동일한 시스템을 실시간 동기화 — RTO ≈ 0, 비용 최대`,`핫 사이트(Hot Site): 대부분의 장비·데이터가 준비, 수시간 내 복구 — RTO: 수시간`,`웜 사이트(Warm Site): 주요 장비 준비, 데이터 일부 동기화 — RTO: 수일`,`콜드 사이트(Cold Site): 공간·전력만 확보, 장비·데이터는 별도 확보 — RTO: 수주, 비용 최소`,`RTO(Recovery Time Objective): 서비스 복구 목표 시간 — 미러<핫<웜<콜드`],blanks:[{s:`DRS 4유형 (RTO 기준): {{미러 사이트}}(≈0) < {{핫 사이트}}(수시간) < {{웜 사이트}}(수일) < {{콜드 사이트}}(수주).`},{s:`미러 사이트는 주센터와 {{동일 시스템}}을 {{실시간 동기화}}한다.`},{s:`콜드 사이트는 {{공간·전력만}} 확보하고 장비·데이터는 별도 확보한다.`},{s:`RTO({{Recovery Time Objective}})는 {{서비스 복구 목표 시간}}이다.`}]}
+]}
+];
+
+/* engine_3step_daily.js
+   DAY 선택 → 3-STEP 파이프라인 엔진
+   데이터 구조: DAYS[{label,qs[],topics[{topic,domain,keywords[],blanks[{s}]}]}]
+*/
+
+// ═══ State ═══
+let curDay=-1;
+let stepDone=[false,false,false];
+let s1={qi:0,score:0,answered:false};
+let s2={ti:0,results:[]};
+let s3={ti:0};
+let QS=[],TOPICS=[];
+
+function atag(a){
+  const m={AI:'tAI',NW:'tNW',MG:'tMG',SC:'tSC'},l={AI:'인공지능/통계',NW:'네트워크',MG:'IT경영',SC:'디지털보안'};
+  return`<span class="tag ${m[a]||'tN'}">${l[a]||a}</span>`;
+}
+function stepIndicator(cur){
+  return`<div class="step-ind">${[0,1,2].map(i=>{
+    let cls=i===0?'s1':i===1?'s2':'s3';
+    if(i===cur)cls+=' current';
+    else if(!stepDone[i]&&i!==cur)cls=' inactive';
+    return(i>0?`<div class="step-line${stepDone[i-1]?' done':''}"></div>`:'')+
+    `<div class="step-dot ${cls}">${stepDone[i]?'✓':(i+1)}</div>`;
+  }).join('')}</div>`;
+}
+
+// ═══ DAY LIST ═══
+function renderDayList(){
+  curDay=-1;
+  document.getElementById('hdrT').textContent='4주차 주간퀴즈 · 3-STEP 인출 훈련';
+  document.getElementById('progWrap').style.display='none';
+  document.getElementById('app').innerHTML=`
+    <div class="home-title">4주차 · 3-STEP 인출 훈련</div>
+    <div class="home-sub">인공지능/통계 · 네트워크 · IT경영 · 디지털보안<br>매일 20문항 객관식 + 20토픽 키워드 인출 + 20토픽 빈칸 채우기</div>
+    <div class="day-grid">${DAYS.map((d,i)=>{
+      const done=!!dayScores[i];
+      return`<div class="day-card${done?' done':''}" onclick="selectDay(${i})">
+        <div class="day-lbl">${d.label}</div>
+        ${done?`<div class="day-score" style="color:#059669">STEP1: ${dayScores[i].s1}/20</div>`:'<div class="day-score" style="color:#94a3b8">미완료</div>'}
+        <button class="day-btn">${done?'다시 하기':'시작하기'}</button>
+      </div>`;
+    }).join('')}</div>
+    <div class="locked-section">
+      <div class="locked-title">4주차 · 주간모의고사 3-STEP 인출 훈련</div>
+      <div class="locked-card">
+        <div class="locked-blur">
+          <div class="locked-preview">
+            <div class="locked-preview-item"><div class="locked-preview-num">1</div>📝 STEP 1 · 객관식 퀴즈 (인공지능/통계 · 네트워크 · IT경영 · 디지털보안 20문항)</div>
+            <div class="locked-preview-item"><div class="locked-preview-num">2</div>🔑 STEP 2 · 키워드 인출 (20토픽 핵심 키워드 셀프 체크)</div>
+            <div class="locked-preview-item"><div class="locked-preview-num">3</div>✏️ STEP 3 · 빈칸 채우기 (20토픽 핵심 문장 완성)</div>
+          </div>
+        </div>
+        <div class="locked-overlay">
+          <div class="lock-icon"><svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM12 17c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2z"/></svg></div>
+          <div class="locked-badge">ZIP-UP 수강생 전용</div>
+          <div class="locked-msg">주간퀴즈와 동일한 3-STEP 구조로<br><b>주간모의고사 토픽(인공지능/통계 · 네트워크 · IT경영 · 디지털보안)</b>의<br>인출 훈련을 수행합니다.</div>
+        </div>
+      </div>
+    </div>`;
+}
+
+let dayScores={};
+function selectDay(idx){
+  curDay=idx;
+  QS=DAYS[idx].qs;
+  TOPICS=DAYS[idx].topics;
+  stepDone=[false,false,false];
+  s1={qi:0,score:0,answered:false};
+  s2={ti:0,results:[]};
+  s3={ti:0};
+  renderHome();
+}
+
+// ═══ 3-STEP HOME ═══
+function renderHome(){
+  const d=DAYS[curDay];
+  document.getElementById('hdrT').textContent=d.label+' · 3-STEP 인출 훈련';
+  document.getElementById('progWrap').style.display='none';
+  document.getElementById('app').innerHTML=`
+    <div class="home-title">${d.label} · 3-STEP 인출 훈련</div>
+    <div class="home-sub">인공지능/통계 · 네트워크 · IT경영 · 디지털보안 핵심 개념<br>인지 확인 → 키워드 인출 → 빈칸 채우기</div>
+    <div class="info-banner">
+      💡 <b>학습 파이프라인</b> : 같은 토픽을 3단계에 걸쳐 점점 깊이 있게 반복합니다.<br>
+      순서대로 진행하면 효과적이지만, <b>각 단계를 독립적으로 연습</b>할 수도 있습니다.
+    </div>
+    <div class="pipeline">
+      <div class="pipe-step${stepDone[0]?' done':''}" onclick="startStep1()">
+        <div class="pipe-num pn1">1</div>
+        <div class="pipe-lbl">📝 STEP 1 · 객관식 퀴즈</div>
+        <div class="pipe-desc">4지선다로 핵심 개념을 빠르게 점검합니다. (${QS.length}문항)</div>
+        ${stepDone[0]?`<div class="pipe-score">✅ ${s1.score}/${QS.length} 완료</div>`:''}
+      </div>
+      <div class="pipe-connector"></div>
+      <div class="pipe-step${stepDone[1]?' done':''}" onclick="startStep2()">
+        <div class="pipe-num pn2">2</div>
+        <div class="pipe-lbl">🔑 STEP 2 · 키워드 인출</div>
+        <div class="pipe-desc">토픽명만 보고 핵심 키워드를 떠올려 봅니다. (${TOPICS.length}토픽)</div>
+        ${stepDone[1]?`<div class="pipe-score">✅ 완료</div>`:''}
+      </div>
+      <div class="pipe-connector"></div>
+      <div class="pipe-step${stepDone[2]?' done':''}" onclick="startStep3()">
+        <div class="pipe-num pn3">3</div>
+        <div class="pipe-lbl">✏️ STEP 3 · 빈칸 채우기</div>
+        <div class="pipe-desc">핵심 문장의 빈칸을 채우며 정확한 키워드를 확인합니다. (${TOPICS.length}토픽)</div>
+        ${stepDone[2]?`<div class="pipe-score">✅ 완료</div>`:''}
+      </div>
+    </div>
+    <div style="text-align:center;margin-top:8px"><button class="r-btn secondary" onclick="renderDayList()" style="font-size:12px;padding:8px 18px">← DAY 목록으로</button></div>
+  `;
+}
+
+// ═══ STEP 1 ═══
+function startStep1(){s1={qi:0,score:0,answered:false};renderQuiz();}
+function renderQuiz(){
+  const pw=document.getElementById('progWrap');pw.style.display='block';
+  document.getElementById('progFill').style.background='linear-gradient(90deg,#4f46e5,#7c3aed)';
+  document.getElementById('progTxt').textContent=`STEP 1 · ${s1.qi+1} / ${QS.length}`;
+  document.getElementById('progScr').textContent=`점수: ${s1.score}`;
+  document.getElementById('progFill').style.width=`${((s1.qi+1)/QS.length)*100}%`;
+  const q=QS[s1.qi];
+  document.getElementById('app').innerHTML=`${stepIndicator(0)}
+    <div class="q-card"><div class="q-meta">${atag(q.a)}<span class="tag tN">Q${s1.qi+1}</span><span class="tag tN">${q.t}</span><button class="back-btn" onclick="renderHome()">← 목록</button></div>
+    <div class="q-text">${q.q}</div>
+    <div class="opts" id="opts">${q.o.map((o,i)=>`<button class="opt" id="o${i}" onclick="s1Choose(${i})"><span class="opt-lbl">${'①②③④'[i]}</span><span>${o}</span></button>`).join('')}</div>
+    <div class="fb" id="fb"></div></div>
+    <div class="next-row"><button class="next-btn" id="nxt" onclick="s1Next()">${s1.qi+1<QS.length?'다음 문제 →':'결과 보기 →'}</button></div>`;
+  s1.answered=false;
+}
+function s1Choose(idx){
+  if(s1.answered)return;s1.answered=true;const q=QS[s1.qi];
+  for(let i=0;i<4;i++){const b=document.getElementById('o'+i);b.classList.add('dis');if(i===q.ans)b.classList.add(idx===q.ans?'ok':'rv');}
+  const fb=document.getElementById('fb');
+  if(idx===q.ans){s1.score++;document.getElementById('o'+idx).classList.add('ok');fb.className='fb ok';fb.innerHTML=`<div class="fb-t">✅ 정답!</div>${q.exp}`;}
+  else{document.getElementById('o'+idx).classList.add('ng');fb.className='fb ng';fb.innerHTML=`<div class="fb-t">❌ 오답 — 정답: ${'①②③④'[q.ans]}</div>${q.exp}`;}
+  fb.style.display='block';document.getElementById('nxt').style.display='inline-block';document.getElementById('progScr').textContent=`점수: ${s1.score}`;
+}
+function s1Next(){s1.qi++;if(s1.qi>=QS.length)s1Result();else renderQuiz();}
+function s1Result(){
+  stepDone[0]=true;dayScores[curDay]={s1:s1.score};
+  document.getElementById('progWrap').style.display='none';
+  const pct=Math.round(s1.score/QS.length*100);
+  const grade=pct>=90?'🏆 최우수':pct>=75?'🥇 우수':pct>=60?'🥈 보통':'🥉 분발 필요';
+  document.getElementById('app').innerHTML=`${stepIndicator(0)}
+    <div class="result-card"><div style="font-size:12px;color:#94a3b8;margin-bottom:8px">STEP 1 · 객관식 퀴즈 결과</div>
+    <div><span class="r-score">${s1.score}</span><span class="r-denom"> / ${QS.length}</span></div>
+    <div class="r-pct">정답률 ${pct}%</div><div class="r-grade">${grade}</div>
+    <div class="r-msg">객관식으로 핵심 개념을 확인했습니다.<br>이제 같은 토픽의 키워드를 <b>직접 떠올려 보세요!</b></div>
+    <div class="r-btns"><button class="r-btn green" onclick="startStep2()">🔑 STEP 2 · 키워드 인출 →</button><button class="r-btn secondary" onclick="renderHome()">목록으로</button></div></div>`;
+}
+
+// ═══ STEP 2 ═══
+function startStep2(){s2={ti:0,results:[]};renderKeyword();}
+function renderKeyword(){
+  const pw=document.getElementById('progWrap');pw.style.display='block';
+  document.getElementById('progFill').style.background='linear-gradient(90deg,#059669,#10b981)';
+  document.getElementById('progTxt').textContent=`STEP 2 · ${s2.ti+1} / ${TOPICS.length}`;
+  document.getElementById('progScr').textContent='';
+  document.getElementById('progFill').style.width=`${((s2.ti+1)/TOPICS.length)*100}%`;
+  const tp=TOPICS[s2.ti];
+  document.getElementById('app').innerHTML=`${stepIndicator(1)}
+    <div class="kw-card"><div class="q-meta">${atag(tp.domain)}<span class="tag tN">${s2.ti+1}/${TOPICS.length}</span><button class="back-btn" onclick="renderHome()">← 목록</button></div>
+    <div class="kw-topic">${tp.topic}</div>
+    <div class="kw-prompt">이 토픽의 <b>핵심 키워드</b>를 먼저 떠올려 보세요.<br>충분히 생각한 후 아래 버튼을 눌러 확인합니다.</div>
+    <button class="kw-reveal-btn" id="kwRevBtn" onclick="revealKw()">💡 키워드 공개</button>
+    <div class="kw-list" id="kwList">${tp.keywords.map((k,i)=>`<div class="kw-item" id="kw${i}" onclick="toggleKw(${i})"><div class="kw-check">✓</div><div style="flex:1;color:#334155">${k}</div></div>`).join('')}</div>
+    <div class="kw-self-row" id="kwSelfRow">
+      <div style="font-size:12px;color:#64748b;margin-bottom:8px">떠올린 키워드만 터치하여 <b style="color:#059669">✓ 체크</b>하세요. 체크하지 않은 항목은 못 떠올린 것으로 집계됩니다.</div>
+      <button class="r-btn green" id="kwNxt" onclick="kwNext()" style="display:none;font-size:12px;padding:8px 20px">${s2.ti+1<TOPICS.length?'다음 토픽 →':'결과 보기 →'}</button>
+    </div></div>`;
+  window._kwR=false;window._kwC=new Array(tp.keywords.length).fill(0);
+}
+function revealKw(){if(window._kwR)return;window._kwR=true;document.getElementById('kwRevBtn').classList.add('revealed');document.getElementById('kwRevBtn').textContent='키워드가 공개되었습니다';document.getElementById('kwList').classList.add('show');document.getElementById('kwSelfRow').classList.add('show');document.getElementById('kwNxt').style.display='inline-block';}
+function toggleKw(i){
+  if(!window._kwR)return;const el=document.getElementById('kw'+i);
+  if(window._kwC[i]===0){window._kwC[i]=1;el.className='kw-item checked';}
+  else{window._kwC[i]=0;el.className='kw-item';}
+}
+function kwNext(){
+  const tp=TOPICS[s2.ti];s2.results.push({topic:tp.topic,checked:window._kwC.filter(v=>v===1).length,total:tp.keywords.length});
+  s2.ti++;if(s2.ti>=TOPICS.length)s2Result();else renderKeyword();
+}
+function s2Result(){
+  stepDone[1]=true;document.getElementById('progWrap').style.display='none';
+  const tK=s2.results.reduce((a,r)=>a+r.total,0),tC=s2.results.reduce((a,r)=>a+r.checked,0),pct=Math.round(tC/tK*100);
+  document.getElementById('app').innerHTML=`${stepIndicator(1)}
+    <div class="result-card"><div style="font-size:12px;color:#94a3b8;margin-bottom:8px">STEP 2 · 키워드 인출 결과</div>
+    <div><span class="r-score" style="background:linear-gradient(135deg,#059669,#10b981);-webkit-background-clip:text">${tC}</span><span class="r-denom"> / ${tK} 키워드</span></div>
+    <div class="r-pct">인출 성공률 ${pct}%</div>
+    <div class="r-msg">${s2.results.map(r=>`<span style="font-size:11px;color:${r.checked===r.total?'#059669':'#64748b'}">${r.topic.split('(')[0].trim()}: ${r.checked}/${r.total}</span>`).join(' · ')}<br><br>이제 <b>빈칸 채우기</b>로 정확한 키워드를 확인합니다!</div>
+    <div class="r-btns"><button class="r-btn amber" onclick="startStep3()">✏️ STEP 3 · 빈칸 채우기 →</button><button class="r-btn secondary" onclick="renderHome()">목록으로</button></div></div>`;
+}
+
+// ═══ STEP 3 ═══
+function startStep3(){s3={ti:0};renderBlank();}
+function renderBlank(){
+  const pw=document.getElementById('progWrap');pw.style.display='block';
+  document.getElementById('progFill').style.background='linear-gradient(90deg,#d97706,#f59e0b)';
+  document.getElementById('progTxt').textContent=`STEP 3 · ${s3.ti+1} / ${TOPICS.length}`;
+  document.getElementById('progScr').textContent='';
+  document.getElementById('progFill').style.width=`${((s3.ti+1)/TOPICS.length)*100}%`;
+  const tp=TOPICS[s3.ti];
+  const blHtml=tp.blanks.map((b,bi)=>{
+    let html=b.s.replace(/\{\{([^}]+)\}\}/g,(_,ans)=>`<span class="bl-blank" data-ans="${ans}" onclick="rvBl(this)">[　?　]</span>`);
+    return`<div class="bl-sentence"><span class="bl-label">${bi+1}</span>${html}</div>`;
+  }).join('');
+  document.getElementById('app').innerHTML=`${stepIndicator(2)}
+    <div class="bl-card"><div class="q-meta">${atag(tp.domain)}<span class="tag tN">${s3.ti+1}/${TOPICS.length}</span><button class="back-btn" onclick="renderHome()">← 목록</button></div>
+    <div class="bl-topic">${tp.topic}</div>
+    <div class="bl-prompt">빈칸을 터치하면 키워드가 하나씩 공개됩니다. 먼저 머릿속으로 떠올린 후 터치하세요!</div>
+    ${blHtml}
+    <button class="bl-reveal-all" id="blRA" onclick="rvAll()">전체 키워드 공개</button></div>
+    <div class="next-row"><button class="next-btn" id="blNxt" style="display:inline-block;${s3.ti+1>=TOPICS.length?'background:linear-gradient(135deg,#d97706,#f59e0b)':''}" onclick="blNext()">${s3.ti+1<TOPICS.length?'다음 토픽 →':'최종 결과 →'}</button></div>`;
+}
+function rvBl(el){if(el.classList.contains('revealed'))return;el.classList.add('revealed');el.textContent=el.dataset.ans;}
+function rvAll(){document.querySelectorAll('.bl-blank:not(.revealed)').forEach(el=>{el.classList.add('revealed');el.textContent=el.dataset.ans;});const b=document.getElementById('blRA');b.classList.add('done');b.textContent='모든 키워드가 공개되었습니다';}
+function blNext(){s3.ti++;if(s3.ti>=TOPICS.length)s3Result();else renderBlank();}
+function s3Result(){
+  stepDone[2]=true;document.getElementById('progWrap').style.display='none';
+  document.getElementById('app').innerHTML=`${stepIndicator(2)}
+    <div class="result-card"><div style="font-size:12px;color:#94a3b8;margin-bottom:8px">🎉 3-STEP 인출 훈련 완료!</div>
+    <div style="font-size:42px;margin:10px 0">🏆</div>
+    <div class="r-grade">${DAYS[curDay].label} 인출 훈련을 모두 마쳤습니다</div>
+    <div class="r-msg">"아는 것"에서 "쓸 수 있는 것"으로 한 걸음 더 나아갔습니다.<br>내일도 같은 루틴으로 반복하면, 시험장에서 자연스럽게 키워드가 나옵니다! 💪</div>
+    <div style="background:#eef2ff;border:1px solid #c7d2fe;border-radius:9px;padding:12px 16px;margin:0 auto 16px;max-width:380px;font-size:11px;color:#3730a3;line-height:1.7;text-align:center">
+      💡 이 퀴즈는 ZIP-UP 학습 시스템의 일부입니다.<br>같은 3-STEP 구조의 <b>주간모의고사 인출훈련(인공지능/통계 · 네트워크 · IT경영 · 디지털보안)</b>은<br>ZIP-UP 수강생에게 제공됩니다.
+    </div>
+    <div class="r-btns"><button class="r-btn primary" onclick="selectDay(${curDay})">처음부터 다시</button><button class="r-btn secondary" onclick="renderDayList()">DAY 목록으로</button></div></div>`;
+}
+
+renderDayList();
+
+</script></body></html>

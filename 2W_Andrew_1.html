@@ -1,0 +1,1532 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2주차 주간모의고사 첨삭지도 (v1.2) - Andrew (1교시)</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+
+:root {
+  --primary: #1a365d;
+  --primary-light: #2b6cb0;
+  --accent: #e53e3e;
+  --green: #38a169;
+  --orange: #dd6b20;
+  --red: #e53e3e;
+  --bg: #f7fafc;
+  --card: #ffffff;
+  --border: #e2e8f0;
+  --text: #2d3748;
+  --text-light: #718096;
+  --pass: #38a169;
+  --fail: #e53e3e;
+  --purple: #6b46c1;
+  --purple-light: #805ad5;
+  --blue: #2b6cb0;
+  --blue-soft: #dbeafe;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Noto Sans KR',sans-serif; background:var(--bg); color:var(--text); line-height:1.7; }
+
+/* Header */
+.header { background:linear-gradient(135deg,#1a365d 0%,#2b6cb0 100%); color:#fff; padding:2rem; }
+.header h1 { font-size:1.5rem; font-weight:700; }
+.header-meta { display:flex; gap:2rem; margin-top:0.5rem; font-size:0.9rem; opacity:0.9; flex-wrap:wrap; }
+.header-meta span { background:rgba(255,255,255,0.15); padding:0.2rem 0.8rem; border-radius:20px; }
+
+/* Navigation */
+.nav { background:#fff; border-bottom:1px solid var(--border); padding:0.5rem 2rem; position:sticky; top:0; z-index:100; display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center; }
+.nav-btn { padding:0.4rem 1rem; border:1px solid var(--border); border-radius:6px; background:#fff; cursor:pointer; font-size:0.85rem; font-family:inherit; transition:all 0.2s; }
+.nav-btn:hover { background:var(--primary); color:#fff; border-color:var(--primary); }
+.nav-btn.active { background:var(--primary); color:#fff; border-color:var(--primary); }
+.nav-btn.summary-btn { background:#edf2f7; font-weight:600; }
+
+/* Main */
+.main { max-width:1100px; margin:0 auto; padding:1.5rem; }
+
+/* Section */
+.section { display:none; }
+.section.active { display:block; }
+
+/* Cards */
+.card { background:var(--card); border-radius:12px; border:1px solid var(--border); padding:1.5rem; margin-bottom:1.2rem; box-shadow:0 1px 3px rgba(0,0,0,0.04); }
+.card h2 { font-size:1.15rem; font-weight:700; color:var(--primary); margin-bottom:1rem; padding-bottom:0.5rem; border-bottom:2px solid var(--primary); }
+.card h3 { font-size:1rem; font-weight:600; color:var(--primary-light); margin:1rem 0 0.5rem; }
+
+/* Score Summary Box */
+.score-box { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:1rem; margin:1rem 0; }
+.score-item { text-align:center; padding:1rem; border-radius:10px; background:#f7fafc; border:1px solid var(--border); }
+.score-item .label { font-size:0.8rem; color:var(--text-light); margin-bottom:0.3rem; }
+.score-item .value { font-size:1.8rem; font-weight:900; }
+.score-item .value.pass { color:var(--pass); }
+.score-item .value.fail { color:var(--fail); }
+.score-item .value.warn { color:var(--orange); }
+.score-item .max { font-size:0.85rem; color:var(--text-light); }
+
+/* Checklist */
+.checklist { margin:0.8rem 0; }
+.check-item { display:flex; align-items:flex-start; gap:0.5rem; padding:0.4rem 0; border-bottom:1px solid #f0f0f0; font-size:0.9rem; }
+.check-item:last-child { border-bottom:none; }
+.check-icon { flex-shrink:0; width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:700; color:#fff; margin-top:2px; }
+.check-icon.yes { background:var(--green); }
+.check-icon.partial { background:var(--orange); }
+.check-icon.no { background:var(--red); }
+.check-text { flex:1; }
+.check-text .fact { font-weight:500; }
+.check-text .detail { color:var(--text-light); font-size:0.82rem; }
+
+/* Qualitative */
+.qual-grid { display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin:1rem 0; }
+@media(max-width:700px) { .qual-grid { grid-template-columns:1fr; } }
+.qual-item { padding:1rem; border-radius:8px; border:1px solid var(--border); }
+.qual-item .qual-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem; }
+.qual-item .qual-title { font-weight:600; font-size:0.95rem; }
+.qual-item .qual-score { font-weight:700; font-size:1.1rem; }
+.qual-item .qual-detail { font-size:0.85rem; color:var(--text-light); }
+.qual-purple .qual-score { color:var(--purple) !important; }
+
+/* Comments */
+.comment-box { margin:1rem 0; padding:1rem; border-radius:8px; border-left:4px solid; }
+.comment-box.good { border-color:var(--green); background:#f0fff4; }
+.comment-box.improve { border-color:var(--orange); background:#fffaf0; }
+.comment-box.critical { border-color:var(--red); background:#fff5f5; }
+.comment-box .comment-title { font-weight:600; font-size:0.9rem; margin-bottom:0.3rem; }
+.comment-box.good .comment-title { color:var(--green); }
+.comment-box.improve .comment-title { color:var(--orange); }
+.comment-box.critical .comment-title { color:var(--red); }
+.comment-box ul { margin-left:1.2rem; font-size:0.88rem; }
+.comment-box li { margin-bottom:0.3rem; }
+
+/* Overall Summary */
+.overall-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:0.8rem; margin:1.5rem 0; }
+@media(max-width:900px) { .overall-grid { grid-template-columns:repeat(3,1fr); } }
+@media(max-width:600px) { .overall-grid { grid-template-columns:repeat(2,1fr); } }
+.overall-card { text-align:center; padding:1rem 0.5rem; border-radius:12px; border:2px solid var(--border); }
+.overall-card .q-label { font-size:0.78rem; color:var(--text-light); margin-bottom:0.2rem; }
+.overall-card .q-title { font-size:0.72rem; font-weight:500; margin-bottom:0.6rem; min-height:2rem; color:var(--text); }
+.overall-card .q-score { font-size:1.7rem; font-weight:900; line-height:1; }
+.overall-card .q-max { font-size:0.75rem; color:var(--text-light); margin-top:0.2rem; }
+.overall-card .q-bar { height:5px; background:#edf2f7; border-radius:3px; margin-top:0.4rem; overflow:hidden; }
+.overall-card .q-bar-fill { height:100%; border-radius:3px; transition:width 0.5s; }
+.overall-card.pass { border-color:var(--pass); }
+.overall-card.pass .q-score { color:var(--pass); }
+.overall-card.pass .q-bar-fill { background:var(--pass); }
+.overall-card.fail { border-color:var(--fail); }
+.overall-card.fail .q-score { color:var(--fail); }
+.overall-card.fail .q-bar-fill { background:var(--fail); }
+.overall-card.warn { border-color:var(--orange); }
+.overall-card.warn .q-score { color:var(--orange); }
+.overall-card.warn .q-bar-fill { background:var(--orange); }
+
+/* Mentor Area */
+.mentor-area { background:#edf2f7; border-radius:10px; padding:1.2rem; margin:1rem 0; }
+.mentor-area h3 { font-size:0.95rem; font-weight:600; color:var(--primary); margin-bottom:0.8rem; }
+.mentor-input-row { display:flex; gap:1rem; align-items:center; margin-bottom:0.5rem; flex-wrap:wrap; }
+.mentor-input-row label { font-size:0.85rem; font-weight:500; min-width:80px; }
+.mentor-input { padding:0.4rem 0.8rem; border:1px solid var(--border); border-radius:6px; font-family:inherit; font-size:0.9rem; width:80px; text-align:center; }
+.mentor-textarea { width:100%; min-height:60px; padding:0.5rem; border:1px solid var(--border); border-radius:6px; font-family:inherit; font-size:0.85rem; resize:vertical; }
+
+/* Page ref */
+.page-ref { display:inline-block; background:#edf2f7; padding:0.15rem 0.6rem; border-radius:4px; font-size:0.78rem; color:var(--text-light); margin-right:0.3rem; }
+
+/* Print */
+@media print {
+  .nav { display:none; }
+  .section { display:block !important; page-break-inside:avoid; }
+  .mentor-area { border:1px solid #ccc; }
+}
+
+/* Sub-question header */
+.sub-q-header { display:flex; align-items:center; gap:0.8rem; margin:1.2rem 0 0.8rem; padding:0.6rem 1rem; background:linear-gradient(90deg,#ebf4ff,#fff); border-radius:8px; border-left:4px solid var(--primary-light); }
+.sub-q-num { font-size:1.1rem; font-weight:700; color:var(--primary); }
+.sub-q-title { font-size:0.95rem; font-weight:500; }
+.sub-q-score { margin-left:auto; font-weight:700; font-size:1rem; }
+.sub-q-breakdown { font-size:0.78rem; color:var(--text-light); margin-left:0.5rem; }
+
+/* Total bar */
+.total-bar { display:flex; align-items:center; justify-content:center; gap:1rem; padding:1.5rem; background:linear-gradient(135deg,#1a365d,#2b6cb0); border-radius:12px; color:#fff; margin:1.5rem 0; }
+.total-bar .total-label { font-size:1rem; }
+.total-bar .total-score { font-size:3rem; font-weight:900; }
+.total-bar .total-max { font-size:1.2rem; opacity:0.8; }
+.total-bar .total-pass { font-size:0.9rem; padding:0.3rem 1rem; border-radius:20px; margin-left:1rem; }
+.total-bar .total-pass.is-pass { background:rgba(56,161,105,0.3); }
+.total-bar .total-pass.is-fail { background:rgba(229,62,62,0.3); }
+
+/* Fact type tags */
+.fact-tag { display:inline-block; padding:0.1rem 0.5rem; border-radius:4px; font-size:0.72rem; font-weight:600; margin-right:0.3rem; vertical-align:middle; }
+.fact-tag.required { background:#dbeafe; color:#1e40af; }
+.fact-tag.bonus { background:#fef3c7; color:#92400e; }
+.fact-tag.structure { background:#e0e7ff; color:#3730a3; }
+
+/* Qualitative section - separate feedback badge */
+.badge { display:inline-block; padding:0.15rem 0.6rem; border-radius:12px; font-size:0.75rem; font-weight:600; }
+.badge-blue { background:#dbeafe; color:#1e40af; }
+.badge-purple { background:#ede9fe; color:#6b46c1; }
+.badge-green { background:#d1fae5; color:#065f46; }
+.badge-orange { background:#ffedd5; color:#9a3412; }
+.badge-red { background:#fee2e2; color:#991b1b; }
+.badge-gray { background:#e5e7eb; color:#4b5563; }
+
+/* v1.1 상한·검증 배지 (카드 상단 띠) */
+.banner-row { display:flex; gap:0.5rem; flex-wrap:wrap; margin:0.8rem 0 1rem 0; }
+.banner { padding:0.4rem 0.8rem; border-radius:6px; font-size:0.8rem; font-weight:600; display:inline-flex; align-items:center; gap:0.3rem; }
+.banner-volume-below { background:#fef2f2; color:#991b1b; border:1px solid #fecaca; }
+.banner-volume-partial { background:#fff7ed; color:#9a3412; border:1px solid #fed7aa; }
+.banner-volume-standard { background:#f0fdf4; color:#166534; border:1px solid #bbf7d0; }
+.banner-volume-bonus { background:#eff6ff; color:#1e40af; border:1px solid #bfdbfe; }
+.banner-content-downgraded { background:#fef2f2; color:#991b1b; border:1px solid #fecaca; }
+.banner-curve { background:#eff6ff; color:#1e40af; border:1px solid #bfdbfe; }
+.banner-bonus-triggered { background:#f0fdf4; color:#166534; border:1px solid #bbf7d0; font-weight:700; }
+
+/* v1.2 가점 트리거 박스 */
+.bonus-trigger-box { border-radius:8px; padding:0.8rem 1rem; margin:0.8rem 0; font-size:0.82rem; }
+.bonus-trigger-box.triggered { background:#f0fdf4; border:1.5px solid #34d399; }
+.bonus-trigger-box.not-triggered { background:#f9fafb; border:1px solid #d1d5db; }
+.bonus-trigger-box .btb-title { font-weight:700; margin-bottom:0.5rem; }
+.bonus-trigger-box.triggered .btb-title { color:#065f46; }
+.bonus-trigger-box.not-triggered .btb-title { color:#4b5563; }
+.bonus-trigger-box .btb-list { display:grid; grid-template-columns:repeat(2,1fr); gap:0.3rem 1rem; margin-top:0.3rem; }
+@media(max-width:600px) { .bonus-trigger-box .btb-list { grid-template-columns:1fr; } }
+.bonus-trigger-box .btb-item { display:flex; align-items:center; gap:0.4rem; font-size:0.8rem; }
+.bonus-trigger-box .btb-item.ok { color:#065f46; }
+.bonus-trigger-box .btb-item.ng { color:#6b7280; }
+.bonus-trigger-box .btb-chk { width:16px; height:16px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:0.68rem; font-weight:700; color:#fff; flex-shrink:0; }
+.bonus-trigger-box .btb-chk.ok { background:#10b981; }
+.bonus-trigger-box .btb-chk.ng { background:#9ca3af; }
+
+/* 점수 계산 추적 (details/summary) */
+.calc-trace { margin-top:0.8rem; }
+.calc-trace summary { cursor:pointer; font-size:0.82rem; color:var(--text-light); padding:0.3rem 0; user-select:none; }
+.calc-trace summary:hover { color:var(--primary); }
+.calc-trace pre { background:#f9fafb; border:1px solid var(--border); border-radius:6px; padding:0.6rem 0.8rem; font-size:0.78rem; line-height:1.55; color:#4b5563; margin-top:0.4rem; white-space:pre-wrap; font-family:'Menlo','Consolas',monospace; }
+
+/* Qualitative 4-cell (정성 4항목 grid) */
+.qual-4 { display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin:1rem 0; }
+@media(max-width:700px) { .qual-4 { grid-template-columns:1fr; } }
+
+/* 문제별 분량·점수 테이블 */
+table.scoretbl { width:100%; border-collapse:collapse; font-size:0.86rem; }
+table.scoretbl th { padding:0.55rem 0.4rem; text-align:center; border-bottom:2px solid var(--border); background:#edf2f7; font-weight:600; }
+table.scoretbl td { padding:0.5rem 0.4rem; border-bottom:1px solid #f0f0f0; text-align:center; }
+table.scoretbl td.tl { text-align:left; }
+table.scoretbl tr.alt { background:#fafafa; }
+table.scoretbl tr.pass td { color:var(--text); }
+table.scoretbl tr.fail td { color:var(--red); }
+table.scoretbl tfoot td { background:#edf2f7; font-weight:700; border-bottom:none; padding:0.6rem 0.4rem; }
+
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>2주차 주간모의고사 첨삭지도 (v1.2)</h1>
+  <div class="header-meta">
+    <span>학생: Andrew</span>
+    <span>1교시 (단답형 10문항)</span>
+    <span>2026년 4월 2주차</span>
+    <span>채점기준: 체크리스트 v2.2 + 교재(md)</span>
+  </div>
+  <div style="margin-top:0.8rem;font-size:0.82rem;opacity:0.85;">
+    채점 체계: <span class="badge badge-blue">정량 10점 × 10문항 = 공식 점수</span>
+    <span class="badge badge-purple">정성 10점 × 10문항 = 별도 피드백</span>
+    <span class="badge badge-green">0.3 단위 반올림</span>
+  </div>
+</div>
+
+<div class="nav" id="nav">
+<button class="nav-btn summary-btn active" onclick="showSection('summary')">종합 요약</button>
+<button class="nav-btn" onclick="showSection('q2')">문2 차원 축소</button>
+<button class="nav-btn" onclick="showSection('q5')">문5 TCP 혼잡제어</button>
+<button class="nav-btn" onclick="showSection('q6')">문6 OSPF 라우팅 프로토콜</button>
+<button class="nav-btn" onclick="showSection('q7')">문7 6G 이동통신과 AI-RAN</button>
+<button class="nav-btn" onclick="showSection('q8')">문8 마이클 포터 5-Forces Model</button>
+<button class="nav-btn" onclick="showSection('q9')">문9 ISMS-P 인증 제도</button>
+<button class="nav-btn" onclick="showSection('q10')">문10 제로 트러스트 아키텍처</button>
+<button class="nav-btn" onclick="showSection('q11')">문11 사이버 킬 체인</button>
+<button class="nav-btn" onclick="showSection('q12')">문12 프롬프트 인젝션</button>
+<button class="nav-btn" onclick="showSection('q13')">문13 RAG 검색증강생성</button>
+</div>
+
+<div class="main">
+
+<div class="section active" id="summary">
+  <div class="card">
+    <h2>종합 채점 결과 (제안 점수)</h2>
+    <p style="font-size:0.85rem;color:var(--text-light);margin-bottom:1rem;">아래는 교재 기반 자동 분석 + v1.2 체크리스트(v2.2 — 연도·인물 완화)에 의한 <strong>제안 점수</strong>입니다. 점수는 0.3 단위로 반올림되었으며, 멘토가 최종 확정합니다.</p>
+
+    <div class="overall-grid">
+<div class="overall-card fail"><div class="q-label">문제 2</div><div class="q-title">차원 축소</div><div class="q-score">3.0</div><div class="q-max">/ 10점 (달성 6점)</div><div style="font-size:0.72rem;color:var(--purple);margin-top:0.2rem;">정성 5.0/10</div><div class="q-bar"><div class="q-bar-fill" style="width:30%;"></div></div><div style="font-size:0.68rem;color:var(--text-light);margin-top:0.3rem;">28줄·1.3쪽</div></div>
+<div class="overall-card fail"><div class="q-label">문제 5</div><div class="q-title">TCP 혼잡제어</div><div class="q-score">3.7</div><div class="q-max">/ 10점 (달성 6점)</div><div style="font-size:0.72rem;color:var(--purple);margin-top:0.2rem;">정성 5.7/10</div><div class="q-bar"><div class="q-bar-fill" style="width:37%;"></div></div><div style="font-size:0.68rem;color:var(--text-light);margin-top:0.3rem;">28줄·1.3쪽</div></div>
+<div class="overall-card fail"><div class="q-label">문제 6</div><div class="q-title">OSPF 라우팅 프로토콜</div><div class="q-score">2.7</div><div class="q-max">/ 10점 (달성 6점)</div><div style="font-size:0.72rem;color:var(--purple);margin-top:0.2rem;">정성 4.3/10</div><div class="q-bar"><div class="q-bar-fill" style="width:27%;"></div></div><div style="font-size:0.68rem;color:var(--text-light);margin-top:0.3rem;">22줄·1.0쪽</div></div>
+<div class="overall-card warn"><div class="q-label">문제 7</div><div class="q-title">6G 이동통신과 AI-RAN</div><div class="q-score">4.0</div><div class="q-max">/ 10점 (달성 6점)</div><div style="font-size:0.72rem;color:var(--purple);margin-top:0.2rem;">정성 5.3/10</div><div class="q-bar"><div class="q-bar-fill" style="width:40%;"></div></div><div style="font-size:0.68rem;color:var(--text-light);margin-top:0.3rem;">22줄·1.0쪽</div></div>
+<div class="overall-card pass"><div class="q-label">문제 8</div><div class="q-title">마이클 포터 5-Forces Model</div><div class="q-score">6.0</div><div class="q-max">/ 10점 (달성 6점)</div><div style="font-size:0.72rem;color:var(--purple);margin-top:0.2rem;">정성 6.7/10</div><div class="q-bar"><div class="q-bar-fill" style="width:60%;"></div></div><div style="font-size:0.68rem;color:var(--text-light);margin-top:0.3rem;">25줄·1.1쪽</div></div>
+<div class="overall-card pass"><div class="q-label">문제 9</div><div class="q-title">ISMS-P 인증 제도</div><div class="q-score">6.0</div><div class="q-max">/ 10점 (달성 6점)</div><div style="font-size:0.72rem;color:var(--purple);margin-top:0.2rem;">정성 6.7/10</div><div class="q-bar"><div class="q-bar-fill" style="width:60%;"></div></div><div style="font-size:0.68rem;color:var(--text-light);margin-top:0.3rem;">28줄·1.3쪽</div></div>
+<div class="overall-card warn"><div class="q-label">문제 10</div><div class="q-title">제로 트러스트 아키텍처</div><div class="q-score">5.7</div><div class="q-max">/ 10점 (달성 6점)</div><div style="font-size:0.72rem;color:var(--purple);margin-top:0.2rem;">정성 6.3/10</div><div class="q-bar"><div class="q-bar-fill" style="width:57%;"></div></div><div style="font-size:0.68rem;color:var(--text-light);margin-top:0.3rem;">26줄·1.2쪽</div></div>
+<div class="overall-card pass"><div class="q-label">문제 11</div><div class="q-title">사이버 킬 체인</div><div class="q-score">6.0</div><div class="q-max">/ 10점 (달성 6점)</div><div style="font-size:0.72rem;color:var(--purple);margin-top:0.2rem;">정성 5.7/10</div><div class="q-bar"><div class="q-bar-fill" style="width:60%;"></div></div><div style="font-size:0.68rem;color:var(--text-light);margin-top:0.3rem;">22줄·1.0쪽</div></div>
+<div class="overall-card warn"><div class="q-label">문제 12</div><div class="q-title">프롬프트 인젝션</div><div class="q-score">5.7</div><div class="q-max">/ 10점 (달성 6점)</div><div style="font-size:0.72rem;color:var(--purple);margin-top:0.2rem;">정성 6.0/10</div><div class="q-bar"><div class="q-bar-fill" style="width:57%;"></div></div><div style="font-size:0.68rem;color:var(--text-light);margin-top:0.3rem;">22줄·1.0쪽</div></div>
+<div class="overall-card pass"><div class="q-label">문제 13</div><div class="q-title">RAG 검색증강생성</div><div class="q-score">6.0</div><div class="q-max">/ 10점 (달성 6점)</div><div style="font-size:0.72rem;color:var(--purple);margin-top:0.2rem;">정성 6.3/10</div><div class="q-bar"><div class="q-bar-fill" style="width:60%;"></div></div><div style="font-size:0.68rem;color:var(--text-light);margin-top:0.3rem;">25줄·1.1쪽</div></div>
+    </div>
+
+    
+    <div style="display:flex;gap:1rem;margin:1.5rem 0;flex-wrap:wrap;">
+      <div class="total-bar" style="flex:1;min-width:250px;">
+        <div class="total-label">공식 점수 (정량)</div>
+        <div class="total-score">48.8</div>
+        <div class="total-max">/ 100</div>
+        <div class="total-pass is-pass">달성 4 / 미달 6</div>
+      </div>
+      <div class="total-bar" style="flex:1;min-width:250px;background:linear-gradient(135deg,#553c9a,#805ad5);">
+        <div class="total-label">별도 피드백 (정성)</div>
+        <div class="total-score">58.0</div>
+        <div class="total-max">/ 100</div>
+        <div class="total-pass" style="background:rgba(255,255,255,0.15);">참고용 (공식점수 미포함)</div>
+      </div>
+    </div>
+    
+  </div>
+
+  
+    <div class="card">
+      <h2>문항별 분량·점수 한눈에 보기</h2>
+      <table class="scoretbl">
+        <thead>
+          <tr>
+            <th style="text-align:left;">문항</th>
+            <th>페이지</th>
+            <th>분량 (줄·쪽)</th>
+            <th>정량(10) [공식]</th>
+            <th>기준선(6)</th>
+            <th>정성(10) [별도]</th>
+          </tr>
+        </thead>
+        <tbody>
+          
+          <tr class=" fail"><td class="tl">문2 차원 축소</td><td>4~5쪽</td><td style="color:var(--orange);font-weight:600;">28줄 (1.3쪽) △</td><td style="font-weight:700;">3.0/10</td><td style="color:var(--red);font-weight:600;">미달</td><td>5.0/10</td></tr>
+<tr class="alt fail"><td class="tl">문5 TCP 혼잡제어</td><td>6~7쪽</td><td style="color:var(--green);font-weight:600;">28줄 (1.3쪽) ✓</td><td style="font-weight:700;">3.7/10</td><td style="color:var(--red);font-weight:600;">미달</td><td>5.7/10</td></tr>
+<tr class=" fail"><td class="tl">문6 OSPF 라우팅 프로토콜</td><td>13쪽</td><td style="color:var(--orange);font-weight:600;">22줄 (1.0쪽) △</td><td style="font-weight:700;">2.7/10</td><td style="color:var(--red);font-weight:600;">미달</td><td>4.3/10</td></tr>
+<tr class="alt fail"><td class="tl">문7 6G 이동통신과 AI-RAN</td><td>11쪽</td><td style="color:var(--green);font-weight:600;">22줄 (1.0쪽) ✓</td><td style="font-weight:700;">4.0/10</td><td style="color:var(--red);font-weight:600;">미달</td><td>5.3/10</td></tr>
+<tr class=""><td class="tl">문8 마이클 포터 5-Forces Model</td><td>3~4쪽</td><td style="color:var(--green);font-weight:600;">25줄 (1.1쪽) ✓</td><td style="font-weight:700;">6.0/10</td><td style="color:var(--green);font-weight:600;">달성</td><td>6.7/10</td></tr>
+<tr class="alt"><td class="tl">문9 ISMS-P 인증 제도</td><td>2~3쪽</td><td style="color:var(--green);font-weight:600;">28줄 (1.3쪽) ✓</td><td style="font-weight:700;">6.0/10</td><td style="color:var(--green);font-weight:600;">달성</td><td>6.7/10</td></tr>
+<tr class=" fail"><td class="tl">문10 제로 트러스트 아키텍처</td><td>7~8쪽</td><td style="color:var(--green);font-weight:600;">26줄 (1.2쪽) ✓</td><td style="font-weight:700;">5.7/10</td><td style="color:var(--red);font-weight:600;">미달</td><td>6.3/10</td></tr>
+<tr class="alt"><td class="tl">문11 사이버 킬 체인</td><td>12쪽</td><td style="color:var(--green);font-weight:600;">22줄 (1.0쪽) ✓</td><td style="font-weight:700;">6.0/10</td><td style="color:var(--green);font-weight:600;">달성</td><td>5.7/10</td></tr>
+<tr class=" fail"><td class="tl">문12 프롬프트 인젝션</td><td>10쪽</td><td style="color:var(--green);font-weight:600;">22줄 (1.0쪽) ✓</td><td style="font-weight:700;">5.7/10</td><td style="color:var(--red);font-weight:600;">미달</td><td>6.0/10</td></tr>
+<tr class="alt"><td class="tl">문13 RAG 검색증강생성</td><td>8~9쪽</td><td style="color:var(--green);font-weight:600;">25줄 (1.1쪽) ✓</td><td style="font-weight:700;">6.0/10</td><td style="color:var(--green);font-weight:600;">달성</td><td>6.3/10</td></tr>
+        
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="2" style="text-align:left;">합계 · 평균</td>
+            <td>248줄 (1.1쪽 평균)</td>
+            <td>48.8/100</td>
+            <td>달성 4 / 미달 6</td>
+            <td>58.0/100</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+    
+
+  
+    <div class="card">
+      <h2>전체 강평</h2>
+      <div class="comment-box good">
+        <div class="comment-title">잘한 점</div>
+        <ul><li>전 10문제 표준 이상 분량 달성(22~28줄)</li>
+<li>ISMS-P·제로트러스트·RAG·프롬프트인젝션 등 보안/AI 토픽에서 개념도+표 일관 활용</li>
+<li>시각적 전달력 우수: 5-Forces·NIST 아키텍처·7단계 매트릭스 등 다이어그램 적극</li></ul>
+      </div>
+      <div class="comment-box improve">
+        <div class="comment-title">공통 보완 사항</div>
+        <ul><li>실무 사례·수치 부족: BBR/QUIC·BeyondCorp·삼성/NVIDIA 등 구체 케이스 보강</li>
+<li>핵심 공식·용어 누락 빈번: AIMD, 다익스트라, NIST SP 800-207 표준번호</li>
+<li>차별화 단락(3단락) 상대적 약세 — 연관 프레임워크 비교 습관화 필요</li></ul>
+      </div>
+      
+        <div class="comment-box critical">
+          <div class="comment-title">긴급 보완</div>
+          <ul><li>OSPF: Area 계층·다익스트라 미기재 시급 보강 필요</li>
+<li>차원축소: t-SNE 누락은 핵심 결격</li></ul>
+        </div>
+        
+    </div>
+    
+
+  
+    <div class="card">
+      <div class="mentor-area">
+        <h3>멘토 최종 확정 (종합)</h3>
+        <div class="mentor-input-row">
+          <label>문2 정량:</label><input class="mentor-input" type="number" min="0" max="10" placeholder="3.0"> <label>문5 정량:</label><input class="mentor-input" type="number" min="0" max="10" placeholder="3.7"> <label>문6 정량:</label><input class="mentor-input" type="number" min="0" max="10" placeholder="2.7"> <label>문7 정량:</label><input class="mentor-input" type="number" min="0" max="10" placeholder="4.0"> <label>문8 정량:</label><input class="mentor-input" type="number" min="0" max="10" placeholder="6.0"> <label>문9 정량:</label><input class="mentor-input" type="number" min="0" max="10" placeholder="6.0"> <label>문10 정량:</label><input class="mentor-input" type="number" min="0" max="10" placeholder="5.7"> <label>문11 정량:</label><input class="mentor-input" type="number" min="0" max="10" placeholder="6.0"> <label>문12 정량:</label><input class="mentor-input" type="number" min="0" max="10" placeholder="5.7"> <label>문13 정량:</label><input class="mentor-input" type="number" min="0" max="10" placeholder="6.0">
+        </div>
+        <div class="mentor-input-row" style="margin-top:0.5rem;">
+          <label>문2 정성:</label><input class="mentor-input" type="number" min="0" max="10" placeholder="5.0" style="border-color:#805ad5;"> <label>문5 정성:</label><input class="mentor-input" type="number" min="0" max="10" placeholder="5.7" style="border-color:#805ad5;"> <label>문6 정성:</label><input class="mentor-input" type="number" min="0" max="10" placeholder="4.3" style="border-color:#805ad5;"> <label>문7 정성:</label><input class="mentor-input" type="number" min="0" max="10" placeholder="5.3" style="border-color:#805ad5;"> <label>문8 정성:</label><input class="mentor-input" type="number" min="0" max="10" placeholder="6.7" style="border-color:#805ad5;"> <label>문9 정성:</label><input class="mentor-input" type="number" min="0" max="10" placeholder="6.7" style="border-color:#805ad5;"> <label>문10 정성:</label><input class="mentor-input" type="number" min="0" max="10" placeholder="6.3" style="border-color:#805ad5;"> <label>문11 정성:</label><input class="mentor-input" type="number" min="0" max="10" placeholder="5.7" style="border-color:#805ad5;"> <label>문12 정성:</label><input class="mentor-input" type="number" min="0" max="10" placeholder="6.0" style="border-color:#805ad5;"> <label>문13 정성:</label><input class="mentor-input" type="number" min="0" max="10" placeholder="6.3" style="border-color:#805ad5;">
+        </div>
+        <div class="mentor-input-row" style="margin-top:0.8rem;">
+          <label style="min-width:110px;">종합 코멘트:</label>
+          <textarea class="mentor-textarea" placeholder="총평을 기록하세요..."></textarea>
+        </div>
+      </div>
+    </div>
+    
+</div>
+
+
+<div class="section" id="q2">
+  <div class="card">
+    <h2>문2. 차원 축소</h2>
+    <div class="banner-row"><span class="banner banner-volume-partial">분량 부족 — 정량 상한 4점 (28줄, 1.3쪽)</span>
+<span class="banner banner-content-downgraded">내용 미달 — 분량 구간 1단계 강등</span>
+<span class="banner banner-curve">필수 커브 적용 (raw 2.9 → 커브 후 2.9)</span></div>
+    
+    <div class="score-box">
+      <div class="score-item">
+        <div class="label"><span class="badge badge-blue">공식 점수</span></div>
+        <div class="value fail">3.0</div>
+        <div class="max">/ 10점 (정량)</div>
+      </div>
+      <div class="score-item">
+        <div class="label"><span class="badge badge-purple">별도 피드백</span></div>
+        <div class="value" style="color:var(--purple)">5.0</div>
+        <div class="max">/ 10점 (정성)</div>
+      </div>
+      <div class="score-item">
+        <div class="label">기준선</div>
+        <div class="value fail">미달</div>
+        <div class="max">기준 6점</div>
+      </div>
+      <div class="score-item">
+        <div class="label">분량</div>
+        <div class="value warn">28줄</div>
+        <div class="max">1.3쪽 · 상한 4점</div>
+      </div>
+    </div>
+    
+    <p style="font-size:0.85rem;color:var(--text-light);">답안 위치: <span class="page-ref">4쪽</span><span class="page-ref">5쪽</span> | 체크리스트: 2W_01_02_차원축소.md (코드: 2W_01_02, v2.2)</p>
+    
+    <div class="bonus-trigger-box not-triggered">
+      <div class="btb-title">가점 미발동 — 조건 미충족</div>
+      <div class="btb-list">
+        <div class="btb-item ng"><span class="btb-chk ng">✗</span><span><strong>필수 80% 이상 인정</strong> — <span style="font-size:0.75rem;color:#6b7280;">현재 필수 인정률 20%</span></span></div><div class="btb-item ng"><span class="btb-chk ng">✗</span><span><strong>가점 팩트 1개 이상 ✓</strong> — <span style="font-size:0.75rem;color:#6b7280;">가점 yes/partial 1개 이상</span></span></div><div class="btb-item ok"><span class="btb-chk ok">✓</span><span><strong>구조 점수 충족</strong> — <span style="font-size:0.75rem;color:#6b7280;">구조 ≥ 0.5</span></span></div><div class="btb-item ng"><span class="btb-chk ng">✗</span><span><strong>차별화 분량(bonus_eligible)</strong> — <span style="font-size:0.75rem;color:#6b7280;">30줄 / 1.3쪽 이상</span></span></div>
+      </div>
+      <p style="font-size:0.78rem;color:#6b7280;margin-top:0.4rem;">미충족 조건: 필수 80% 이상 인정, 가점 팩트 1개 이상 ✓, 차별화 분량(bonus_eligible)</p>
+    </div>
+    
+    
+    <details class="calc-trace">
+      <summary>▶ 점수 계산 추적 보기</summary>
+      <pre>raw 점수: 필수 1.88 + 가점 0.50 + 구조 0.50 = 2.88
+필수 커브 적용: raw 필수 3.38 → 커브 후 1.88 (−1.5)
+분량: 28줄 (1.3쪽) → partial_high 구간
+내용 검증: 불통과 → 분량 구간 1단계 강등 (상한 4.0 적용)
+분량 상한: 4.00점
+상한 적용 후: 2.88점
+가점 발동: NO — 0점
+최종 상한 (가점 반영): 7점
+최종 제안 점수 (0.3 단위 반올림): 3.0점</pre>
+    </details>
+    
+  </div>
+
+  <div class="card">
+    <h3>교재 핵심 팩트 체크리스트</h3>
+    <div class="checklist">
+      <div class="check-item"><div class="check-icon partial">△</div><div class="check-text"><div class="fact"><span class="fact-tag required">필수</span>차원의 저주와 차원 축소 정의 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.5 → 0.75점)</span></div><div class="detail">위치: 1단락 · 답안 3쪽: &#x27;고차원 Data → 저차원 Data, 동적 유지, 고차원 데이터 특성 재수로 줄여도 유의성·활용성 유지&#x27; — 차원 축소 목적은 명시, 차원의 저주 원인(희소성·거리 균일화) 미언급</div></div></div>
+<div class="check-item"><div class="check-icon partial">△</div><div class="check-text"><div class="fact"><span class="fact-tag required">필수</span>PCA의 원리와 5단계 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.5 → 0.75점)</span></div><div class="detail">위치: 2단락 · 답안 4쪽 표: &#x27;PCA (선형, 고유인코더, 필터/매타, 선형)&#x27; — PCA 언급 있으나 분산 최대 보존 원리 또는 5단계(표준화→공분산→고유값→주성분→변환) 명시 부족</div></div></div>
+<div class="check-item"><div class="check-icon no">✗</div><div class="check-text"><div class="fact"><span class="fact-tag required">필수</span>설명 분산비 수치 예시 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.0 → 0.00점)</span></div><div class="detail">위치: - · 설명 분산비 또는 85~95% 누적 수치 미언급</div></div></div>
+<div class="check-item"><div class="check-icon no">✗</div><div class="check-text"><div class="fact"><span class="fact-tag required">필수</span>t-SNE 원리와 Crowding Problem <span style="font-size:0.72rem;color:#6b7280;">(배점 1.5 → 0.00점)</span></div><div class="detail">위치: - · t-SNE 미기재 (PCA, LDA, Copula만 언급)</div></div></div>
+<div class="check-item"><div class="check-icon no">✗</div><div class="check-text"><div class="fact"><span class="fact-tag required">필수</span>PCA vs t-SNE 비교 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.5 → 0.00점)</span></div><div class="detail">위치: - · PCA vs t-SNE 비교 없음. 대신 선형/비선형, 필터/래퍼/임베디드 분류</div></div></div>
+<div class="check-item"><div class="check-icon no">✗</div><div class="check-text"><div class="fact"><span class="fact-tag bonus">가점</span>UMAP 최신 동향 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.0 → 0.00점)</span></div><div class="detail">위치: - · UMAP 미언급</div></div></div>
+<div class="check-item"><div class="check-icon partial">△</div><div class="check-text"><div class="fact"><span class="fact-tag bonus">가점</span>실무 사례 또는 오토인코더 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.0 → 0.50점)</span></div><div class="detail">위치: 2단락 · 답안 4쪽: &#x27;오토인코더 Copula&#x27; 비선형 기법 언급 — 오토인코더 연결은 있으나 비선형 PCA 신경망 버전 설명 없음</div></div></div>
+<div class="check-item"><div class="check-icon partial">△</div><div class="check-text"><div class="fact"><span class="fact-tag structure">구조</span>구조 완결성 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.0 → 0.50점)</span></div><div class="detail">위치: 전체 · 정의 → 개념도(유형) → 세부 표 → 마무리로 흐름. 다만 t-SNE·PCA 비교 등 핵심 흐름 부재</div></div></div>
+    </div>
+    
+    <div class="comment-box good">
+      <div class="comment-title">잘한 점</div>
+      <ul><li>선형/비선형/필터/래퍼/임베디드 등 차원 축소 기법 분류 제시</li>
+<li>고차원→저차원 시각화 개념도</li>
+<li>오토인코더·Copula 등 다양한 기법 언급</li></ul>
+    </div>
+    <div class="comment-box improve">
+      <div class="comment-title">보완 필요</div>
+      <ul><li>t-SNE(KL 다이버전스·Crowding Problem) 반드시 추가</li>
+<li>PCA 5단계(표준화→공분산→고유값→주성분→변환) 명시</li>
+<li>설명 분산비 85~95% 누적 수치 예시 보강</li>
+<li>UMAP 최신 동향 또는 scRNA-seq 실무 사례 추가</li></ul>
+    </div>
+    
+        <div class="comment-box critical">
+          <div class="comment-title">긴급 보완</div>
+          <ul><li>주요 기법 t-SNE 누락은 토픽 핵심 결격</li></ul>
+        </div>
+        
+    
+  </div>
+
+  <div class="card">
+    <h3>정성 평가 <span class="badge badge-purple">별도 피드백 (공식점수 미포함)</span></h3>
+    <div class="qual-4"><div class="qual-item qual-purple"><div class="qual-header"><div class="qual-title">논리적 흐름</div><div class="qual-score" style="color:var(--purple)">1.3 / 3</div></div><div class="qual-detail">정의→유형 개념도→세부 표 구조. t-SNE 등 핵심 기법 누락으로 흐름 부실.</div></div>
+<div class="qual-item qual-purple"><div class="qual-header"><div class="qual-title">시각적 전달력·가독성</div><div class="qual-score" style="color:var(--purple)">2.0 / 3</div></div><div class="qual-detail">고차원→저차원 시각화 + 유형 표 활용. 가독성 양호.</div></div>
+<div class="qual-item qual-purple"><div class="qual-header"><div class="qual-title">차별화 역량</div><div class="qual-score" style="color:var(--purple)">0.7 / 2</div></div><div class="qual-detail">오토인코더 언급은 긍정. t-SNE·UMAP 등 차세대 기법 누락.</div></div>
+<div class="qual-item qual-purple"><div class="qual-header"><div class="qual-title">전략적 관리</div><div class="qual-score" style="color:var(--purple)">1.0 / 2</div></div><div class="qual-detail">1.3쪽 분량. 필터/래퍼/임베디드 구분에 지면 할애한 전략적 편향.</div></div></div>
+  </div>
+
+  <div class="card">
+    
+    <div class="mentor-area" style="margin-top:1rem;">
+      <h3>멘토 확정 — 문2</h3>
+      <div class="mentor-input-row">
+        <label>정량 최종:</label><input class="mentor-input" type="number" min="0" max="10" placeholder="3.0" style="font-weight:700;font-size:1.1rem;">
+        <span style="font-size:0.85rem;color:var(--text-light);">/ 10 <span class="badge badge-blue">공식</span></span>
+        <label style="margin-left:1rem;">정성 최종:</label><input class="mentor-input" type="number" min="0" max="10" placeholder="5.0" style="font-weight:700;font-size:1.1rem;border-color:#805ad5;">
+        <span style="font-size:0.85rem;color:#6b46c1;">/ 10 <span class="badge badge-purple">별도</span></span>
+      </div>
+      <div class="mentor-input-row" style="margin-top:0.5rem;">
+        <label style="min-width:110px;">코멘트:</label>
+        <textarea class="mentor-textarea" placeholder="문2 최종 코멘트..."></textarea>
+      </div>
+    </div>
+    
+  </div>
+</div>
+
+
+<div class="section" id="q5">
+  <div class="card">
+    <h2>문5. TCP 혼잡제어</h2>
+    <div class="banner-row"><span class="banner banner-volume-standard">분량 표준 충족 — 기본 상한 6점 (28줄, 1.3쪽)</span>
+<span class="banner banner-curve">필수 커브 적용 (raw 3.8 → 커브 후 3.8)</span></div>
+    
+    <div class="score-box">
+      <div class="score-item">
+        <div class="label"><span class="badge badge-blue">공식 점수</span></div>
+        <div class="value fail">3.7</div>
+        <div class="max">/ 10점 (정량)</div>
+      </div>
+      <div class="score-item">
+        <div class="label"><span class="badge badge-purple">별도 피드백</span></div>
+        <div class="value" style="color:var(--purple)">5.7</div>
+        <div class="max">/ 10점 (정성)</div>
+      </div>
+      <div class="score-item">
+        <div class="label">기준선</div>
+        <div class="value fail">미달</div>
+        <div class="max">기준 6점</div>
+      </div>
+      <div class="score-item">
+        <div class="label">분량</div>
+        <div class="value pass">28줄</div>
+        <div class="max">1.3쪽 · 기본 상한 6점</div>
+      </div>
+    </div>
+    
+    <p style="font-size:0.85rem;color:var(--text-light);">답안 위치: <span class="page-ref">6쪽</span><span class="page-ref">7쪽</span> | 체크리스트: 2W_01_07_TCP혼잡제어.md (코드: 2W_01_07, v2.2)</p>
+    
+    <div class="bonus-trigger-box not-triggered">
+      <div class="btb-title">가점 미발동 — 조건 미충족</div>
+      <div class="btb-list">
+        <div class="btb-item ng"><span class="btb-chk ng">✗</span><span><strong>필수 80% 이상 인정</strong> — <span style="font-size:0.75rem;color:#6b7280;">현재 필수 인정률 30%</span></span></div><div class="btb-item ng"><span class="btb-chk ng">✗</span><span><strong>가점 팩트 1개 이상 ✓</strong> — <span style="font-size:0.75rem;color:#6b7280;">가점 yes/partial 1개 이상</span></span></div><div class="btb-item ok"><span class="btb-chk ok">✓</span><span><strong>구조 점수 충족</strong> — <span style="font-size:0.75rem;color:#6b7280;">구조 ≥ 0.5</span></span></div><div class="btb-item ng"><span class="btb-chk ng">✗</span><span><strong>차별화 분량(bonus_eligible)</strong> — <span style="font-size:0.75rem;color:#6b7280;">30줄 / 1.3쪽 이상</span></span></div>
+      </div>
+      <p style="font-size:0.78rem;color:#6b7280;margin-top:0.4rem;">미충족 조건: 필수 80% 이상 인정, 가점 팩트 1개 이상 ✓, 차별화 분량(bonus_eligible)</p>
+    </div>
+    
+    
+    <details class="calc-trace">
+      <summary>▶ 점수 계산 추적 보기</summary>
+      <pre>raw 점수: 필수 2.81 + 가점 0.50 + 구조 0.50 = 3.81
+필수 커브 적용: raw 필수 4.31 → 커브 후 2.81 (−1.5)
+분량: 28줄 (1.3쪽) → standard 구간
+내용 검증: 통과
+분량 상한: 6.00점
+상한 적용 후: 3.81점
+가점 발동: NO — 0점
+최종 상한 (가점 반영): 7점
+최종 제안 점수 (0.3 단위 반올림): 3.7점</pre>
+    </details>
+    
+  </div>
+
+  <div class="card">
+    <h3>교재 핵심 팩트 체크리스트</h3>
+    <div class="checklist">
+      <div class="check-item"><div class="check-icon no">✗</div><div class="check-text"><div class="fact"><span class="fact-tag required">필수</span>혼잡 제어 등장 배경 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.0 → 0.00점)</span></div><div class="detail">위치: - · 1986년 혼잡 붕괴 사건 또는 Van Jacobson 1988 혼잡 제어 제안 미언급</div></div></div>
+<div class="check-item"><div class="check-icon no">✗</div><div class="check-text"><div class="fact"><span class="fact-tag required">필수</span>CWND와 흐름 제어 비교 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.5 → 0.00점)</span></div><div class="detail">위치: - · CWND·RWND 구분 및 min(CWND,RWND) 미기재. 혼잡제어·흐름제어 구분 부족</div></div></div>
+<div class="check-item"><div class="check-icon yes">✓</div><div class="check-text"><div class="fact"><span class="fact-tag required">필수</span>4단계 메커니즘 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.5 → 1.50점)</span></div><div class="detail">위치: 2단락 · 답안 5-6쪽: &#x27;Slow Start → Congestion Avoidance → Fast Retransmit → Fast Recovery&#x27; 4단계 명시 + 각 단계 동작(지수/선형/3중복/절반) 표로 정리</div></div></div>
+<div class="check-item"><div class="check-icon partial">△</div><div class="check-text"><div class="fact"><span class="fact-tag required">필수</span>CWND 변화 그래프/수치 예시 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.5 → 0.75점)</span></div><div class="detail">위치: 2단락 · 답안 5쪽: Taho/Reno 혼잡도 그래프 도식 + ssthresh1/2 표기 + 3ACK/TimeOut 구분. 1→2→4→8 수치 예시는 부족</div></div></div>
+<div class="check-item"><div class="check-icon no">✗</div><div class="check-text"><div class="fact"><span class="fact-tag required">필수</span>AIMD 원리 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.5 → 0.00점)</span></div><div class="detail">위치: - · AIMD(Additive Increase Multiplicative Decrease) 용어 또는 가산/승산 원리 미기재</div></div></div>
+<div class="check-item"><div class="check-icon partial">△</div><div class="check-text"><div class="fact"><span class="fact-tag bonus">가점</span>TCP 알고리즘 변형 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.0 → 0.50점)</span></div><div class="detail">위치: 2단락 · 답안 5쪽 그래프: &#x27;Taho, Reno&#x27; 2개 알고리즘 명시. CUBIC/BBR 등 차이점 설명 부족</div></div></div>
+<div class="check-item"><div class="check-icon no">✗</div><div class="check-text"><div class="fact"><span class="fact-tag bonus">가점</span>실무 사례(BBR/QUIC) <span style="font-size:0.72rem;color:#6b7280;">(배점 1.0 → 0.00점)</span></div><div class="detail">위치: - · BBR/YouTube/QUIC/넷플릭스 등 실무 사례 미기재</div></div></div>
+<div class="check-item"><div class="check-icon partial">△</div><div class="check-text"><div class="fact"><span class="fact-tag structure">구조</span>구조 완결성 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.0 → 0.50점)</span></div><div class="detail">위치: 전체 · 정의→그래프→4단계 표→마무리(ARQ/FEC 추가) 흐름. 다만 ARQ/FEC는 오류제어로 토픽과 결이 달라 혼선</div></div></div>
+    </div>
+    
+    <div class="comment-box good">
+      <div class="comment-title">잘한 점</div>
+      <ul><li>Slow Start·Congestion Avoidance·Fast Retransmit·Fast Recovery 4단계 명확 기술</li>
+<li>Taho/Reno 혼잡도 그래프로 시각적 이해 도움</li>
+<li>3ACK vs TimeOut 대응 차이 명시</li></ul>
+    </div>
+    <div class="comment-box improve">
+      <div class="comment-title">보완 필요</div>
+      <ul><li>1986년 혼잡 붕괴 배경 및 Van Jacobson 1988 등장사 추가</li>
+<li>CWND와 RWND 구분, 실제 전송=min(CWND,RWND) 수식 명시</li>
+<li>AIMD(가산 증가·승산 감소) 용어와 원리 필수 추가</li>
+<li>BBR·QUIC 실무 사례로 차별화</li></ul>
+    </div>
+    
+        <div class="comment-box critical">
+          <div class="comment-title">긴급 보완</div>
+          <ul><li>AIMD 미언급은 핵심 원리 누락</li></ul>
+        </div>
+        
+    
+  </div>
+
+  <div class="card">
+    <h3>정성 평가 <span class="badge badge-purple">별도 피드백 (공식점수 미포함)</span></h3>
+    <div class="qual-4"><div class="qual-item qual-purple"><div class="qual-header"><div class="qual-title">논리적 흐름</div><div class="qual-score" style="color:var(--purple)">1.7 / 3</div></div><div class="qual-detail">정의→그래프→4단계 흐름은 양호. ARQ/FEC 추가는 토픽과 결이 달라 흐름 혼선.</div></div>
+<div class="qual-item qual-purple"><div class="qual-header"><div class="qual-title">시각적 전달력·가독성</div><div class="qual-score" style="color:var(--purple)">2.3 / 3</div></div><div class="qual-detail">Taho/Reno 혼잡도 그래프 + 4단계 동작 표 조합. 시각화 우수.</div></div>
+<div class="qual-item qual-purple"><div class="qual-header"><div class="qual-title">차별화 역량</div><div class="qual-score" style="color:var(--purple)">0.7 / 2</div></div><div class="qual-detail">Taho/Reno 언급은 시도. BBR/QUIC 등 최신 트렌드 없이 차별화 미흡.</div></div>
+<div class="qual-item qual-purple"><div class="qual-header"><div class="qual-title">전략적 관리</div><div class="qual-score" style="color:var(--purple)">1.0 / 2</div></div><div class="qual-detail">1.3쪽 분량이나 ARQ/FEC 지면 사용이 전략적 판단 아쉬움.</div></div></div>
+  </div>
+
+  <div class="card">
+    
+    <div class="mentor-area" style="margin-top:1rem;">
+      <h3>멘토 확정 — 문5</h3>
+      <div class="mentor-input-row">
+        <label>정량 최종:</label><input class="mentor-input" type="number" min="0" max="10" placeholder="3.7" style="font-weight:700;font-size:1.1rem;">
+        <span style="font-size:0.85rem;color:var(--text-light);">/ 10 <span class="badge badge-blue">공식</span></span>
+        <label style="margin-left:1rem;">정성 최종:</label><input class="mentor-input" type="number" min="0" max="10" placeholder="5.7" style="font-weight:700;font-size:1.1rem;border-color:#805ad5;">
+        <span style="font-size:0.85rem;color:#6b46c1;">/ 10 <span class="badge badge-purple">별도</span></span>
+      </div>
+      <div class="mentor-input-row" style="margin-top:0.5rem;">
+        <label style="min-width:110px;">코멘트:</label>
+        <textarea class="mentor-textarea" placeholder="문5 최종 코멘트..."></textarea>
+      </div>
+    </div>
+    
+  </div>
+</div>
+
+
+<div class="section" id="q6">
+  <div class="card">
+    <h2>문6. OSPF 라우팅 프로토콜</h2>
+    <div class="banner-row"><span class="banner banner-volume-partial">분량 부족 — 정량 상한 4점 (22줄, 1.0쪽)</span>
+<span class="banner banner-content-downgraded">내용 미달 — 분량 구간 1단계 강등</span>
+<span class="banner banner-curve">필수 커브 적용 (raw 2.6 → 커브 후 2.6)</span></div>
+    
+    <div class="score-box">
+      <div class="score-item">
+        <div class="label"><span class="badge badge-blue">공식 점수</span></div>
+        <div class="value fail">2.7</div>
+        <div class="max">/ 10점 (정량)</div>
+      </div>
+      <div class="score-item">
+        <div class="label"><span class="badge badge-purple">별도 피드백</span></div>
+        <div class="value" style="color:var(--purple)">4.3</div>
+        <div class="max">/ 10점 (정성)</div>
+      </div>
+      <div class="score-item">
+        <div class="label">기준선</div>
+        <div class="value fail">미달</div>
+        <div class="max">기준 6점</div>
+      </div>
+      <div class="score-item">
+        <div class="label">분량</div>
+        <div class="value warn">22줄</div>
+        <div class="max">1.0쪽 · 상한 4점</div>
+      </div>
+    </div>
+    
+    <p style="font-size:0.85rem;color:var(--text-light);">답안 위치: <span class="page-ref">13쪽</span> | 체크리스트: 2W_01_08_OSPF라우팅프로토콜.md (코드: 2W_01_08, v2.2)</p>
+    
+    <div class="bonus-trigger-box not-triggered">
+      <div class="btb-title">가점 미발동 — 조건 미충족</div>
+      <div class="btb-list">
+        <div class="btb-item ng"><span class="btb-chk ng">✗</span><span><strong>필수 80% 이상 인정</strong> — <span style="font-size:0.75rem;color:#6b7280;">현재 필수 인정률 20%</span></span></div><div class="btb-item ng"><span class="btb-chk ng">✗</span><span><strong>가점 팩트 1개 이상 ✓</strong> — <span style="font-size:0.75rem;color:#6b7280;">가점 yes/partial 1개 이상</span></span></div><div class="btb-item ok"><span class="btb-chk ok">✓</span><span><strong>구조 점수 충족</strong> — <span style="font-size:0.75rem;color:#6b7280;">구조 ≥ 0.5</span></span></div><div class="btb-item ng"><span class="btb-chk ng">✗</span><span><strong>차별화 분량(bonus_eligible)</strong> — <span style="font-size:0.75rem;color:#6b7280;">30줄 / 1.3쪽 이상</span></span></div>
+      </div>
+      <p style="font-size:0.78rem;color:#6b7280;margin-top:0.4rem;">미충족 조건: 필수 80% 이상 인정, 가점 팩트 1개 이상 ✓, 차별화 분량(bonus_eligible)</p>
+    </div>
+    
+    
+    <details class="calc-trace">
+      <summary>▶ 점수 계산 추적 보기</summary>
+      <pre>raw 점수: 필수 1.56 + 가점 0.50 + 구조 0.50 = 2.56
+필수 커브 적용: raw 필수 3.06 → 커브 후 1.56 (−1.5)
+분량: 22줄 (1.0쪽) → partial_high 구간
+내용 검증: 불통과 → 분량 구간 1단계 강등 (상한 4.0 적용)
+분량 상한: 4.00점
+상한 적용 후: 2.56점
+가점 발동: NO — 0점
+최종 상한 (가점 반영): 7점
+최종 제안 점수 (0.3 단위 반올림): 2.7점</pre>
+    </details>
+    
+  </div>
+
+  <div class="card">
+    <h3>교재 핵심 팩트 체크리스트</h3>
+    <div class="checklist">
+      <div class="check-item"><div class="check-icon partial">△</div><div class="check-text"><div class="fact"><span class="fact-tag required">필수</span>OSPF 정의와 표준 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.0 → 0.50점)</span></div><div class="detail">위치: 1단락 · 답안 12쪽: &#x27;대규모 알고리즘과 Symbolic Length 기반, 광대 상에 따라 최단거리 라우팅 알고리즘&#x27; — 정의 일부 있으나 링크 상태/IGP/RFC 2328 등 표준 명시 부족 (v2.2 표준번호 유지)</div></div></div>
+<div class="check-item"><div class="check-icon no">✗</div><div class="check-text"><div class="fact"><span class="fact-tag required">필수</span>거리 벡터 vs 링크 상태 비교 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.5 → 0.00점)</span></div><div class="detail">위치: - · DV(RIP/벨만-포드) vs LS(OSPF/다익스트라) 비교 미기재</div></div></div>
+<div class="check-item"><div class="check-icon no">✗</div><div class="check-text"><div class="fact"><span class="fact-tag required">필수</span>다익스트라 알고리즘과 Cost <span style="font-size:0.72rem;color:#6b7280;">(배점 1.5 → 0.00점)</span></div><div class="detail">위치: - · 다익스트라 명시 없음(Symbolic Length 기재). Cost=RBW/IFW 수식 미기재</div></div></div>
+<div class="check-item"><div class="check-icon partial">△</div><div class="check-text"><div class="fact"><span class="fact-tag required">필수</span>OSPF 동작 5단계 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.5 → 0.75점)</span></div><div class="detail">위치: 2단락 · 답안 12쪽 표: 룩업(링크 발견·감지), 업데이트(경유 상태 컨버전스), 수렴(목적지 최단 경로) 3단계. Hello/DBD/LSA 플러딩/SPF 5단계 중 4개 이상 충족 부족</div></div></div>
+<div class="check-item"><div class="check-icon no">✗</div><div class="check-text"><div class="fact"><span class="fact-tag required">필수</span>Area 계층 구조 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.5 → 0.00점)</span></div><div class="detail">위치: - · Area 0(Backbone), ABR/ASBR, Stub/NSSA 등 Area 구조 미기재</div></div></div>
+<div class="check-item"><div class="check-icon no">✗</div><div class="check-text"><div class="fact"><span class="fact-tag bonus">가점</span>OSPF 패킷 5종 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.0 → 0.00점)</span></div><div class="detail">위치: - · Hello/DBD/LSR/LSU/LSAck 5종 미기재</div></div></div>
+<div class="check-item"><div class="check-icon partial">△</div><div class="check-text"><div class="fact"><span class="fact-tag bonus">가점</span>실무 사례 또는 연관 프로토콜 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.0 → 0.50점)</span></div><div class="detail">위치: 3단락 · 답안 12쪽 마무리: &#x27;OSPF 외에도 경로 상태 기반 EIGRP 존재&#x27; — 연관 프로토콜 1개 이름 언급. 구체 비교 부족</div></div></div>
+<div class="check-item"><div class="check-icon partial">△</div><div class="check-text"><div class="fact"><span class="fact-tag structure">구조</span>구조 완결성 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.0 → 0.50점)</span></div><div class="detail">위치: 전체 · 정의 → 개념도 → 상세 표 → 연관 프로토콜 3부 흐름. 단락 구분 혼재</div></div></div>
+    </div>
+    
+    <div class="comment-box good">
+      <div class="comment-title">잘한 점</div>
+      <ul><li>OSPF 최단 거리 라우팅 개념 제시</li>
+<li>룩업-업데이트-수렴 동작 흐름 기술</li>
+<li>EIGRP 연관 프로토콜 언급</li></ul>
+    </div>
+    <div class="comment-box improve">
+      <div class="comment-title">보완 필요</div>
+      <ul><li>OSPF=링크 상태(Link State) 프로토콜, RFC 2328 표준 명시</li>
+<li>다익스트라 SPF 알고리즘 + Cost=RBW/IFW 수식 필수</li>
+<li>OSPF 5단계(Hello→DBD→LSA 플러딩→DR/BDR→SPF) 보강</li>
+<li>Area 0 Backbone + ABR/ASBR 계층 구조 반드시 추가</li>
+<li>Hello/DBD/LSR/LSU/LSAck 패킷 5종 기능 설명</li></ul>
+    </div>
+    
+        <div class="comment-box critical">
+          <div class="comment-title">긴급 보완</div>
+          <ul><li>Area 계층·다익스트라 미기재는 OSPF 핵심 결격</li></ul>
+        </div>
+        
+    
+  </div>
+
+  <div class="card">
+    <h3>정성 평가 <span class="badge badge-purple">별도 피드백 (공식점수 미포함)</span></h3>
+    <div class="qual-4"><div class="qual-item qual-purple"><div class="qual-header"><div class="qual-title">논리적 흐름</div><div class="qual-score" style="color:var(--purple)">1.3 / 3</div></div><div class="qual-detail">정의→개념도→표→연관 프로토콜 흐름. 다익스트라·Area 등 핵심 구조 부재.</div></div>
+<div class="qual-item qual-purple"><div class="qual-header"><div class="qual-title">시각적 전달력·가독성</div><div class="qual-score" style="color:var(--purple)">1.7 / 3</div></div><div class="qual-detail">개념도 + 표 활용하나 다익스트라 경로 계산 시각화 부족.</div></div>
+<div class="qual-item qual-purple"><div class="qual-header"><div class="qual-title">차별화 역량</div><div class="qual-score" style="color:var(--purple)">0.3 / 2</div></div><div class="qual-detail">EIGRP 언급 1개. 실무 사례나 패킷 5종 구체 부족.</div></div>
+<div class="qual-item qual-purple"><div class="qual-header"><div class="qual-title">전략적 관리</div><div class="qual-score" style="color:var(--purple)">1.0 / 2</div></div><div class="qual-detail">1.0쪽 분량이나 Symbolic Length 등 부정확 용어로 전략적 판단 아쉬움.</div></div></div>
+  </div>
+
+  <div class="card">
+    
+    <div class="mentor-area" style="margin-top:1rem;">
+      <h3>멘토 확정 — 문6</h3>
+      <div class="mentor-input-row">
+        <label>정량 최종:</label><input class="mentor-input" type="number" min="0" max="10" placeholder="2.7" style="font-weight:700;font-size:1.1rem;">
+        <span style="font-size:0.85rem;color:var(--text-light);">/ 10 <span class="badge badge-blue">공식</span></span>
+        <label style="margin-left:1rem;">정성 최종:</label><input class="mentor-input" type="number" min="0" max="10" placeholder="4.3" style="font-weight:700;font-size:1.1rem;border-color:#805ad5;">
+        <span style="font-size:0.85rem;color:#6b46c1;">/ 10 <span class="badge badge-purple">별도</span></span>
+      </div>
+      <div class="mentor-input-row" style="margin-top:0.5rem;">
+        <label style="min-width:110px;">코멘트:</label>
+        <textarea class="mentor-textarea" placeholder="문6 최종 코멘트..."></textarea>
+      </div>
+    </div>
+    
+  </div>
+</div>
+
+
+<div class="section" id="q7">
+  <div class="card">
+    <h2>문7. 6G 이동통신과 AI-RAN</h2>
+    <div class="banner-row"><span class="banner banner-volume-standard">분량 표준 충족 — 기본 상한 6점 (22줄, 1.0쪽)</span>
+<span class="banner banner-curve">필수 커브 적용 (raw 3.9 → 커브 후 3.9)</span></div>
+    
+    <div class="score-box">
+      <div class="score-item">
+        <div class="label"><span class="badge badge-blue">공식 점수</span></div>
+        <div class="value warn">4.0</div>
+        <div class="max">/ 10점 (정량)</div>
+      </div>
+      <div class="score-item">
+        <div class="label"><span class="badge badge-purple">별도 피드백</span></div>
+        <div class="value" style="color:var(--purple)">5.3</div>
+        <div class="max">/ 10점 (정성)</div>
+      </div>
+      <div class="score-item">
+        <div class="label">기준선</div>
+        <div class="value fail">미달</div>
+        <div class="max">기준 6점</div>
+      </div>
+      <div class="score-item">
+        <div class="label">분량</div>
+        <div class="value pass">22줄</div>
+        <div class="max">1.0쪽 · 기본 상한 6점</div>
+      </div>
+    </div>
+    
+    <p style="font-size:0.85rem;color:var(--text-light);">답안 위치: <span class="page-ref">11쪽</span> | 체크리스트: 2W_01_09_6G이동통신과AI-RAN.md (코드: 2W_01_09, v2.2)</p>
+    
+    <div class="bonus-trigger-box not-triggered">
+      <div class="btb-title">가점 미발동 — 조건 미충족</div>
+      <div class="btb-list">
+        <div class="btb-item ng"><span class="btb-chk ng">✗</span><span><strong>필수 80% 이상 인정</strong> — <span style="font-size:0.75rem;color:#6b7280;">현재 필수 인정률 40%</span></span></div><div class="btb-item ng"><span class="btb-chk ng">✗</span><span><strong>가점 팩트 1개 이상 ✓</strong> — <span style="font-size:0.75rem;color:#6b7280;">가점 yes/partial 1개 이상</span></span></div><div class="btb-item ok"><span class="btb-chk ok">✓</span><span><strong>구조 점수 충족</strong> — <span style="font-size:0.75rem;color:#6b7280;">구조 ≥ 0.5</span></span></div><div class="btb-item ng"><span class="btb-chk ng">✗</span><span><strong>차별화 분량(bonus_eligible)</strong> — <span style="font-size:0.75rem;color:#6b7280;">30줄 / 1.3쪽 이상</span></span></div>
+      </div>
+      <p style="font-size:0.78rem;color:#6b7280;margin-top:0.4rem;">미충족 조건: 필수 80% 이상 인정, 가점 팩트 1개 이상 ✓, 차별화 분량(bonus_eligible)</p>
+    </div>
+    
+    
+    <details class="calc-trace">
+      <summary>▶ 점수 계산 추적 보기</summary>
+      <pre>raw 점수: 필수 3.44 + 가점 0.00 + 구조 0.50 = 3.94
+필수 커브 적용: raw 필수 4.94 → 커브 후 3.44 (−1.5)
+분량: 22줄 (1.0쪽) → standard 구간
+내용 검증: 통과
+분량 상한: 6.00점
+상한 적용 후: 3.94점
+가점 발동: NO — 0점
+최종 상한 (가점 반영): 7점
+최종 제안 점수 (0.3 단위 반올림): 4.0점</pre>
+    </details>
+    
+  </div>
+
+  <div class="card">
+    <h3>교재 핵심 팩트 체크리스트</h3>
+    <div class="checklist">
+      <div class="check-item"><div class="check-icon partial">△</div><div class="check-text"><div class="fact"><span class="fact-tag required">필수</span>6G 비전과 KPI <span style="font-size:0.72rem;color:#6b7280;">(배점 1.5 → 0.75점)</span></div><div class="detail">위치: 1단락 · 답안 10쪽: &#x27;초저지 헤르츠 대역, 초전짐 MIMO등 초고속·다중사용 차세대 이동기술&#x27; — THz·MIMO 언급. 1Tbps/0.1ms 등 구체 KPI 수치 부족</div></div></div>
+<div class="check-item"><div class="check-icon partial">△</div><div class="check-text"><div class="fact"><span class="fact-tag required">필수</span>AI-RAN 정의 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.5 → 0.75점)</span></div><div class="detail">위치: 1단락 · 답안 10쪽: &#x27;AI 통합 기반으로 RAN 인프라 효율활용·자원 최적화 추구 6G 핵심기술&#x27; — AI-RAN 정의는 있으나 NVIDIA/Alliance 주도 기업 미언급</div></div></div>
+<div class="check-item"><div class="check-icon no">✗</div><div class="check-text"><div class="fact"><span class="fact-tag required">필수</span>기존 RAN vs AI-RAN 비교 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.5 → 0.00점)</span></div><div class="detail">위치: - · 규칙 기반 vs AI 동적, 정적 vs 실시간 예측 등 비교 미기재</div></div></div>
+<div class="check-item"><div class="check-icon partial">△</div><div class="check-text"><div class="fact"><span class="fact-tag required">필수</span>O-RAN/RIC 아키텍처 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.5 → 0.75점)</span></div><div class="detail">위치: 2단락 · 답안 10쪽 개념도: &#x27;RU-DU/CU-코어, 분산형&#x27; 구조 언급 — O-RAN Disaggregation 구조 일부 시사. RIC/xApp/rApp 구체 명시 부족</div></div></div>
+<div class="check-item"><div class="check-icon partial">△</div><div class="check-text"><div class="fact"><span class="fact-tag required">필수</span>AI-RAN 5대 핵심 기능 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.0 → 0.50점)</span></div><div class="detail">위치: 2단락 · 답안 10쪽: &#x27;AI on RAN/AI for RAN/AI and RAN&#x27; 3구분 — 동적 스펙트럼·빔포밍·핸드오버·자가 치유·그린 네트워킹 5대 기능과 다른 분류 체계</div></div></div>
+<div class="check-item"><div class="check-icon no">✗</div><div class="check-text"><div class="fact"><span class="fact-tag bonus">가점</span>6G 핵심 기술 6종 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.0 → 0.00점)</span></div><div class="detail">위치: 1단락 · THz·MIMO 각 1개씩 언급. NTN/RIS/디지털 트윈/시맨틱 등 3개 이상 충족 부족</div></div></div>
+<div class="check-item"><div class="check-icon no">✗</div><div class="check-text"><div class="fact"><span class="fact-tag bonus">가점</span>실무 사례 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.0 → 0.00점)</span></div><div class="detail">위치: - · SK텔레콤·NVIDIA·T-Mobile·Hexa-X 등 구체 사례 미기재</div></div></div>
+<div class="check-item"><div class="check-icon partial">△</div><div class="check-text"><div class="fact"><span class="fact-tag structure">구조</span>구조 완결성 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.0 → 0.50점)</span></div><div class="detail">위치: 전체 · 6G/AI-RAN 정의→개념도→AI-RAN 유형 표→마무리. 단락 구분은 혼재</div></div></div>
+    </div>
+    
+    <div class="comment-box good">
+      <div class="comment-title">잘한 점</div>
+      <ul><li>AI on/for/and RAN 3구분으로 AI-RAN 역할 체계화</li>
+<li>UE-RU-DU/CU-코어 개념도로 네트워크 구조 시각화</li>
+<li>오케스트레이션·분산형 개념 언급</li></ul>
+    </div>
+    <div class="comment-box improve">
+      <div class="comment-title">보완 필요</div>
+      <ul><li>6G KPI 수치(1Tbps, 0.1ms, 2030 상용화) 명시</li>
+<li>O-RAN RIC(Near-RT/Non-RT) xApp/rApp 아키텍처 상세 기술</li>
+<li>기존 RAN vs AI-RAN 체계 비교(자원 할당·간섭·빔포밍)</li>
+<li>SK텔레콤 자율 네트워크 Lv3 또는 NVIDIA+T-Mobile AI-on-5G 사례 추가</li></ul>
+    </div>
+    
+    
+  </div>
+
+  <div class="card">
+    <h3>정성 평가 <span class="badge badge-purple">별도 피드백 (공식점수 미포함)</span></h3>
+    <div class="qual-4"><div class="qual-item qual-purple"><div class="qual-header"><div class="qual-title">논리적 흐름</div><div class="qual-score" style="color:var(--purple)">1.7 / 3</div></div><div class="qual-detail">6G/AI-RAN 정의→개념도→3구분 흐름. 기존 RAN 비교 부재로 흐름 부족.</div></div>
+<div class="qual-item qual-purple"><div class="qual-header"><div class="qual-title">시각적 전달력·가독성</div><div class="qual-score" style="color:var(--purple)">2.0 / 3</div></div><div class="qual-detail">UE-RU-DU/CU-코어 개념도 + AI on/for/and RAN 표 조합. 간결.</div></div>
+<div class="qual-item qual-purple"><div class="qual-header"><div class="qual-title">차별화 역량</div><div class="qual-score" style="color:var(--purple)">0.7 / 2</div></div><div class="qual-detail">AI on/for/and RAN 독자적 분류 시도는 긍정. 구체 사례 부족.</div></div>
+<div class="qual-item qual-purple"><div class="qual-header"><div class="qual-title">전략적 관리</div><div class="qual-score" style="color:var(--purple)">1.0 / 2</div></div><div class="qual-detail">1.0쪽 분량. AI-RAN 분류 중심 전략이나 기본 KPI 수치 부족.</div></div></div>
+  </div>
+
+  <div class="card">
+    
+    <div class="mentor-area" style="margin-top:1rem;">
+      <h3>멘토 확정 — 문7</h3>
+      <div class="mentor-input-row">
+        <label>정량 최종:</label><input class="mentor-input" type="number" min="0" max="10" placeholder="4.0" style="font-weight:700;font-size:1.1rem;">
+        <span style="font-size:0.85rem;color:var(--text-light);">/ 10 <span class="badge badge-blue">공식</span></span>
+        <label style="margin-left:1rem;">정성 최종:</label><input class="mentor-input" type="number" min="0" max="10" placeholder="5.3" style="font-weight:700;font-size:1.1rem;border-color:#805ad5;">
+        <span style="font-size:0.85rem;color:#6b46c1;">/ 10 <span class="badge badge-purple">별도</span></span>
+      </div>
+      <div class="mentor-input-row" style="margin-top:0.5rem;">
+        <label style="min-width:110px;">코멘트:</label>
+        <textarea class="mentor-textarea" placeholder="문7 최종 코멘트..."></textarea>
+      </div>
+    </div>
+    
+  </div>
+</div>
+
+
+<div class="section" id="q8">
+  <div class="card">
+    <h2>문8. 마이클 포터 5-Forces Model</h2>
+    <div class="banner-row"><span class="banner banner-volume-standard">분량 표준 충족 — 기본 상한 6점 (25줄, 1.1쪽)</span>
+<span class="banner banner-curve">필수 커브 적용 (raw 7.4 → 커브 후 7.4)</span></div>
+    
+    <div class="score-box">
+      <div class="score-item">
+        <div class="label"><span class="badge badge-blue">공식 점수</span></div>
+        <div class="value pass">6.0</div>
+        <div class="max">/ 10점 (정량)</div>
+      </div>
+      <div class="score-item">
+        <div class="label"><span class="badge badge-purple">별도 피드백</span></div>
+        <div class="value" style="color:var(--purple)">6.7</div>
+        <div class="max">/ 10점 (정성)</div>
+      </div>
+      <div class="score-item">
+        <div class="label">기준선</div>
+        <div class="value pass">달성</div>
+        <div class="max">기준 6점</div>
+      </div>
+      <div class="score-item">
+        <div class="label">분량</div>
+        <div class="value pass">25줄</div>
+        <div class="max">1.1쪽 · 기본 상한 6점</div>
+      </div>
+    </div>
+    
+    <p style="font-size:0.85rem;color:var(--text-light);">답안 위치: <span class="page-ref">3쪽</span><span class="page-ref">4쪽</span> | 체크리스트: 2W_01_11_마이클포터_5Forces.md (코드: 2W_01_11, v2.2)</p>
+    
+    <div class="bonus-trigger-box not-triggered">
+      <div class="btb-title">가점 미발동 — 조건 미충족</div>
+      <div class="btb-list">
+        <div class="btb-item ok"><span class="btb-chk ok">✓</span><span><strong>필수 80% 이상 인정</strong> — <span style="font-size:0.75rem;color:#6b7280;">현재 필수 인정률 70%</span></span></div><div class="btb-item ng"><span class="btb-chk ng">✗</span><span><strong>가점 팩트 1개 이상 ✓</strong> — <span style="font-size:0.75rem;color:#6b7280;">가점 yes/partial 1개 이상</span></span></div><div class="btb-item ok"><span class="btb-chk ok">✓</span><span><strong>구조 점수 충족</strong> — <span style="font-size:0.75rem;color:#6b7280;">구조 ≥ 0.5</span></span></div><div class="btb-item ng"><span class="btb-chk ng">✗</span><span><strong>차별화 분량(bonus_eligible)</strong> — <span style="font-size:0.75rem;color:#6b7280;">30줄 / 1.3쪽 이상</span></span></div>
+      </div>
+      <p style="font-size:0.78rem;color:#6b7280;margin-top:0.4rem;">미충족 조건: 가점 팩트 1개 이상 ✓, 차별화 분량(bonus_eligible)</p>
+    </div>
+    
+    
+    <details class="calc-trace">
+      <summary>▶ 점수 계산 추적 보기</summary>
+      <pre>raw 점수: 필수 5.94 + 가점 0.50 + 구조 1.00 = 7.44
+필수 커브 적용: raw 필수 7.44 → 커브 후 5.94 (−1.5)
+분량: 25줄 (1.1쪽) → standard 구간
+내용 검증: 통과
+분량 상한: 6.00점
+상한 적용 후: 6.00점
+가점 발동: NO — 0점
+최종 상한 (가점 반영): 7점
+최종 제안 점수 (0.3 단위 반올림): 6.0점</pre>
+    </details>
+    
+  </div>
+
+  <div class="card">
+    <h3>교재 핵심 팩트 체크리스트</h3>
+    <div class="checklist">
+      <div class="check-item"><div class="check-icon yes">✓</div><div class="check-text"><div class="fact"><span class="fact-tag required">필수</span>5-Forces Model 정의 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.5 → 1.50점)</span></div><div class="detail">위치: 1단락 · 답안 2쪽: &#x27;사업 경쟁·위협 세력을 5계로 분석. 비즈니스 전략 수립에 활용 프레임워크&#x27; — 산업 구조 분석 목적 명시 (v2.2 인물명 선택 완화)</div></div></div>
+<div class="check-item"><div class="check-icon yes">✓</div><div class="check-text"><div class="fact"><span class="fact-tag required">필수</span>5가지 경쟁 세력 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.5 → 1.50점)</span></div><div class="detail">위치: 2단락 · 답안 2-3쪽 개념도+표: 기존 경쟁자, 대체재 위협, 신규 진입 위협, 구매자 교섭력, 공급자 교섭력 — 5가지 모두 도식·표 명시</div></div></div>
+<div class="check-item"><div class="check-icon partial">△</div><div class="check-text"><div class="fact"><span class="fact-tag required">필수</span>진입 장벽 및 각 세력 강도 요인 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.5 → 0.75점)</span></div><div class="detail">위치: 2단락 · 답안 3쪽: &#x27;초기 고비용, 진입장벽 높음&#x27;(진입장벽 1개) + &#x27;구매자 소수, 유통채널 축소&#x27;, &#x27;공급자 소수&#x27; 등 강도 요인. 진입 장벽 3개 이상은 미흡</div></div></div>
+<div class="check-item"><div class="check-icon no">✗</div><div class="check-text"><div class="fact"><span class="fact-tag required">필수</span>3대 본원적 전략 연계 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.5 → 0.00점)</span></div><div class="detail">위치: - · 원가 우위, 차별화, 집중 3대 본원적 전략 미언급</div></div></div>
+<div class="check-item"><div class="check-icon yes">✓</div><div class="check-text"><div class="fact"><span class="fact-tag required">필수</span>IT 산업 적용 사례 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.0 → 1.00점)</span></div><div class="detail">위치: 2단락 · 답안 3쪽: &#x27;현대 홈쇼핑·상호 경쟁, 넷플릭스 DVD 대여(대체재), 반도체/스마트폰(진입장벽), 아마존/구찌(구매자), NVIDIA GPU(공급자)&#x27; — IT 산업 2개 이상 세력 적용</div></div></div>
+<div class="check-item"><div class="check-icon no">✗</div><div class="check-text"><div class="fact"><span class="fact-tag bonus">가점</span>한계와 보완 프레임워크 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.0 → 0.00점)</span></div><div class="detail">위치: - · 정적 분석 한계나 Value Net, RBV 등 보완 프레임워크 미기재</div></div></div>
+<div class="check-item"><div class="check-icon partial">△</div><div class="check-text"><div class="fact"><span class="fact-tag bonus">가점</span>연관 프레임워크(SWOT/가치 사슬) <span style="font-size:0.72rem;color:#6b7280;">(배점 1.0 → 0.50점)</span></div><div class="detail">위치: 3단락 · 답안 3쪽 마무리: &#x27;5-Force → PEST → SWOT 연계성 중요&#x27; — 연관 프레임워크 2개 이름 언급. 5-Forces와의 관계 설명은 부족</div></div></div>
+<div class="check-item"><div class="check-icon yes">✓</div><div class="check-text"><div class="fact"><span class="fact-tag structure">구조</span>구조 완결성 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.0 → 1.00점)</span></div><div class="detail">위치: 전체 · 1단락(정의) → 2단락(개념도·5세력 표) → 3단락(연관 프레임워크) 3부 흐름 + 5-Forces 도식 시도</div></div></div>
+    </div>
+    
+    <div class="comment-box good">
+      <div class="comment-title">잘한 점</div>
+      <ul><li>5가지 세력 도식으로 구조 명확히 전달</li>
+<li>넷플릭스·NVIDIA·반도체 등 IT 산업 사례 적용</li>
+<li>PEST/SWOT와의 연계성 언급으로 전략 확장 시사</li></ul>
+    </div>
+    <div class="comment-box improve">
+      <div class="comment-title">보완 필요</div>
+      <ul><li>원가 우위·차별화·집중 3대 본원적 전략 명시 필요</li>
+<li>진입 장벽 3개 이상(규모의 경제·자본·전환 비용 등) 보강</li>
+<li>Value Net, RBV 등 5-Forces 한계 보완 프레임워크 추가</li></ul>
+    </div>
+    
+    
+  </div>
+
+  <div class="card">
+    <h3>정성 평가 <span class="badge badge-purple">별도 피드백 (공식점수 미포함)</span></h3>
+    <div class="qual-4"><div class="qual-item qual-purple"><div class="qual-header"><div class="qual-title">논리적 흐름</div><div class="qual-score" style="color:var(--purple)">2.0 / 3</div></div><div class="qual-detail">정의→5세력 도식→세력별 표 구조. 본원적 전략 연계가 빠져 흐름 완결성 약화.</div></div>
+<div class="qual-item qual-purple"><div class="qual-header"><div class="qual-title">시각적 전달력·가독성</div><div class="qual-score" style="color:var(--purple)">2.3 / 3</div></div><div class="qual-detail">5-Forces 중앙 배치 도식 + 세력별 표에 IT 기업 사례 결합. 가독성 우수.</div></div>
+<div class="qual-item qual-purple"><div class="qual-header"><div class="qual-title">차별화 역량</div><div class="qual-score" style="color:var(--purple)">1.0 / 2</div></div><div class="qual-detail">NVIDIA·넷플릭스 IT 사례 제시로 차별화 시도. PEST/SWOT 언급도 긍정.</div></div>
+<div class="qual-item qual-purple"><div class="qual-header"><div class="qual-title">전략적 관리</div><div class="qual-score" style="color:var(--purple)">1.3 / 2</div></div><div class="qual-detail">1.1쪽 분량 표준 달성. 중앙 개념도 활용 전략 적절.</div></div></div>
+  </div>
+
+  <div class="card">
+    
+    <div class="mentor-area" style="margin-top:1rem;">
+      <h3>멘토 확정 — 문8</h3>
+      <div class="mentor-input-row">
+        <label>정량 최종:</label><input class="mentor-input" type="number" min="0" max="10" placeholder="6.0" style="font-weight:700;font-size:1.1rem;">
+        <span style="font-size:0.85rem;color:var(--text-light);">/ 10 <span class="badge badge-blue">공식</span></span>
+        <label style="margin-left:1rem;">정성 최종:</label><input class="mentor-input" type="number" min="0" max="10" placeholder="6.7" style="font-weight:700;font-size:1.1rem;border-color:#805ad5;">
+        <span style="font-size:0.85rem;color:#6b46c1;">/ 10 <span class="badge badge-purple">별도</span></span>
+      </div>
+      <div class="mentor-input-row" style="margin-top:0.5rem;">
+        <label style="min-width:110px;">코멘트:</label>
+        <textarea class="mentor-textarea" placeholder="문8 최종 코멘트..."></textarea>
+      </div>
+    </div>
+    
+  </div>
+</div>
+
+
+<div class="section" id="q9">
+  <div class="card">
+    <h2>문9. ISMS-P 인증 제도</h2>
+    <div class="banner-row"><span class="banner banner-volume-standard">분량 표준 충족 — 기본 상한 6점 (28줄, 1.3쪽)</span>
+<span class="banner banner-curve">필수 커브 적용 (raw 8.4 → 커브 후 8.4)</span></div>
+    
+    <div class="score-box">
+      <div class="score-item">
+        <div class="label"><span class="badge badge-blue">공식 점수</span></div>
+        <div class="value pass">6.0</div>
+        <div class="max">/ 10점 (정량)</div>
+      </div>
+      <div class="score-item">
+        <div class="label"><span class="badge badge-purple">별도 피드백</span></div>
+        <div class="value" style="color:var(--purple)">6.7</div>
+        <div class="max">/ 10점 (정성)</div>
+      </div>
+      <div class="score-item">
+        <div class="label">기준선</div>
+        <div class="value pass">달성</div>
+        <div class="max">기준 6점</div>
+      </div>
+      <div class="score-item">
+        <div class="label">분량</div>
+        <div class="value pass">28줄</div>
+        <div class="max">1.3쪽 · 기본 상한 6점</div>
+      </div>
+    </div>
+    
+    <p style="font-size:0.85rem;color:var(--text-light);">답안 위치: <span class="page-ref">2쪽</span><span class="page-ref">3쪽</span> | 체크리스트: 2W_01_12_ISMS-P인증제도.md (코드: 2W_01_12, v2.2)</p>
+    
+    <div class="bonus-trigger-box not-triggered">
+      <div class="btb-title">가점 미발동 — 조건 미충족</div>
+      <div class="btb-list">
+        <div class="btb-item ok"><span class="btb-chk ok">✓</span><span><strong>필수 80% 이상 인정</strong> — <span style="font-size:0.75rem;color:#6b7280;">현재 필수 인정률 80%</span></span></div><div class="btb-item ng"><span class="btb-chk ng">✗</span><span><strong>가점 팩트 1개 이상 ✓</strong> — <span style="font-size:0.75rem;color:#6b7280;">가점 yes/partial 1개 이상</span></span></div><div class="btb-item ok"><span class="btb-chk ok">✓</span><span><strong>구조 점수 충족</strong> — <span style="font-size:0.75rem;color:#6b7280;">구조 ≥ 0.5</span></span></div><div class="btb-item ng"><span class="btb-chk ng">✗</span><span><strong>차별화 분량(bonus_eligible)</strong> — <span style="font-size:0.75rem;color:#6b7280;">30줄 / 1.3쪽 이상</span></span></div>
+      </div>
+      <p style="font-size:0.78rem;color:#6b7280;margin-top:0.4rem;">미충족 조건: 가점 팩트 1개 이상 ✓, 차별화 분량(bonus_eligible)</p>
+    </div>
+    
+    
+    <details class="calc-trace">
+      <summary>▶ 점수 계산 추적 보기</summary>
+      <pre>raw 점수: 필수 6.88 + 가점 0.50 + 구조 1.00 = 8.38
+필수 커브 적용: raw 필수 8.38 → 커브 후 6.88 (−1.5)
+분량: 28줄 (1.3쪽) → standard 구간
+내용 검증: 통과
+분량 상한: 6.00점
+상한 적용 후: 6.00점
+가점 발동: NO — 0점
+최종 상한 (가점 반영): 7점
+최종 제안 점수 (0.3 단위 반올림): 6.0점</pre>
+    </details>
+    
+  </div>
+
+  <div class="card">
+    <h3>교재 핵심 팩트 체크리스트</h3>
+    <div class="checklist">
+      <div class="check-item"><div class="check-icon partial">△</div><div class="check-text"><div class="fact"><span class="fact-tag required">필수</span>ISMS-P 정의와 통합 배경 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.5 → 0.75점)</span></div><div class="detail">위치: 1단락 · 답안 1쪽: &#x27;조직의 정보보호, 개인정보보호 수준, 101개 항목 3영역 평가·인증하는 공인제도&#x27; — 정의 명시되었으나 2018년 ISMS+PIMS 통합 배경은 누락</div></div></div>
+<div class="check-item"><div class="check-icon yes">✓</div><div class="check-text"><div class="fact"><span class="fact-tag required">필수</span>법적 근거 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.5 → 1.50점)</span></div><div class="detail">위치: 1단락 · 개념도: &#x27;정보통신망법 제47조&#x27;, &#x27;개인정보보호법 32조&#x27; 명시 — 법률 2개 + 조문 번호 포함 (v2.2 법조문 판정 유지)</div></div></div>
+<div class="check-item"><div class="check-icon yes">✓</div><div class="check-text"><div class="fact"><span class="fact-tag required">필수</span>3대 영역 101개 항목 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.5 → 1.50점)</span></div><div class="detail">위치: 2단락 · 답안 표: &#x27;16개(관리체계 수립·운영), 64개(보호조치 요구사항), 21개(개인정보 처리 단계별 요구사항)&#x27; — 3대 영역 + 영역별 항목 수 정확 (수치 유지)</div></div></div>
+<div class="check-item"><div class="check-icon yes">✓</div><div class="check-text"><div class="fact"><span class="fact-tag required">필수</span>인증 의무 대상 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.0 → 1.00점)</span></div><div class="detail">위치: 2단락 · 답안 2쪽: ISP/IDC 도식 + &#x27;전년 1500억원, 일평균 100만명, 의료기관/상급종합 병원&#x27; 3유형 이상 (수치 유지)</div></div></div>
+<div class="check-item"><div class="check-icon partial">△</div><div class="check-text"><div class="fact"><span class="fact-tag required">필수</span>인증 절차 또는 개인정보 생명주기 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.5 → 0.75점)</span></div><div class="detail">위치: 2단락 · 답안 2쪽: &#x27;수집·이용·제공·파기 전 단계&#x27; 생명주기 일부 언급. 절차 6단계나 유효기간 3년 등 구체 기술 부족</div></div></div>
+<div class="check-item"><div class="check-icon no">✗</div><div class="check-text"><div class="fact"><span class="fact-tag bonus">가점</span>연관 제도(ISO 27001/GDPR) <span style="font-size:0.72rem;color:#6b7280;">(배점 1.0 → 0.00점)</span></div><div class="detail">위치: - · ISO 27001, GDPR, PIA 등 연관 제도 미언급</div></div></div>
+<div class="check-item"><div class="check-icon partial">△</div><div class="check-text"><div class="fact"><span class="fact-tag bonus">가점</span>위반 제재 또는 최신 동향 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.0 → 0.50점)</span></div><div class="detail">위치: 3단락 · 답안 2쪽 결론부: &#x27;최근 언급된 침해사고로 보안인증 충실히 줄여&#x27; — 관련 동향 시사적 언급. 과태료 3000만원 등 구체 수치 부족</div></div></div>
+<div class="check-item"><div class="check-icon yes">✓</div><div class="check-text"><div class="fact"><span class="fact-tag structure">구조</span>구조 완결성 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.0 → 1.00점)</span></div><div class="detail">위치: 전체 · 1단락(정의·개념도·법적 근거) → 2단락(3대 영역·의무 대상) → 마무리 3부 흐름 완성</div></div></div>
+    </div>
+    
+    <div class="comment-box good">
+      <div class="comment-title">잘한 점</div>
+      <ul><li>정보통신망법 제47조·개인정보보호법 32조 법조문 정확 기재</li>
+<li>3대 영역 항목 수(16+64+21=101) 정확 기술</li>
+<li>ISP/IDC/의료·학교 의무 대상을 도식+수치로 체계 정리</li></ul>
+    </div>
+    <div class="comment-box improve">
+      <div class="comment-title">보완 필요</div>
+      <ul><li>2018년 ISMS+PIMS 통합 배경 명시 필요</li>
+<li>인증 절차 6단계(신청→심사팀→서면→현장→보완→발급) 보강</li>
+<li>ISO 27001 비교 또는 과태료 3000만원 등 차별화 단락 추가</li></ul>
+    </div>
+    
+    
+  </div>
+
+  <div class="card">
+    <h3>정성 평가 <span class="badge badge-purple">별도 피드백 (공식점수 미포함)</span></h3>
+    <div class="qual-4"><div class="qual-item qual-purple"><div class="qual-header"><div class="qual-title">논리적 흐름</div><div class="qual-score" style="color:var(--purple)">2.0 / 3</div></div><div class="qual-detail">정의→개념도→항목표→의무대상 구조 양호. 일부 &#x27;의무 아닌 필요공증&#x27; 오해 소지가 흐름 약화.</div></div>
+<div class="qual-item qual-purple"><div class="qual-header"><div class="qual-title">시각적 전달력·가독성</div><div class="qual-score" style="color:var(--purple)">2.3 / 3</div></div><div class="qual-detail">과기부→ISMS-P→KISA 개념도와 16+64+21 항목 표 등 시각화 우수. 글씨 판독 양호.</div></div>
+<div class="qual-item qual-purple"><div class="qual-header"><div class="qual-title">차별화 역량</div><div class="qual-score" style="color:var(--purple)">1.0 / 2</div></div><div class="qual-detail">ISO 27001 비교나 구체 사례 미기재. 일반적 마무리.</div></div>
+<div class="qual-item qual-purple"><div class="qual-header"><div class="qual-title">전략적 관리</div><div class="qual-score" style="color:var(--purple)">1.3 / 2</div></div><div class="qual-detail">1.3쪽 분량으로 기준 초과. 단락 배분 적정.</div></div></div>
+  </div>
+
+  <div class="card">
+    
+    <div class="mentor-area" style="margin-top:1rem;">
+      <h3>멘토 확정 — 문9</h3>
+      <div class="mentor-input-row">
+        <label>정량 최종:</label><input class="mentor-input" type="number" min="0" max="10" placeholder="6.0" style="font-weight:700;font-size:1.1rem;">
+        <span style="font-size:0.85rem;color:var(--text-light);">/ 10 <span class="badge badge-blue">공식</span></span>
+        <label style="margin-left:1rem;">정성 최종:</label><input class="mentor-input" type="number" min="0" max="10" placeholder="6.7" style="font-weight:700;font-size:1.1rem;border-color:#805ad5;">
+        <span style="font-size:0.85rem;color:#6b46c1;">/ 10 <span class="badge badge-purple">별도</span></span>
+      </div>
+      <div class="mentor-input-row" style="margin-top:0.5rem;">
+        <label style="min-width:110px;">코멘트:</label>
+        <textarea class="mentor-textarea" placeholder="문9 최종 코멘트..."></textarea>
+      </div>
+    </div>
+    
+  </div>
+</div>
+
+
+<div class="section" id="q10">
+  <div class="card">
+    <h2>문10. 제로 트러스트 아키텍처</h2>
+    <div class="banner-row"><span class="banner banner-volume-standard">분량 표준 충족 — 기본 상한 6점 (26줄, 1.2쪽)</span>
+<span class="banner banner-curve">필수 커브 적용 (raw 5.7 → 커브 후 5.7)</span></div>
+    
+    <div class="score-box">
+      <div class="score-item">
+        <div class="label"><span class="badge badge-blue">공식 점수</span></div>
+        <div class="value warn">5.7</div>
+        <div class="max">/ 10점 (정량)</div>
+      </div>
+      <div class="score-item">
+        <div class="label"><span class="badge badge-purple">별도 피드백</span></div>
+        <div class="value" style="color:var(--purple)">6.3</div>
+        <div class="max">/ 10점 (정성)</div>
+      </div>
+      <div class="score-item">
+        <div class="label">기준선</div>
+        <div class="value fail">미달</div>
+        <div class="max">기준 6점</div>
+      </div>
+      <div class="score-item">
+        <div class="label">분량</div>
+        <div class="value pass">26줄</div>
+        <div class="max">1.2쪽 · 기본 상한 6점</div>
+      </div>
+    </div>
+    
+    <p style="font-size:0.85rem;color:var(--text-light);">답안 위치: <span class="page-ref">7쪽</span><span class="page-ref">8쪽</span> | 체크리스트: 2W_01_13_제로트러스트아키텍처.md (코드: 2W_01_13, v2.2)</p>
+    
+    <div class="bonus-trigger-box not-triggered">
+      <div class="btb-title">가점 미발동 — 조건 미충족</div>
+      <div class="btb-list">
+        <div class="btb-item ng"><span class="btb-chk ng">✗</span><span><strong>필수 80% 이상 인정</strong> — <span style="font-size:0.75rem;color:#6b7280;">현재 필수 인정률 50%</span></span></div><div class="btb-item ng"><span class="btb-chk ng">✗</span><span><strong>가점 팩트 1개 이상 ✓</strong> — <span style="font-size:0.75rem;color:#6b7280;">가점 yes/partial 1개 이상</span></span></div><div class="btb-item ok"><span class="btb-chk ok">✓</span><span><strong>구조 점수 충족</strong> — <span style="font-size:0.75rem;color:#6b7280;">구조 ≥ 0.5</span></span></div><div class="btb-item ng"><span class="btb-chk ng">✗</span><span><strong>차별화 분량(bonus_eligible)</strong> — <span style="font-size:0.75rem;color:#6b7280;">30줄 / 1.3쪽 이상</span></span></div>
+      </div>
+      <p style="font-size:0.78rem;color:#6b7280;margin-top:0.4rem;">미충족 조건: 필수 80% 이상 인정, 가점 팩트 1개 이상 ✓, 차별화 분량(bonus_eligible)</p>
+    </div>
+    
+    
+    <details class="calc-trace">
+      <summary>▶ 점수 계산 추적 보기</summary>
+      <pre>raw 점수: 필수 4.69 + 가점 0.00 + 구조 1.00 = 5.69
+필수 커브 적용: raw 필수 6.19 → 커브 후 4.69 (−1.5)
+분량: 26줄 (1.2쪽) → standard 구간
+내용 검증: 통과
+분량 상한: 6.00점
+상한 적용 후: 5.69점
+가점 발동: NO — 0점
+최종 상한 (가점 반영): 7점
+최종 제안 점수 (0.3 단위 반올림): 5.7점</pre>
+    </details>
+    
+  </div>
+
+  <div class="card">
+    <h3>교재 핵심 팩트 체크리스트</h3>
+    <div class="checklist">
+      <div class="check-item"><div class="check-icon no">✗</div><div class="check-text"><div class="fact"><span class="fact-tag required">필수</span>경계 기반 보안의 한계 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.0 → 0.00점)</span></div><div class="detail">위치: - · 경계 기반(Castle-and-Moat), 측면 이동(Lateral Movement), SolarWinds 등 한계 배경 미언급</div></div></div>
+<div class="check-item"><div class="check-icon partial">△</div><div class="check-text"><div class="fact"><span class="fact-tag required">필수</span>제로 트러스트 정의 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.5 → 0.75점)</span></div><div class="detail">위치: 1단락 · 답안 7쪽: &#x27;네트워크 위치에 권한 없이 지속 검증, 침해 가정기반 보안 아키텍처&#x27; — 지속 검증 원리 명시. 그러나 &#x27;Never Trust Always Verify&#x27; 원칙 슬로건이나 NIST SP 800-207 표준번호 명시 부족 (v2.2 인물은 선택이나 표준번호는 유지)</div></div></div>
+<div class="check-item"><div class="check-icon partial">△</div><div class="check-text"><div class="fact"><span class="fact-tag required">필수</span>3대 핵심 원칙 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.5 → 0.75점)</span></div><div class="detail">위치: 1~2단락 · 답안 7쪽: &#x27;침해 가정후 최소화&#x27; — 침해 가정·최소 권한 2개 원칙 시사. 지속적 검증을 포함한 3대 원칙 구조적 명시 부족</div></div></div>
+<div class="check-item"><div class="check-icon partial">△</div><div class="check-text"><div class="fact"><span class="fact-tag required">필수</span>NIST SP 800-207 아키텍처 구성 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.5 → 0.75점)</span></div><div class="detail">위치: 2단락 · 답안 7쪽 개념도: &#x27;PEP(정책 실행점), PDP(정책 결정점)&#x27; 명시 + CDM/CTAS 관련 표기. PE+PA 구분이나 PEP+PDP 역할 설명 부족</div></div></div>
+<div class="check-item"><div class="check-icon yes">✓</div><div class="check-text"><div class="fact"><span class="fact-tag required">필수</span>핵심 구현 기술(SDP/마이크로세그/IAM) <span style="font-size:0.72rem;color:#6b7280;">(배점 1.5 → 1.50점)</span></div><div class="detail">위치: 2단락 · 답안 8쪽 표: &#x27;SDP(소프트웨어 정의 경계, 블랙 클라우드), Micro-Segmentation(NW 세분화, 횡적 이동 차단), IAM(MFA/SSO 인증 강화, RBAC/ABAC)&#x27; — 3대 구현 기술 모두 + 원리 설명</div></div></div>
+<div class="check-item"><div class="check-icon no">✗</div><div class="check-text"><div class="fact"><span class="fact-tag bonus">가점</span>구글 BeyondCorp 또는 한국 가이드라인 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.0 → 0.00점)</span></div><div class="detail">위치: - · BeyondCorp, 오로라 작전, 과기정통부 가이드라인 미언급</div></div></div>
+<div class="check-item"><div class="check-icon no">✗</div><div class="check-text"><div class="fact"><span class="fact-tag bonus">가점</span>SASE 또는 연관 프레임워크 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.0 → 0.00점)</span></div><div class="detail">위치: - · SASE/ZTNA/CASB 등 연관 기술 미언급</div></div></div>
+<div class="check-item"><div class="check-icon yes">✓</div><div class="check-text"><div class="fact"><span class="fact-tag structure">구조</span>구조 완결성 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.0 → 1.00점)</span></div><div class="detail">위치: 전체 · 정의 → 아키텍처 개념도 → 구현 기술 표 → 응용 개념도 → 마무리 3부 흐름 완성</div></div></div>
+    </div>
+    
+    <div class="comment-box good">
+      <div class="comment-title">잘한 점</div>
+      <ul><li>PEP+PDP NIST 아키텍처 도식화</li>
+<li>SDP·Micro-Segmentation·IAM 3대 구현 기술 각 원리 기술</li>
+<li>ID/NW/디바이스 응용 관점 개념도로 확장</li></ul>
+    </div>
+    <div class="comment-box improve">
+      <div class="comment-title">보완 필요</div>
+      <ul><li>NIST SP 800-207 표준번호 + &#x27;Never Trust, Always Verify&#x27; 원칙 슬로건 명시</li>
+<li>3대 핵심 원칙(지속 검증·최소 권한·침해 가정) 구조적 기술</li>
+<li>경계 기반 한계(Castle-and-Moat)·측면 이동·SolarWinds 배경 추가</li>
+<li>BeyondCorp 또는 SASE 연관 프레임워크로 차별화</li></ul>
+    </div>
+    
+    
+  </div>
+
+  <div class="card">
+    <h3>정성 평가 <span class="badge badge-purple">별도 피드백 (공식점수 미포함)</span></h3>
+    <div class="qual-4"><div class="qual-item qual-purple"><div class="qual-header"><div class="qual-title">논리적 흐름</div><div class="qual-score" style="color:var(--purple)">2.0 / 3</div></div><div class="qual-detail">정의→NIST 아키텍처→구현 기술→응용 흐름 양호. 경계 기반 한계·3대 원칙 명시가 약해 흐름 약화.</div></div>
+<div class="qual-item qual-purple"><div class="qual-header"><div class="qual-title">시각적 전달력·가독성</div><div class="qual-score" style="color:var(--purple)">2.3 / 3</div></div><div class="qual-detail">PEP/PDP 아키텍처 도식 + ID/NW/디바이스 응용 개념도 활용. 이중 시각화 우수.</div></div>
+<div class="qual-item qual-purple"><div class="qual-header"><div class="qual-title">차별화 역량</div><div class="qual-score" style="color:var(--purple)">0.7 / 2</div></div><div class="qual-detail">BeyondCorp·SASE 등 차별화 요소 부족. 기초 개념 위주.</div></div>
+<div class="qual-item qual-purple"><div class="qual-header"><div class="qual-title">전략적 관리</div><div class="qual-score" style="color:var(--purple)">1.3 / 2</div></div><div class="qual-detail">1.2쪽 분량 표준. SDP/마이크로세그/IAM 3대 기술에 지면 집중 전략 적절.</div></div></div>
+  </div>
+
+  <div class="card">
+    
+    <div class="mentor-area" style="margin-top:1rem;">
+      <h3>멘토 확정 — 문10</h3>
+      <div class="mentor-input-row">
+        <label>정량 최종:</label><input class="mentor-input" type="number" min="0" max="10" placeholder="5.7" style="font-weight:700;font-size:1.1rem;">
+        <span style="font-size:0.85rem;color:var(--text-light);">/ 10 <span class="badge badge-blue">공식</span></span>
+        <label style="margin-left:1rem;">정성 최종:</label><input class="mentor-input" type="number" min="0" max="10" placeholder="6.3" style="font-weight:700;font-size:1.1rem;border-color:#805ad5;">
+        <span style="font-size:0.85rem;color:#6b46c1;">/ 10 <span class="badge badge-purple">별도</span></span>
+      </div>
+      <div class="mentor-input-row" style="margin-top:0.5rem;">
+        <label style="min-width:110px;">코멘트:</label>
+        <textarea class="mentor-textarea" placeholder="문10 최종 코멘트..."></textarea>
+      </div>
+    </div>
+    
+  </div>
+</div>
+
+
+<div class="section" id="q11">
+  <div class="card">
+    <h2>문11. 사이버 킬 체인</h2>
+    <div class="banner-row"><span class="banner banner-volume-standard">분량 표준 충족 — 기본 상한 6점 (22줄, 1.0쪽)</span>
+<span class="banner banner-curve">필수 커브 적용 (raw 7.2 → 커브 후 7.2)</span></div>
+    
+    <div class="score-box">
+      <div class="score-item">
+        <div class="label"><span class="badge badge-blue">공식 점수</span></div>
+        <div class="value pass">6.0</div>
+        <div class="max">/ 10점 (정량)</div>
+      </div>
+      <div class="score-item">
+        <div class="label"><span class="badge badge-purple">별도 피드백</span></div>
+        <div class="value" style="color:var(--purple)">5.7</div>
+        <div class="max">/ 10점 (정성)</div>
+      </div>
+      <div class="score-item">
+        <div class="label">기준선</div>
+        <div class="value pass">달성</div>
+        <div class="max">기준 6점</div>
+      </div>
+      <div class="score-item">
+        <div class="label">분량</div>
+        <div class="value pass">22줄</div>
+        <div class="max">1.0쪽 · 기본 상한 6점</div>
+      </div>
+    </div>
+    
+    <p style="font-size:0.85rem;color:var(--text-light);">답안 위치: <span class="page-ref">12쪽</span> | 체크리스트: 2W_01_14_사이버킬체인.md (코드: 2W_01_14, v2.2)</p>
+    
+    <div class="bonus-trigger-box not-triggered">
+      <div class="btb-title">가점 미발동 — 조건 미충족</div>
+      <div class="btb-list">
+        <div class="btb-item ok"><span class="btb-chk ok">✓</span><span><strong>필수 80% 이상 인정</strong> — <span style="font-size:0.75rem;color:#6b7280;">현재 필수 인정률 70%</span></span></div><div class="btb-item ng"><span class="btb-chk ng">✗</span><span><strong>가점 팩트 1개 이상 ✓</strong> — <span style="font-size:0.75rem;color:#6b7280;">가점 yes/partial 1개 이상</span></span></div><div class="btb-item ok"><span class="btb-chk ok">✓</span><span><strong>구조 점수 충족</strong> — <span style="font-size:0.75rem;color:#6b7280;">구조 ≥ 0.5</span></span></div><div class="btb-item ng"><span class="btb-chk ng">✗</span><span><strong>차별화 분량(bonus_eligible)</strong> — <span style="font-size:0.75rem;color:#6b7280;">30줄 / 1.3쪽 이상</span></span></div>
+      </div>
+      <p style="font-size:0.78rem;color:#6b7280;margin-top:0.4rem;">미충족 조건: 가점 팩트 1개 이상 ✓, 차별화 분량(bonus_eligible)</p>
+    </div>
+    
+    
+    <details class="calc-trace">
+      <summary>▶ 점수 계산 추적 보기</summary>
+      <pre>raw 점수: 필수 6.25 + 가점 0.00 + 구조 1.00 = 7.25
+필수 커브 적용: raw 필수 7.75 → 커브 후 6.25 (−1.5)
+분량: 22줄 (1.0쪽) → standard 구간
+내용 검증: 통과
+분량 상한: 6.00점
+상한 적용 후: 6.00점
+가점 발동: NO — 0점
+최종 상한 (가점 반영): 7점
+최종 제안 점수 (0.3 단위 반올림): 6.0점</pre>
+    </details>
+    
+  </div>
+
+  <div class="card">
+    <h3>교재 핵심 팩트 체크리스트</h3>
+    <div class="checklist">
+      <div class="check-item"><div class="check-icon yes">✓</div><div class="check-text"><div class="fact"><span class="fact-tag required">필수</span>사이버 킬 체인 정의 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.5 → 1.50점)</span></div><div class="detail">위치: 1단락 · 답안 11쪽: &#x27;사이버 킬체인 정의 (록히드마틴 제창)&#x27; + &#x27;사이버 공격시 단계를 거쳐 분류, 하나만 막아도 전체 예방 가능&#x27; — 정의 + APT 공격 방어 목적 명시 (기관명 포함)</div></div></div>
+<div class="check-item"><div class="check-icon yes">✓</div><div class="check-text"><div class="fact"><span class="fact-tag required">필수</span>7단계 프로세스 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.5 → 1.50점)</span></div><div class="detail">위치: 2단락 · 답안 11쪽: &#x27;정찰→무기화→전달→Exploit→설치→Command&amp;통제→목표달성&#x27; — 7단계 모두 정확 명시</div></div></div>
+<div class="check-item"><div class="check-icon partial">△</div><div class="check-text"><div class="fact"><span class="fact-tag required">필수</span>각 단계 공격 활동과 방어 전략 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.5 → 0.75점)</span></div><div class="detail">위치: 2단락 · 답안 11쪽 표: 각 단계별 공격 내용만 기술. 방어 전략(OSINT/EDR/DLP/DNS 모니터링 등) 매칭 부족</div></div></div>
+<div class="check-item"><div class="check-icon partial">△</div><div class="check-text"><div class="fact"><span class="fact-tag required">필수</span>전략적 원리(비대칭 방어) <span style="font-size:0.72rem;color:#6b7280;">(배점 1.5 → 0.75점)</span></div><div class="detail">위치: 1단락 · 답안 11쪽: &#x27;하나만 막아도 전체 예방 가능&#x27; — 비대칭 원리 언급. 좌측 이동(Left of Hack) 전략 명시 부족</div></div></div>
+<div class="check-item"><div class="check-icon partial">△</div><div class="check-text"><div class="fact"><span class="fact-tag required">필수</span>MITRE ATT&amp;CK 비교 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.0 → 0.50점)</span></div><div class="detail">위치: 3단락 · 답안 11쪽 마무리: &#x27;사이버킬체인 구채·복잡훈 Mitre ATT&amp;CK 포함&#x27; — ATT&amp;CK 이름 언급. 구체 비교 관점(14 전술·기술 수준 등) 부족</div></div></div>
+<div class="check-item"><div class="check-icon no">✗</div><div class="check-text"><div class="fact"><span class="fact-tag bonus">가점</span>실제 공격 사례 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.0 → 0.00점)</span></div><div class="detail">위치: - · Colonial Pipeline/SolarWinds/Stuxnet 등 구체 사례 미기재</div></div></div>
+<div class="check-item"><div class="check-icon no">✗</div><div class="check-text"><div class="fact"><span class="fact-tag bonus">가점</span>연관 보안 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.0 → 0.00점)</span></div><div class="detail">위치: - · 제로 트러스트/ISMS-P/능동적 방어 등 연관 보안 미언급</div></div></div>
+<div class="check-item"><div class="check-icon yes">✓</div><div class="check-text"><div class="fact"><span class="fact-tag structure">구조</span>구조 완결성 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.0 → 1.00점)</span></div><div class="detail">위치: 전체 · 정의 → 7단계 표 → ATT&amp;CK 확장 마무리. 3부 흐름 완성</div></div></div>
+    </div>
+    
+    <div class="comment-box good">
+      <div class="comment-title">잘한 점</div>
+      <ul><li>록히드마틴 제창 명시 + 비대칭 원리 포착</li>
+<li>정찰·무기화·전달·Exploit·설치·C&amp;C·목표달성 7단계 완전 기술</li>
+<li>MITRE ATT&amp;CK와의 연결 언급</li></ul>
+    </div>
+    <div class="comment-box improve">
+      <div class="comment-title">보완 필요</div>
+      <ul><li>각 단계별 방어 전략 매칭(OSINT↔공개정보 최소화, 전달↔스피어피싱/이메일 게이트웨이 등)</li>
+<li>좌측 이동(Left of Hack) 전략 명시</li>
+<li>Colonial Pipeline(2021, DarkSide)/SolarWinds(2020) 사례 + 단계 매핑</li>
+<li>제로 트러스트 &#x27;침해 가정&#x27;과의 연결로 통합 보안 관점</li></ul>
+    </div>
+    
+    
+  </div>
+
+  <div class="card">
+    <h3>정성 평가 <span class="badge badge-purple">별도 피드백 (공식점수 미포함)</span></h3>
+    <div class="qual-4"><div class="qual-item qual-purple"><div class="qual-header"><div class="qual-title">논리적 흐름</div><div class="qual-score" style="color:var(--purple)">2.0 / 3</div></div><div class="qual-detail">록히드마틴 정의→7단계→ATT&amp;CK 연결 흐름 양호.</div></div>
+<div class="qual-item qual-purple"><div class="qual-header"><div class="qual-title">시각적 전달력·가독성</div><div class="qual-score" style="color:var(--purple)">2.0 / 3</div></div><div class="qual-detail">7단계 매트릭스 표로 각 단계 설명. 가독성 양호하나 흐름도 없음.</div></div>
+<div class="qual-item qual-purple"><div class="qual-header"><div class="qual-title">차별화 역량</div><div class="qual-score" style="color:var(--purple)">0.7 / 2</div></div><div class="qual-detail">ATT&amp;CK 언급은 긍정. Colonial Pipeline 등 실사례 부족.</div></div>
+<div class="qual-item qual-purple"><div class="qual-header"><div class="qual-title">전략적 관리</div><div class="qual-score" style="color:var(--purple)">1.0 / 2</div></div><div class="qual-detail">1.0쪽 표준. 7단계에 지면 집중 전략 적절.</div></div></div>
+  </div>
+
+  <div class="card">
+    
+    <div class="mentor-area" style="margin-top:1rem;">
+      <h3>멘토 확정 — 문11</h3>
+      <div class="mentor-input-row">
+        <label>정량 최종:</label><input class="mentor-input" type="number" min="0" max="10" placeholder="6.0" style="font-weight:700;font-size:1.1rem;">
+        <span style="font-size:0.85rem;color:var(--text-light);">/ 10 <span class="badge badge-blue">공식</span></span>
+        <label style="margin-left:1rem;">정성 최종:</label><input class="mentor-input" type="number" min="0" max="10" placeholder="5.7" style="font-weight:700;font-size:1.1rem;border-color:#805ad5;">
+        <span style="font-size:0.85rem;color:#6b46c1;">/ 10 <span class="badge badge-purple">별도</span></span>
+      </div>
+      <div class="mentor-input-row" style="margin-top:0.5rem;">
+        <label style="min-width:110px;">코멘트:</label>
+        <textarea class="mentor-textarea" placeholder="문11 최종 코멘트..."></textarea>
+      </div>
+    </div>
+    
+  </div>
+</div>
+
+
+<div class="section" id="q12">
+  <div class="card">
+    <h2>문12. 프롬프트 인젝션</h2>
+    <div class="banner-row"><span class="banner banner-volume-standard">분량 표준 충족 — 기본 상한 6점 (22줄, 1.0쪽)</span>
+<span class="banner banner-curve">필수 커브 적용 (raw 5.7 → 커브 후 5.7)</span></div>
+    
+    <div class="score-box">
+      <div class="score-item">
+        <div class="label"><span class="badge badge-blue">공식 점수</span></div>
+        <div class="value warn">5.7</div>
+        <div class="max">/ 10점 (정량)</div>
+      </div>
+      <div class="score-item">
+        <div class="label"><span class="badge badge-purple">별도 피드백</span></div>
+        <div class="value" style="color:var(--purple)">6.0</div>
+        <div class="max">/ 10점 (정성)</div>
+      </div>
+      <div class="score-item">
+        <div class="label">기준선</div>
+        <div class="value fail">미달</div>
+        <div class="max">기준 6점</div>
+      </div>
+      <div class="score-item">
+        <div class="label">분량</div>
+        <div class="value pass">22줄</div>
+        <div class="max">1.0쪽 · 기본 상한 6점</div>
+      </div>
+    </div>
+    
+    <p style="font-size:0.85rem;color:var(--text-light);">답안 위치: <span class="page-ref">10쪽</span> | 체크리스트: 2W_01_15_프롬프트인젝션.md (코드: 2W_01_15, v2.2)</p>
+    
+    <div class="bonus-trigger-box not-triggered">
+      <div class="btb-title">가점 미발동 — 조건 미충족</div>
+      <div class="btb-list">
+        <div class="btb-item ng"><span class="btb-chk ng">✗</span><span><strong>필수 80% 이상 인정</strong> — <span style="font-size:0.75rem;color:#6b7280;">현재 필수 인정률 50%</span></span></div><div class="btb-item ng"><span class="btb-chk ng">✗</span><span><strong>가점 팩트 1개 이상 ✓</strong> — <span style="font-size:0.75rem;color:#6b7280;">가점 yes/partial 1개 이상</span></span></div><div class="btb-item ok"><span class="btb-chk ok">✓</span><span><strong>구조 점수 충족</strong> — <span style="font-size:0.75rem;color:#6b7280;">구조 ≥ 0.5</span></span></div><div class="btb-item ng"><span class="btb-chk ng">✗</span><span><strong>차별화 분량(bonus_eligible)</strong> — <span style="font-size:0.75rem;color:#6b7280;">30줄 / 1.3쪽 이상</span></span></div>
+      </div>
+      <p style="font-size:0.78rem;color:#6b7280;margin-top:0.4rem;">미충족 조건: 필수 80% 이상 인정, 가점 팩트 1개 이상 ✓, 차별화 분량(bonus_eligible)</p>
+    </div>
+    
+    
+    <details class="calc-trace">
+      <summary>▶ 점수 계산 추적 보기</summary>
+      <pre>raw 점수: 필수 4.69 + 가점 0.00 + 구조 1.00 = 5.69
+필수 커브 적용: raw 필수 6.19 → 커브 후 4.69 (−1.5)
+분량: 22줄 (1.0쪽) → standard 구간
+내용 검증: 통과
+분량 상한: 6.00점
+상한 적용 후: 5.69점
+가점 발동: NO — 0점
+최종 상한 (가점 반영): 7점
+최종 제안 점수 (0.3 단위 반올림): 5.7점</pre>
+    </details>
+    
+  </div>
+
+  <div class="card">
+    <h3>교재 핵심 팩트 체크리스트</h3>
+    <div class="checklist">
+      <div class="check-item"><div class="check-icon yes">✓</div><div class="check-text"><div class="fact"><span class="fact-tag required">필수</span>프롬프트 인젝션 정의와 OWASP <span style="font-size:0.72rem;color:#6b7280;">(배점 1.5 → 1.50점)</span></div><div class="detail">위치: 1단락 · 답안 9쪽: &#x27;LLM 보안에 악의적 명령어를 삽입, 의도치 않은 결과를 도출·유발 공격방식&#x27; + &#x27;OWASP LLM TOP 10 1등재된 위협&#x27; — 정의 + OWASP Top 10 LLM 1위 명시 (v2.2 연도 선택)</div></div></div>
+<div class="check-item"><div class="check-icon no">✗</div><div class="check-text"><div class="fact"><span class="fact-tag required">필수</span>근본 원인 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.5 → 0.00점)</span></div><div class="detail">위치: - · 시스템 프롬프트 vs 사용자 입력 분리 불가, 데이터/코드 분리 원칙 위반 등 근본 원인 미기재</div></div></div>
+<div class="check-item"><div class="check-icon partial">△</div><div class="check-text"><div class="fact"><span class="fact-tag required">필수</span>직접 프롬프트 인젝션 기법 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.5 → 0.75점)</span></div><div class="detail">위치: 2단락 · 답안 9쪽: &#x27;탈옥·역할연기, 가드레일 변경&#x27; — 탈옥·역할 연기 2개 기법. DAN/프롬프트 누출/페이로드 분할 등 3개 이상 충족은 미흡</div></div></div>
+<div class="check-item"><div class="check-icon yes">✓</div><div class="check-text"><div class="fact"><span class="fact-tag required">필수</span>간접 프롬프트 인젝션과 위험성 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.5 → 1.50점)</span></div><div class="detail">위치: 2단락 · 답안 9쪽: &#x27;외부 데이터, 이메일·코드에 악성행위 삽입 - LLM과 직접 접촉 없어, 대응 더욱 곤란&#x27; — 간접 인젝션 정의 + 직접 대비 위험성 명시</div></div></div>
+<div class="check-item"><div class="check-icon no">✗</div><div class="check-text"><div class="fact"><span class="fact-tag required">필수</span>방어 4계층 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.0 → 0.00점)</span></div><div class="detail">위치: 3단락 · 답안 9쪽 마무리: &#x27;AI 레드팀 운영&#x27; 언급만. 입력 검증·아키텍처·가드레일·정책 4계층 구조화 부족</div></div></div>
+<div class="check-item"><div class="check-icon no">✗</div><div class="check-text"><div class="fact"><span class="fact-tag bonus">가점</span>SQL 인젝션과의 비교 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.0 → 0.00점)</span></div><div class="detail">위치: - · SQL 인젝션 비교 미기재</div></div></div>
+<div class="check-item"><div class="check-icon no">✗</div><div class="check-text"><div class="fact"><span class="fact-tag bonus">가점</span>실제 사례 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.0 → 0.00점)</span></div><div class="detail">위치: - · 삼성 반도체/Bing Chat/GPT-4 레드팀 등 실사례 미기재</div></div></div>
+<div class="check-item"><div class="check-icon yes">✓</div><div class="check-text"><div class="fact"><span class="fact-tag structure">구조</span>구조 완결성 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.0 → 1.00점)</span></div><div class="detail">위치: 전체 · 정의(OWASP 포함) → 직접/간접 개념도 + 표 → 대응 마무리 3부 흐름 완성</div></div></div>
+    </div>
+    
+    <div class="comment-box good">
+      <div class="comment-title">잘한 점</div>
+      <ul><li>OWASP Top 10 LLM 1위 정확 기재</li>
+<li>직접 vs 간접 인젝션 분기 명확히 구분</li>
+<li>간접 인젝션 위험성(직접 접촉 없음·대응 곤란) 포인트 포착</li></ul>
+    </div>
+    <div class="comment-box improve">
+      <div class="comment-title">보완 필요</div>
+      <ul><li>근본 원인: 시스템 프롬프트/사용자 입력 분리 불가, 데이터/코드 분리 원칙 위반 명시</li>
+<li>직접 인젝션 기법 3개 이상(DAN/페이로드 분할/인코딩 우회) 추가</li>
+<li>방어 4계층(입력검증·아키텍처·가드레일·정책) 구조화</li>
+<li>삼성 반도체 유출/Bing Chat 간접 인젝션 등 실사례 보강</li></ul>
+    </div>
+    
+    
+  </div>
+
+  <div class="card">
+    <h3>정성 평가 <span class="badge badge-purple">별도 피드백 (공식점수 미포함)</span></h3>
+    <div class="qual-4"><div class="qual-item qual-purple"><div class="qual-header"><div class="qual-title">논리적 흐름</div><div class="qual-score" style="color:var(--purple)">2.0 / 3</div></div><div class="qual-detail">정의→직접/간접→대응 흐름. 방어 4계층 구조화가 약해 흐름 약화.</div></div>
+<div class="qual-item qual-purple"><div class="qual-header"><div class="qual-title">시각적 전달력·가독성</div><div class="qual-score" style="color:var(--purple)">2.0 / 3</div></div><div class="qual-detail">직접/간접 분기 개념도 + 비교 표 활용. 명료.</div></div>
+<div class="qual-item qual-purple"><div class="qual-header"><div class="qual-title">차별화 역량</div><div class="qual-score" style="color:var(--purple)">0.7 / 2</div></div><div class="qual-detail">OWASP Top 10 LLM 1위 명시는 긍정. 삼성/Bing Chat 사례 등 차별화 부족.</div></div>
+<div class="qual-item qual-purple"><div class="qual-header"><div class="qual-title">전략적 관리</div><div class="qual-score" style="color:var(--purple)">1.3 / 2</div></div><div class="qual-detail">1.0쪽 분량 표준. 직접/간접 비교에 지면 집중 전략 적절.</div></div></div>
+  </div>
+
+  <div class="card">
+    
+    <div class="mentor-area" style="margin-top:1rem;">
+      <h3>멘토 확정 — 문12</h3>
+      <div class="mentor-input-row">
+        <label>정량 최종:</label><input class="mentor-input" type="number" min="0" max="10" placeholder="5.7" style="font-weight:700;font-size:1.1rem;">
+        <span style="font-size:0.85rem;color:var(--text-light);">/ 10 <span class="badge badge-blue">공식</span></span>
+        <label style="margin-left:1rem;">정성 최종:</label><input class="mentor-input" type="number" min="0" max="10" placeholder="6.0" style="font-weight:700;font-size:1.1rem;border-color:#805ad5;">
+        <span style="font-size:0.85rem;color:#6b46c1;">/ 10 <span class="badge badge-purple">별도</span></span>
+      </div>
+      <div class="mentor-input-row" style="margin-top:0.5rem;">
+        <label style="min-width:110px;">코멘트:</label>
+        <textarea class="mentor-textarea" placeholder="문12 최종 코멘트..."></textarea>
+      </div>
+    </div>
+    
+  </div>
+</div>
+
+
+<div class="section" id="q13">
+  <div class="card">
+    <h2>문13. RAG 검색증강생성</h2>
+    <div class="banner-row"><span class="banner banner-volume-standard">분량 표준 충족 — 기본 상한 6점 (25줄, 1.1쪽)</span>
+<span class="banner banner-curve">필수 커브 적용 (raw 7.2 → 커브 후 7.2)</span></div>
+    
+    <div class="score-box">
+      <div class="score-item">
+        <div class="label"><span class="badge badge-blue">공식 점수</span></div>
+        <div class="value pass">6.0</div>
+        <div class="max">/ 10점 (정량)</div>
+      </div>
+      <div class="score-item">
+        <div class="label"><span class="badge badge-purple">별도 피드백</span></div>
+        <div class="value" style="color:var(--purple)">6.3</div>
+        <div class="max">/ 10점 (정성)</div>
+      </div>
+      <div class="score-item">
+        <div class="label">기준선</div>
+        <div class="value pass">달성</div>
+        <div class="max">기준 6점</div>
+      </div>
+      <div class="score-item">
+        <div class="label">분량</div>
+        <div class="value pass">25줄</div>
+        <div class="max">1.1쪽 · 기본 상한 6점</div>
+      </div>
+    </div>
+    
+    <p style="font-size:0.85rem;color:var(--text-light);">답안 위치: <span class="page-ref">8쪽</span><span class="page-ref">9쪽</span> | 체크리스트: 2W_01_04_RAG_검색증강생성.md (코드: 2W_01_04, v2.2)</p>
+    
+    <div class="bonus-trigger-box not-triggered">
+      <div class="btb-title">가점 미발동 — 조건 미충족</div>
+      <div class="btb-list">
+        <div class="btb-item ok"><span class="btb-chk ok">✓</span><span><strong>필수 80% 이상 인정</strong> — <span style="font-size:0.75rem;color:#6b7280;">현재 필수 인정률 70%</span></span></div><div class="btb-item ng"><span class="btb-chk ng">✗</span><span><strong>가점 팩트 1개 이상 ✓</strong> — <span style="font-size:0.75rem;color:#6b7280;">가점 yes/partial 1개 이상</span></span></div><div class="btb-item ok"><span class="btb-chk ok">✓</span><span><strong>구조 점수 충족</strong> — <span style="font-size:0.75rem;color:#6b7280;">구조 ≥ 0.5</span></span></div><div class="btb-item ng"><span class="btb-chk ng">✗</span><span><strong>차별화 분량(bonus_eligible)</strong> — <span style="font-size:0.75rem;color:#6b7280;">30줄 / 1.3쪽 이상</span></span></div>
+      </div>
+      <p style="font-size:0.78rem;color:#6b7280;margin-top:0.4rem;">미충족 조건: 가점 팩트 1개 이상 ✓, 차별화 분량(bonus_eligible)</p>
+    </div>
+    
+    
+    <details class="calc-trace">
+      <summary>▶ 점수 계산 추적 보기</summary>
+      <pre>raw 점수: 필수 6.25 + 가점 0.00 + 구조 1.00 = 7.25
+필수 커브 적용: raw 필수 7.75 → 커브 후 6.25 (−1.5)
+분량: 25줄 (1.1쪽) → standard 구간
+내용 검증: 통과
+분량 상한: 6.00점
+상한 적용 후: 6.00점
+가점 발동: NO — 0점
+최종 상한 (가점 반영): 7점
+최종 제안 점수 (0.3 단위 반올림): 6.0점</pre>
+    </details>
+    
+  </div>
+
+  <div class="card">
+    <h3>교재 핵심 팩트 체크리스트</h3>
+    <div class="checklist">
+      <div class="check-item"><div class="check-icon partial">△</div><div class="check-text"><div class="fact"><span class="fact-tag required">필수</span>LLM 할루시네이션과 RAG 등장 배경 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.5 → 0.75점)</span></div><div class="detail">위치: 1단락 · 답안 7쪽: &#x27;LLM의 할루시네이션, 확신성 부족 극복위해&#x27; — 할루시네이션 정의·도입 필요성은 언급. 학습 시점 한계 등 원인 세부 기술 부족</div></div></div>
+<div class="check-item"><div class="check-icon yes">✓</div><div class="check-text"><div class="fact"><span class="fact-tag required">필수</span>RAG 정의 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.5 → 1.50점)</span></div><div class="detail">위치: 1단락 · 답안 7쪽: &#x27;검색 증강·재시간 생성 아키텍처&#x27; + 사용자↔LLM + 데이터→벡터DB 개념도 — 검색+증강+생성 하이브리드 원리 명시 (v2.2 연도·인물 선택)</div></div></div>
+<div class="check-item"><div class="check-icon yes">✓</div><div class="check-text"><div class="fact"><span class="fact-tag required">필수</span>사전처리 4단계(Indexing) <span style="font-size:0.72rem;color:#6b7280;">(배점 1.5 → 1.50점)</span></div><div class="detail">위치: 2단락 · 답안 8쪽: &#x27;데이터 소스 → 청킹 → 임베딩 → 벡터 DB&#x27; — 4단계 모두 + 청킹·임베딩 기능 설명</div></div></div>
+<div class="check-item"><div class="check-icon partial">△</div><div class="check-text"><div class="fact"><span class="fact-tag required">필수</span>런타임 4단계(Query Pipeline) <span style="font-size:0.72rem;color:#6b7280;">(배점 1.5 → 0.75점)</span></div><div class="detail">위치: 2단락 · 답안 8쪽 표: &#x27;검색(사용자 쿼리, DB로 검색) + 생성(강화된 특정도 기반 생성)&#x27; — 검색/생성 2단계 명시. 질의 임베딩화·증강(프롬프트 삽입) 단계 미흡</div></div></div>
+<div class="check-item"><div class="check-icon partial">△</div><div class="check-text"><div class="fact"><span class="fact-tag required">필수</span>고도화 기법(하이브리드/Reranking) <span style="font-size:0.72rem;color:#6b7280;">(배점 1.0 → 0.50점)</span></div><div class="detail">위치: 3단락 · 답안 8쪽 마무리: &#x27;청킹 순서 생성 하이브리드 활용해 성능 추가 가능&#x27; + &#x27;고정크기/문장/의미&#x27; 청킹 전략 — 하이브리드 언급. Bi-Encoder/Cross-Encoder 재순위화 미기재</div></div></div>
+<div class="check-item"><div class="check-icon no">✗</div><div class="check-text"><div class="fact"><span class="fact-tag bonus">가점</span>벡터 DB 솔루션 비교 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.0 → 0.00점)</span></div><div class="detail">위치: - · FAISS/Pinecone/Weaviate/Chroma 등 벡터 DB 솔루션 비교 없음</div></div></div>
+<div class="check-item"><div class="check-icon no">✗</div><div class="check-text"><div class="fact"><span class="fact-tag bonus">가점</span>실무 사례 또는 GraphRAG <span style="font-size:0.72rem;color:#6b7280;">(배점 1.0 → 0.00점)</span></div><div class="detail">위치: - · 삼성SDS BriTY, LG CNS, GraphRAG 등 실무 사례/최신 기법 미기재</div></div></div>
+<div class="check-item"><div class="check-icon yes">✓</div><div class="check-text"><div class="fact"><span class="fact-tag structure">구조</span>구조 완결성 <span style="font-size:0.72rem;color:#6b7280;">(배점 1.0 → 1.00점)</span></div><div class="detail">위치: 전체 · 정의 → 개념도 → 파이프라인 표 → 성능 향상 전략 3부 흐름 완성</div></div></div>
+    </div>
+    
+    <div class="comment-box good">
+      <div class="comment-title">잘한 점</div>
+      <ul><li>할루시네이션 극복이라는 RAG 등장 배경 명확히 제시</li>
+<li>데이터→청킹→임베딩→벡터DB 사전처리 4단계 정확 기술</li>
+<li>청킹 전략(고정/문장/의미) 세부 언급</li></ul>
+    </div>
+    <div class="comment-box improve">
+      <div class="comment-title">보완 필요</div>
+      <ul><li>런타임 4단계를 질의→검색→증강→생성으로 명시적 구분</li>
+<li>Bi-Encoder/Cross-Encoder Reranking 2단계 전략 보강</li>
+<li>FAISS·Pinecone·Weaviate 중 2개 이상 특성 비교</li>
+<li>삼성SDS BriTY 또는 GraphRAG/Self-RAG 최신 동향 추가</li></ul>
+    </div>
+    
+    
+  </div>
+
+  <div class="card">
+    <h3>정성 평가 <span class="badge badge-purple">별도 피드백 (공식점수 미포함)</span></h3>
+    <div class="qual-4"><div class="qual-item qual-purple"><div class="qual-header"><div class="qual-title">논리적 흐름</div><div class="qual-score" style="color:var(--purple)">2.0 / 3</div></div><div class="qual-detail">할루시네이션→정의→파이프라인→성능 흐름 양호. 런타임 4단계가 2단계로 축약된 점 아쉬움.</div></div>
+<div class="qual-item qual-purple"><div class="qual-header"><div class="qual-title">시각적 전달력·가독성</div><div class="qual-score" style="color:var(--purple)">2.3 / 3</div></div><div class="qual-detail">사용자↔LLM↔벡터DB 개념도 + 파이프라인 표 + 청킹 전략 상세 조합. 가독성 우수.</div></div>
+<div class="qual-item qual-purple"><div class="qual-header"><div class="qual-title">차별화 역량</div><div class="qual-score" style="color:var(--purple)">0.7 / 2</div></div><div class="qual-detail">Precision@K 평가 언급은 긍정. FAISS·GraphRAG 등 구체 솔루션 부족.</div></div>
+<div class="qual-item qual-purple"><div class="qual-header"><div class="qual-title">전략적 관리</div><div class="qual-score" style="color:var(--purple)">1.3 / 2</div></div><div class="qual-detail">1.1쪽 분량. 인덱싱 4단계에 지면 집중 전략 적절.</div></div></div>
+  </div>
+
+  <div class="card">
+    
+    <div class="mentor-area" style="margin-top:1rem;">
+      <h3>멘토 확정 — 문13</h3>
+      <div class="mentor-input-row">
+        <label>정량 최종:</label><input class="mentor-input" type="number" min="0" max="10" placeholder="6.0" style="font-weight:700;font-size:1.1rem;">
+        <span style="font-size:0.85rem;color:var(--text-light);">/ 10 <span class="badge badge-blue">공식</span></span>
+        <label style="margin-left:1rem;">정성 최종:</label><input class="mentor-input" type="number" min="0" max="10" placeholder="6.3" style="font-weight:700;font-size:1.1rem;border-color:#805ad5;">
+        <span style="font-size:0.85rem;color:#6b46c1;">/ 10 <span class="badge badge-purple">별도</span></span>
+      </div>
+      <div class="mentor-input-row" style="margin-top:0.5rem;">
+        <label style="min-width:110px;">코멘트:</label>
+        <textarea class="mentor-textarea" placeholder="문13 최종 코멘트..."></textarea>
+      </div>
+    </div>
+    
+  </div>
+</div>
+
+</div>
+
+<script>
+function showSection(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.target.classList.add('active');
+  window.scrollTo({top: 0, behavior: 'smooth'});
+}
+</script>
+</body>
+</html>

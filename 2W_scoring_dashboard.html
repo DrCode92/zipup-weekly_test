@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2주차 1교시 학급 대시보드 (v1.2) · 멘토 전용</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+
+:root {
+  --primary: #1a365d;
+  --primary-light: #2b6cb0;
+  --accent: #e53e3e;
+  --green: #38a169;
+  --orange: #dd6b20;
+  --red: #e53e3e;
+  --bg: #f7fafc;
+  --card: #ffffff;
+  --border: #e2e8f0;
+  --text: #2d3748;
+  --text-light: #718096;
+  --pass: #38a169;
+  --fail: #e53e3e;
+  --purple: #6b46c1;
+  --purple-light: #805ad5;
+  --blue: #2b6cb0;
+  --blue-soft: #dbeafe;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Noto Sans KR',sans-serif; background:var(--bg); color:var(--text); line-height:1.7; }
+
+/* Header */
+.header { background:linear-gradient(135deg,#1a365d 0%,#2b6cb0 100%); color:#fff; padding:2rem; }
+.header h1 { font-size:1.5rem; font-weight:700; }
+.header-meta { display:flex; gap:2rem; margin-top:0.5rem; font-size:0.9rem; opacity:0.9; flex-wrap:wrap; }
+.header-meta span { background:rgba(255,255,255,0.15); padding:0.2rem 0.8rem; border-radius:20px; }
+
+/* Navigation */
+.nav { background:#fff; border-bottom:1px solid var(--border); padding:0.5rem 2rem; position:sticky; top:0; z-index:100; display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center; }
+.nav-btn { padding:0.4rem 1rem; border:1px solid var(--border); border-radius:6px; background:#fff; cursor:pointer; font-size:0.85rem; font-family:inherit; transition:all 0.2s; }
+.nav-btn:hover { background:var(--primary); color:#fff; border-color:var(--primary); }
+.nav-btn.active { background:var(--primary); color:#fff; border-color:var(--primary); }
+.nav-btn.summary-btn { background:#edf2f7; font-weight:600; }
+
+/* Main */
+.main { max-width:1100px; margin:0 auto; padding:1.5rem; }
+
+/* Section */
+.section { display:none; }
+.section.active { display:block; }
+
+/* Cards */
+.card { background:var(--card); border-radius:12px; border:1px solid var(--border); padding:1.5rem; margin-bottom:1.2rem; box-shadow:0 1px 3px rgba(0,0,0,0.04); }
+.card h2 { font-size:1.15rem; font-weight:700; color:var(--primary); margin-bottom:1rem; padding-bottom:0.5rem; border-bottom:2px solid var(--primary); }
+.card h3 { font-size:1rem; font-weight:600; color:var(--primary-light); margin:1rem 0 0.5rem; }
+
+/* Score Summary Box */
+.score-box { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:1rem; margin:1rem 0; }
+.score-item { text-align:center; padding:1rem; border-radius:10px; background:#f7fafc; border:1px solid var(--border); }
+.score-item .label { font-size:0.8rem; color:var(--text-light); margin-bottom:0.3rem; }
+.score-item .value { font-size:1.8rem; font-weight:900; }
+.score-item .value.pass { color:var(--pass); }
+.score-item .value.fail { color:var(--fail); }
+.score-item .value.warn { color:var(--orange); }
+.score-item .max { font-size:0.85rem; color:var(--text-light); }
+
+/* Checklist */
+.checklist { margin:0.8rem 0; }
+.check-item { display:flex; align-items:flex-start; gap:0.5rem; padding:0.4rem 0; border-bottom:1px solid #f0f0f0; font-size:0.9rem; }
+.check-item:last-child { border-bottom:none; }
+.check-icon { flex-shrink:0; width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:700; color:#fff; margin-top:2px; }
+.check-icon.yes { background:var(--green); }
+.check-icon.partial { background:var(--orange); }
+.check-icon.no { background:var(--red); }
+.check-text { flex:1; }
+.check-text .fact { font-weight:500; }
+.check-text .detail { color:var(--text-light); font-size:0.82rem; }
+
+/* Qualitative */
+.qual-grid { display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin:1rem 0; }
+@media(max-width:700px) { .qual-grid { grid-template-columns:1fr; } }
+.qual-item { padding:1rem; border-radius:8px; border:1px solid var(--border); }
+.qual-item .qual-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem; }
+.qual-item .qual-title { font-weight:600; font-size:0.95rem; }
+.qual-item .qual-score { font-weight:700; font-size:1.1rem; }
+.qual-item .qual-detail { font-size:0.85rem; color:var(--text-light); }
+.qual-purple .qual-score { color:var(--purple) !important; }
+
+/* Comments */
+.comment-box { margin:1rem 0; padding:1rem; border-radius:8px; border-left:4px solid; }
+.comment-box.good { border-color:var(--green); background:#f0fff4; }
+.comment-box.improve { border-color:var(--orange); background:#fffaf0; }
+.comment-box.critical { border-color:var(--red); background:#fff5f5; }
+.comment-box .comment-title { font-weight:600; font-size:0.9rem; margin-bottom:0.3rem; }
+.comment-box.good .comment-title { color:var(--green); }
+.comment-box.improve .comment-title { color:var(--orange); }
+.comment-box.critical .comment-title { color:var(--red); }
+.comment-box ul { margin-left:1.2rem; font-size:0.88rem; }
+.comment-box li { margin-bottom:0.3rem; }
+
+/* Overall Summary */
+.overall-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:0.8rem; margin:1.5rem 0; }
+@media(max-width:900px) { .overall-grid { grid-template-columns:repeat(3,1fr); } }
+@media(max-width:600px) { .overall-grid { grid-template-columns:repeat(2,1fr); } }
+.overall-card { text-align:center; padding:1rem 0.5rem; border-radius:12px; border:2px solid var(--border); }
+.overall-card .q-label { font-size:0.78rem; color:var(--text-light); margin-bottom:0.2rem; }
+.overall-card .q-title { font-size:0.72rem; font-weight:500; margin-bottom:0.6rem; min-height:2rem; color:var(--text); }
+.overall-card .q-score { font-size:1.7rem; font-weight:900; line-height:1; }
+.overall-card .q-max { font-size:0.75rem; color:var(--text-light); margin-top:0.2rem; }
+.overall-card .q-bar { height:5px; background:#edf2f7; border-radius:3px; margin-top:0.4rem; overflow:hidden; }
+.overall-card .q-bar-fill { height:100%; border-radius:3px; transition:width 0.5s; }
+.overall-card.pass { border-color:var(--pass); }
+.overall-card.pass .q-score { color:var(--pass); }
+.overall-card.pass .q-bar-fill { background:var(--pass); }
+.overall-card.fail { border-color:var(--fail); }
+.overall-card.fail .q-score { color:var(--fail); }
+.overall-card.fail .q-bar-fill { background:var(--fail); }
+.overall-card.warn { border-color:var(--orange); }
+.overall-card.warn .q-score { color:var(--orange); }
+.overall-card.warn .q-bar-fill { background:var(--orange); }
+
+/* Mentor Area */
+.mentor-area { background:#edf2f7; border-radius:10px; padding:1.2rem; margin:1rem 0; }
+.mentor-area h3 { font-size:0.95rem; font-weight:600; color:var(--primary); margin-bottom:0.8rem; }
+.mentor-input-row { display:flex; gap:1rem; align-items:center; margin-bottom:0.5rem; flex-wrap:wrap; }
+.mentor-input-row label { font-size:0.85rem; font-weight:500; min-width:80px; }
+.mentor-input { padding:0.4rem 0.8rem; border:1px solid var(--border); border-radius:6px; font-family:inherit; font-size:0.9rem; width:80px; text-align:center; }
+.mentor-textarea { width:100%; min-height:60px; padding:0.5rem; border:1px solid var(--border); border-radius:6px; font-family:inherit; font-size:0.85rem; resize:vertical; }
+
+/* Page ref */
+.page-ref { display:inline-block; background:#edf2f7; padding:0.15rem 0.6rem; border-radius:4px; font-size:0.78rem; color:var(--text-light); margin-right:0.3rem; }
+
+/* Print */
+@media print {
+  .nav { display:none; }
+  .section { display:block !important; page-break-inside:avoid; }
+  .mentor-area { border:1px solid #ccc; }
+}
+
+/* Sub-question header */
+.sub-q-header { display:flex; align-items:center; gap:0.8rem; margin:1.2rem 0 0.8rem; padding:0.6rem 1rem; background:linear-gradient(90deg,#ebf4ff,#fff); border-radius:8px; border-left:4px solid var(--primary-light); }
+.sub-q-num { font-size:1.1rem; font-weight:700; color:var(--primary); }
+.sub-q-title { font-size:0.95rem; font-weight:500; }
+.sub-q-score { margin-left:auto; font-weight:700; font-size:1rem; }
+.sub-q-breakdown { font-size:0.78rem; color:var(--text-light); margin-left:0.5rem; }
+
+/* Total bar */
+.total-bar { display:flex; align-items:center; justify-content:center; gap:1rem; padding:1.5rem; background:linear-gradient(135deg,#1a365d,#2b6cb0); border-radius:12px; color:#fff; margin:1.5rem 0; }
+.total-bar .total-label { font-size:1rem; }
+.total-bar .total-score { font-size:3rem; font-weight:900; }
+.total-bar .total-max { font-size:1.2rem; opacity:0.8; }
+.total-bar .total-pass { font-size:0.9rem; padding:0.3rem 1rem; border-radius:20px; margin-left:1rem; }
+.total-bar .total-pass.is-pass { background:rgba(56,161,105,0.3); }
+.total-bar .total-pass.is-fail { background:rgba(229,62,62,0.3); }
+
+/* Fact type tags */
+.fact-tag { display:inline-block; padding:0.1rem 0.5rem; border-radius:4px; font-size:0.72rem; font-weight:600; margin-right:0.3rem; vertical-align:middle; }
+.fact-tag.required { background:#dbeafe; color:#1e40af; }
+.fact-tag.bonus { background:#fef3c7; color:#92400e; }
+.fact-tag.structure { background:#e0e7ff; color:#3730a3; }
+
+/* Qualitative section - separate feedback badge */
+.badge { display:inline-block; padding:0.15rem 0.6rem; border-radius:12px; font-size:0.75rem; font-weight:600; }
+.badge-blue { background:#dbeafe; color:#1e40af; }
+.badge-purple { background:#ede9fe; color:#6b46c1; }
+.badge-green { background:#d1fae5; color:#065f46; }
+.badge-orange { background:#ffedd5; color:#9a3412; }
+.badge-red { background:#fee2e2; color:#991b1b; }
+.badge-gray { background:#e5e7eb; color:#4b5563; }
+
+/* v1.1 상한·검증 배지 (카드 상단 띠) */
+.banner-row { display:flex; gap:0.5rem; flex-wrap:wrap; margin:0.8rem 0 1rem 0; }
+.banner { padding:0.4rem 0.8rem; border-radius:6px; font-size:0.8rem; font-weight:600; display:inline-flex; align-items:center; gap:0.3rem; }
+.banner-volume-below { background:#fef2f2; color:#991b1b; border:1px solid #fecaca; }
+.banner-volume-partial { background:#fff7ed; color:#9a3412; border:1px solid #fed7aa; }
+.banner-volume-standard { background:#f0fdf4; color:#166534; border:1px solid #bbf7d0; }
+.banner-volume-bonus { background:#eff6ff; color:#1e40af; border:1px solid #bfdbfe; }
+.banner-content-downgraded { background:#fef2f2; color:#991b1b; border:1px solid #fecaca; }
+.banner-curve { background:#eff6ff; color:#1e40af; border:1px solid #bfdbfe; }
+.banner-bonus-triggered { background:#f0fdf4; color:#166534; border:1px solid #bbf7d0; font-weight:700; }
+
+/* v1.2 가점 트리거 박스 */
+.bonus-trigger-box { border-radius:8px; padding:0.8rem 1rem; margin:0.8rem 0; font-size:0.82rem; }
+.bonus-trigger-box.triggered { background:#f0fdf4; border:1.5px solid #34d399; }
+.bonus-trigger-box.not-triggered { background:#f9fafb; border:1px solid #d1d5db; }
+.bonus-trigger-box .btb-title { font-weight:700; margin-bottom:0.5rem; }
+.bonus-trigger-box.triggered .btb-title { color:#065f46; }
+.bonus-trigger-box.not-triggered .btb-title { color:#4b5563; }
+.bonus-trigger-box .btb-list { display:grid; grid-template-columns:repeat(2,1fr); gap:0.3rem 1rem; margin-top:0.3rem; }
+@media(max-width:600px) { .bonus-trigger-box .btb-list { grid-template-columns:1fr; } }
+.bonus-trigger-box .btb-item { display:flex; align-items:center; gap:0.4rem; font-size:0.8rem; }
+.bonus-trigger-box .btb-item.ok { color:#065f46; }
+.bonus-trigger-box .btb-item.ng { color:#6b7280; }
+.bonus-trigger-box .btb-chk { width:16px; height:16px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:0.68rem; font-weight:700; color:#fff; flex-shrink:0; }
+.bonus-trigger-box .btb-chk.ok { background:#10b981; }
+.bonus-trigger-box .btb-chk.ng { background:#9ca3af; }
+
+/* 점수 계산 추적 (details/summary) */
+.calc-trace { margin-top:0.8rem; }
+.calc-trace summary { cursor:pointer; font-size:0.82rem; color:var(--text-light); padding:0.3rem 0; user-select:none; }
+.calc-trace summary:hover { color:var(--primary); }
+.calc-trace pre { background:#f9fafb; border:1px solid var(--border); border-radius:6px; padding:0.6rem 0.8rem; font-size:0.78rem; line-height:1.55; color:#4b5563; margin-top:0.4rem; white-space:pre-wrap; font-family:'Menlo','Consolas',monospace; }
+
+/* Qualitative 4-cell (정성 4항목 grid) */
+.qual-4 { display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin:1rem 0; }
+@media(max-width:700px) { .qual-4 { grid-template-columns:1fr; } }
+
+/* 문제별 분량·점수 테이블 */
+table.scoretbl { width:100%; border-collapse:collapse; font-size:0.86rem; }
+table.scoretbl th { padding:0.55rem 0.4rem; text-align:center; border-bottom:2px solid var(--border); background:#edf2f7; font-weight:600; }
+table.scoretbl td { padding:0.5rem 0.4rem; border-bottom:1px solid #f0f0f0; text-align:center; }
+table.scoretbl td.tl { text-align:left; }
+table.scoretbl tr.alt { background:#fafafa; }
+table.scoretbl tr.pass td { color:var(--text); }
+table.scoretbl tr.fail td { color:var(--red); }
+table.scoretbl tfoot td { background:#edf2f7; font-weight:700; border-bottom:none; padding:0.6rem 0.4rem; }
+
+</style>
+</head>
+<body>
+
+<div class="header" style="background:linear-gradient(135deg,#553c9a 0%,#805ad5 100%);">
+  <h1>2주차 주간모의고사 1교시 · 학급 대시보드 (v1.2)</h1>
+  <div class="header-meta">
+    <span>학생 수: 3명</span>
+    <span>문항 수: 총 13개 (문제 13개)</span>
+    <span>학급 평균: 43.4/100</span>
+    <span>가점 발동: 2건</span>
+    <span>멘토 전용 · 실명 표시</span>
+  </div>
+  <div style="margin-top:0.8rem;font-size:0.82rem;opacity:0.85;">
+    <span class="badge badge-blue">Phase 3 v1.2 · 체크리스트 v2.2</span>
+    <span class="badge badge-green">편향 감사 30건 전원 upheld</span>
+  </div>
+</div>
+
+<div class="main">
+
+
+    <div class="card">
+      <h2>섹션 1 · 학생 요약 테이블 (실명)</h2>
+      <p style="font-size:0.82rem;color:var(--text-light);margin-bottom:0.8rem;">학급 평균 총점 <strong>43.4/100</strong> 기준. 평균 이상 녹색, 이하 빨강. ★ = 가점 발동. 점수는 0.3 단위 반올림.</p>
+      <div style="overflow-x:auto;">
+      <table class="scoretbl">
+        <thead>
+          <tr>
+            <th style="text-align:left;">학생</th>
+            <th style="font-size:0.72rem;min-width:60px;"><div style="font-weight:700;color:var(--primary);">#01</div><div style="font-size:0.62rem;font-weight:400;color:var(--text-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:65px;">베이즈 정리</div></th><th style="font-size:0.72rem;min-width:60px;"><div style="font-weight:700;color:var(--primary);">#02</div><div style="font-size:0.62rem;font-weight:400;color:var(--text-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:65px;">차원 축소</div></th><th style="font-size:0.72rem;min-width:60px;"><div style="font-weight:700;color:var(--primary);">#03</div><div style="font-size:0.62rem;font-weight:400;color:var(--text-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:65px;">트랜스포머 어</div></th><th style="font-size:0.72rem;min-width:60px;"><div style="font-weight:700;color:var(--primary);">#05</div><div style="font-size:0.62rem;font-weight:400;color:var(--text-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:65px;">CNN과 RN</div></th><th style="font-size:0.72rem;min-width:60px;"><div style="font-weight:700;color:var(--primary);">#07</div><div style="font-size:0.62rem;font-weight:400;color:var(--text-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:65px;">TCP 혼잡제</div></th><th style="font-size:0.72rem;min-width:60px;"><div style="font-weight:700;color:var(--primary);">#08</div><div style="font-size:0.62rem;font-weight:400;color:var(--text-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:65px;">OSPF 라우</div></th><th style="font-size:0.72rem;min-width:60px;"><div style="font-weight:700;color:var(--primary);">#09</div><div style="font-size:0.62rem;font-weight:400;color:var(--text-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:65px;">6G 이동통신</div></th><th style="font-size:0.72rem;min-width:60px;"><div style="font-weight:700;color:var(--primary);">#11</div><div style="font-size:0.62rem;font-weight:400;color:var(--text-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:65px;">마이클 포터 </div></th><th style="font-size:0.72rem;min-width:60px;"><div style="font-weight:700;color:var(--primary);">#12</div><div style="font-size:0.62rem;font-weight:400;color:var(--text-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:65px;">ISMS-P </div></th><th style="font-size:0.72rem;min-width:60px;"><div style="font-weight:700;color:var(--primary);">#13</div><div style="font-size:0.62rem;font-weight:400;color:var(--text-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:65px;">제로 트러스트</div></th><th style="font-size:0.72rem;min-width:60px;"><div style="font-weight:700;color:var(--primary);">#14</div><div style="font-size:0.62rem;font-weight:400;color:var(--text-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:65px;">사이버 킬 체</div></th><th style="font-size:0.72rem;min-width:60px;"><div style="font-weight:700;color:var(--primary);">#15</div><div style="font-size:0.62rem;font-weight:400;color:var(--text-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:65px;">프롬프트 인젝</div></th><th style="font-size:0.72rem;min-width:60px;"><div style="font-weight:700;color:var(--primary);">#04</div><div style="font-size:0.62rem;font-weight:400;color:var(--text-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:65px;">RAG 검색증</div></th>
+            <th>총점<br>/100</th>
+            <th>달성</th>
+            <th>정성<br>/100</th>
+            <th>평균<br>분량</th>
+            <th style="text-align:left;">v2→v1.1→v1.2 변화</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="tl" style="font-weight:700;">Andrew</td><td style="color:#9ca3af;">-</td><td style="background:#fef2f2;color:var(--red);font-weight:600;">3.0</td><td style="color:#9ca3af;">-</td><td style="color:#9ca3af;">-</td><td style="background:#fef2f2;color:var(--red);font-weight:600;">3.7</td><td style="background:#fef2f2;color:var(--red);font-weight:600;">2.7</td><td style="background:#fef2f2;color:var(--red);font-weight:600;">4.0</td><td style="background:#f0fdf4;color:var(--green);font-weight:600;">6.0</td><td style="background:#f0fdf4;color:var(--green);font-weight:600;">6.0</td><td style="background:#fef2f2;color:var(--red);font-weight:600;">5.7</td><td style="background:#f0fdf4;color:var(--green);font-weight:600;">6.0</td><td style="background:#fef2f2;color:var(--red);font-weight:600;">5.7</td><td style="background:#f0fdf4;color:var(--green);font-weight:600;">6.0</td><td style="font-weight:900;color:var(--green);">48.8</td><td>4/10</td><td style="color:var(--purple);">58.0/100</td><td>24.8줄</td><td style="font-size:0.78rem;color:var(--text-light);text-align:left;">v1.1 대비 +2.3 (연도·인물 완화로 F1/F2 등 상향)</td></tr><tr><td class="tl" style="font-weight:700;">Brian</td><td style="color:#9ca3af;">-</td><td style="background:#fef2f2;color:var(--red);font-weight:600;">1.0</td><td style="background:#fef2f2;color:var(--red);font-weight:600;">1.0</td><td style="color:#9ca3af;">-</td><td style="background:#fef2f2;color:var(--red);font-weight:600;">3.3</td><td style="background:#fef2f2;color:var(--red);font-weight:600;">3.0</td><td style="color:#9ca3af;">-</td><td style="background:#fef2f2;color:var(--red);font-weight:600;">3.3</td><td style="background:#fef2f2;color:var(--red);font-weight:600;">2.0</td><td style="background:#fef2f2;color:var(--red);font-weight:600;">3.0</td><td style="background:#fef2f2;color:var(--red);font-weight:600;">1.0</td><td style="background:#fef2f2;color:var(--red);font-weight:600;">1.3</td><td style="background:#fef2f2;color:var(--red);font-weight:600;">1.3</td><td style="font-weight:900;color:var(--red);">20.2</td><td>0/10</td><td style="color:var(--purple);">23.6/100</td><td>13.2줄</td><td style="font-size:0.78rem;color:var(--text-light);text-align:left;">v1.1 대비 ±0 (분량 극소로 완화 영향 미미)</td></tr><tr><td class="tl" style="font-weight:700;">Charles</td><td style="background:#fef2f2;color:var(--red);font-weight:600;">5.3</td><td style="background:#f0fdf4;color:var(--green);font-weight:600;">6.0</td><td style="color:#9ca3af;">-</td><td style="background:#f0fdf4;color:var(--green);font-weight:600;">6.0</td><td style="background:#f0fdf4;color:var(--green);font-weight:600;">6.0</td><td style="background:#f0fdf4;color:var(--green);font-weight:600;">6.0</td><td style="color:#9ca3af;">-</td><td style="background:#f0fdf4;color:var(--green);font-weight:600;">6.0</td><td style="background:#f0fdf4;color:var(--green);font-weight:600;">6.0</td><td style="color:#9ca3af;">-</td><td style="background:#f0fdf4;color:var(--green);font-weight:600;">7.0 ★</td><td style="background:#f0fdf4;color:var(--green);font-weight:600;">6.0</td><td style="background:#f0fdf4;color:var(--green);font-weight:600;">7.0 ★</td><td style="font-weight:900;color:var(--green);">61.3</td><td>9/10</td><td style="color:var(--purple);">75.2/100</td><td>26.9줄</td><td style="font-size:0.78rem;color:var(--text-light);text-align:left;">v1.1 대비 +3.6 (가점 2건 추가 발동)</td></tr>
+        </tbody>
+      </table>
+      </div>
+    </div>
+    
+
+
+    <div class="card">
+      <h2>섹션 2 · 문제별 분포</h2>
+      <p style="font-size:0.82rem;color:var(--text-light);margin-bottom:1rem;">문제 13개 카드. 평균/편차/최소/최대/달성률 + 평균 분량(줄수).</p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:0.8rem;"><div class="card" style="padding:1rem;"><h3 style="margin:0 0 0.5rem;"><span style="color:var(--text-light);font-size:0.78rem;">[#01]</span> 베이즈 정리</h3><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:0.3rem;font-size:0.78rem;margin-bottom:0.5rem;"><div><strong>평균</strong> 5.3</div><div><strong>편차</strong> 0.0</div><div><strong>최소</strong> 5.3</div><div><strong>최대</strong> 5.3</div><div><strong>달성률</strong> 0%</div><div><strong>평균분량</strong> 25.0줄</div></div><div style="display:flex;align-items:center;gap:0.5rem;margin:0.2rem 0;font-size:0.82rem;"><span style="min-width:50px;font-weight:500;">Charles</span><div style="flex:1;height:14px;background:#edf2f7;border-radius:3px;overflow:hidden;"><div style="height:100%;width:53%;background:var(--orange);"></div></div><span style="min-width:30px;text-align:right;font-weight:700;">5.3</span></div></div><div class="card" style="padding:1rem;"><h3 style="margin:0 0 0.5rem;"><span style="color:var(--text-light);font-size:0.78rem;">[#02]</span> 차원 축소</h3><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:0.3rem;font-size:0.78rem;margin-bottom:0.5rem;"><div><strong>평균</strong> 3.3</div><div><strong>편차</strong> 2.0</div><div><strong>최소</strong> 1.0</div><div><strong>최대</strong> 6.0</div><div><strong>달성률</strong> 33%</div><div><strong>평균분량</strong> 19.7줄</div></div><div style="display:flex;align-items:center;gap:0.5rem;margin:0.2rem 0;font-size:0.82rem;"><span style="min-width:50px;font-weight:500;">Andrew</span><div style="flex:1;height:14px;background:#edf2f7;border-radius:3px;overflow:hidden;"><div style="height:100%;width:30%;background:var(--red);"></div></div><span style="min-width:30px;text-align:right;font-weight:700;">3.0</span></div><div style="display:flex;align-items:center;gap:0.5rem;margin:0.2rem 0;font-size:0.82rem;"><span style="min-width:50px;font-weight:500;">Brian</span><div style="flex:1;height:14px;background:#edf2f7;border-radius:3px;overflow:hidden;"><div style="height:100%;width:10%;background:var(--red);"></div></div><span style="min-width:30px;text-align:right;font-weight:700;">1.0</span></div><div style="display:flex;align-items:center;gap:0.5rem;margin:0.2rem 0;font-size:0.82rem;"><span style="min-width:50px;font-weight:500;">Charles</span><div style="flex:1;height:14px;background:#edf2f7;border-radius:3px;overflow:hidden;"><div style="height:100%;width:60%;background:var(--green);"></div></div><span style="min-width:30px;text-align:right;font-weight:700;">6.0</span></div></div><div class="card" style="padding:1rem;"><h3 style="margin:0 0 0.5rem;"><span style="color:var(--text-light);font-size:0.78rem;">[#03]</span> 트랜스포머 어텐션 메커니즘</h3><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:0.3rem;font-size:0.78rem;margin-bottom:0.5rem;"><div><strong>평균</strong> 1.0</div><div><strong>편차</strong> 0.0</div><div><strong>최소</strong> 1.0</div><div><strong>최대</strong> 1.0</div><div><strong>달성률</strong> 0%</div><div><strong>평균분량</strong> 10.0줄</div></div><div style="display:flex;align-items:center;gap:0.5rem;margin:0.2rem 0;font-size:0.82rem;"><span style="min-width:50px;font-weight:500;">Brian</span><div style="flex:1;height:14px;background:#edf2f7;border-radius:3px;overflow:hidden;"><div style="height:100%;width:10%;background:var(--red);"></div></div><span style="min-width:30px;text-align:right;font-weight:700;">1.0</span></div></div><div class="card" style="padding:1rem;"><h3 style="margin:0 0 0.5rem;"><span style="color:var(--text-light);font-size:0.78rem;">[#05]</span> CNN과 RNN 구조적 특징</h3><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:0.3rem;font-size:0.78rem;margin-bottom:0.5rem;"><div><strong>평균</strong> 6.0</div><div><strong>편차</strong> 0.0</div><div><strong>최소</strong> 6.0</div><div><strong>최대</strong> 6.0</div><div><strong>달성률</strong> 100%</div><div><strong>평균분량</strong> 25.0줄</div></div><div style="display:flex;align-items:center;gap:0.5rem;margin:0.2rem 0;font-size:0.82rem;"><span style="min-width:50px;font-weight:500;">Charles</span><div style="flex:1;height:14px;background:#edf2f7;border-radius:3px;overflow:hidden;"><div style="height:100%;width:60%;background:var(--green);"></div></div><span style="min-width:30px;text-align:right;font-weight:700;">6.0</span></div></div><div class="card" style="padding:1rem;"><h3 style="margin:0 0 0.5rem;"><span style="color:var(--text-light);font-size:0.78rem;">[#07]</span> TCP 혼잡제어</h3><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:0.3rem;font-size:0.78rem;margin-bottom:0.5rem;"><div><strong>평균</strong> 4.3</div><div><strong>편차</strong> 1.2</div><div><strong>최소</strong> 3.3</div><div><strong>최대</strong> 6.0</div><div><strong>달성률</strong> 33%</div><div><strong>평균분량</strong> 23.7줄</div></div><div style="display:flex;align-items:center;gap:0.5rem;margin:0.2rem 0;font-size:0.82rem;"><span style="min-width:50px;font-weight:500;">Andrew</span><div style="flex:1;height:14px;background:#edf2f7;border-radius:3px;overflow:hidden;"><div style="height:100%;width:37%;background:var(--red);"></div></div><span style="min-width:30px;text-align:right;font-weight:700;">3.7</span></div><div style="display:flex;align-items:center;gap:0.5rem;margin:0.2rem 0;font-size:0.82rem;"><span style="min-width:50px;font-weight:500;">Brian</span><div style="flex:1;height:14px;background:#edf2f7;border-radius:3px;overflow:hidden;"><div style="height:100%;width:33%;background:var(--red);"></div></div><span style="min-width:30px;text-align:right;font-weight:700;">3.3</span></div><div style="display:flex;align-items:center;gap:0.5rem;margin:0.2rem 0;font-size:0.82rem;"><span style="min-width:50px;font-weight:500;">Charles</span><div style="flex:1;height:14px;background:#edf2f7;border-radius:3px;overflow:hidden;"><div style="height:100%;width:60%;background:var(--green);"></div></div><span style="min-width:30px;text-align:right;font-weight:700;">6.0</span></div></div><div class="card" style="padding:1rem;"><h3 style="margin:0 0 0.5rem;"><span style="color:var(--text-light);font-size:0.78rem;">[#08]</span> OSPF 라우팅 프로토콜</h3><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:0.3rem;font-size:0.78rem;margin-bottom:0.5rem;"><div><strong>평균</strong> 3.9</div><div><strong>편차</strong> 1.5</div><div><strong>최소</strong> 2.7</div><div><strong>최대</strong> 6.0</div><div><strong>달성률</strong> 33%</div><div><strong>평균분량</strong> 21.3줄</div></div><div style="display:flex;align-items:center;gap:0.5rem;margin:0.2rem 0;font-size:0.82rem;"><span style="min-width:50px;font-weight:500;">Andrew</span><div style="flex:1;height:14px;background:#edf2f7;border-radius:3px;overflow:hidden;"><div style="height:100%;width:27%;background:var(--red);"></div></div><span style="min-width:30px;text-align:right;font-weight:700;">2.7</span></div><div style="display:flex;align-items:center;gap:0.5rem;margin:0.2rem 0;font-size:0.82rem;"><span style="min-width:50px;font-weight:500;">Brian</span><div style="flex:1;height:14px;background:#edf2f7;border-radius:3px;overflow:hidden;"><div style="height:100%;width:30%;background:var(--red);"></div></div><span style="min-width:30px;text-align:right;font-weight:700;">3.0</span></div><div style="display:flex;align-items:center;gap:0.5rem;margin:0.2rem 0;font-size:0.82rem;"><span style="min-width:50px;font-weight:500;">Charles</span><div style="flex:1;height:14px;background:#edf2f7;border-radius:3px;overflow:hidden;"><div style="height:100%;width:60%;background:var(--green);"></div></div><span style="min-width:30px;text-align:right;font-weight:700;">6.0</span></div></div><div class="card" style="padding:1rem;"><h3 style="margin:0 0 0.5rem;"><span style="color:var(--text-light);font-size:0.78rem;">[#09]</span> 6G 이동통신과 AI-RAN</h3><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:0.3rem;font-size:0.78rem;margin-bottom:0.5rem;"><div><strong>평균</strong> 4.0</div><div><strong>편차</strong> 0.0</div><div><strong>최소</strong> 4.0</div><div><strong>최대</strong> 4.0</div><div><strong>달성률</strong> 0%</div><div><strong>평균분량</strong> 22.0줄</div></div><div style="display:flex;align-items:center;gap:0.5rem;margin:0.2rem 0;font-size:0.82rem;"><span style="min-width:50px;font-weight:500;">Andrew</span><div style="flex:1;height:14px;background:#edf2f7;border-radius:3px;overflow:hidden;"><div style="height:100%;width:40%;background:var(--orange);"></div></div><span style="min-width:30px;text-align:right;font-weight:700;">4.0</span></div></div><div class="card" style="padding:1rem;"><h3 style="margin:0 0 0.5rem;"><span style="color:var(--text-light);font-size:0.78rem;">[#11]</span> 마이클 포터 5-Forces Model</h3><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:0.3rem;font-size:0.78rem;margin-bottom:0.5rem;"><div><strong>평균</strong> 5.1</div><div><strong>편차</strong> 1.3</div><div><strong>최소</strong> 3.3</div><div><strong>최대</strong> 6.0</div><div><strong>달성률</strong> 67%</div><div><strong>평균분량</strong> 24.0줄</div></div><div style="display:flex;align-items:center;gap:0.5rem;margin:0.2rem 0;font-size:0.82rem;"><span style="min-width:50px;font-weight:500;">Andrew</span><div style="flex:1;height:14px;background:#edf2f7;border-radius:3px;overflow:hidden;"><div style="height:100%;width:60%;background:var(--green);"></div></div><span style="min-width:30px;text-align:right;font-weight:700;">6.0</span></div><div style="display:flex;align-items:center;gap:0.5rem;margin:0.2rem 0;font-size:0.82rem;"><span style="min-width:50px;font-weight:500;">Brian</span><div style="flex:1;height:14px;background:#edf2f7;border-radius:3px;overflow:hidden;"><div style="height:100%;width:33%;background:var(--red);"></div></div><span style="min-width:30px;text-align:right;font-weight:700;">3.3</span></div><div style="display:flex;align-items:center;gap:0.5rem;margin:0.2rem 0;font-size:0.82rem;"><span style="min-width:50px;font-weight:500;">Charles</span><div style="flex:1;height:14px;background:#edf2f7;border-radius:3px;overflow:hidden;"><div style="height:100%;width:60%;background:var(--green);"></div></div><span style="min-width:30px;text-align:right;font-weight:700;">6.0</span></div></div><div class="card" style="padding:1rem;"><h3 style="margin:0 0 0.5rem;"><span style="color:var(--text-light);font-size:0.78rem;">[#12]</span> ISMS-P 인증 제도</h3><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:0.3rem;font-size:0.78rem;margin-bottom:0.5rem;"><div><strong>평균</strong> 4.7</div><div><strong>편차</strong> 1.9</div><div><strong>최소</strong> 2.0</div><div><strong>최대</strong> 6.0</div><div><strong>달성률</strong> 67%</div><div><strong>평균분량</strong> 19.7줄</div></div><div style="display:flex;align-items:center;gap:0.5rem;margin:0.2rem 0;font-size:0.82rem;"><span style="min-width:50px;font-weight:500;">Andrew</span><div style="flex:1;height:14px;background:#edf2f7;border-radius:3px;overflow:hidden;"><div style="height:100%;width:60%;background:var(--green);"></div></div><span style="min-width:30px;text-align:right;font-weight:700;">6.0</span></div><div style="display:flex;align-items:center;gap:0.5rem;margin:0.2rem 0;font-size:0.82rem;"><span style="min-width:50px;font-weight:500;">Brian</span><div style="flex:1;height:14px;background:#edf2f7;border-radius:3px;overflow:hidden;"><div style="height:100%;width:20%;background:var(--red);"></div></div><span style="min-width:30px;text-align:right;font-weight:700;">2.0</span></div><div style="display:flex;align-items:center;gap:0.5rem;margin:0.2rem 0;font-size:0.82rem;"><span style="min-width:50px;font-weight:500;">Charles</span><div style="flex:1;height:14px;background:#edf2f7;border-radius:3px;overflow:hidden;"><div style="height:100%;width:60%;background:var(--green);"></div></div><span style="min-width:30px;text-align:right;font-weight:700;">6.0</span></div></div><div class="card" style="padding:1rem;"><h3 style="margin:0 0 0.5rem;"><span style="color:var(--text-light);font-size:0.78rem;">[#13]</span> 제로 트러스트 아키텍처</h3><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:0.3rem;font-size:0.78rem;margin-bottom:0.5rem;"><div><strong>평균</strong> 4.3</div><div><strong>편차</strong> 1.4</div><div><strong>최소</strong> 3.0</div><div><strong>최대</strong> 5.7</div><div><strong>달성률</strong> 0%</div><div><strong>평균분량</strong> 24.0줄</div></div><div style="display:flex;align-items:center;gap:0.5rem;margin:0.2rem 0;font-size:0.82rem;"><span style="min-width:50px;font-weight:500;">Andrew</span><div style="flex:1;height:14px;background:#edf2f7;border-radius:3px;overflow:hidden;"><div style="height:100%;width:57%;background:var(--orange);"></div></div><span style="min-width:30px;text-align:right;font-weight:700;">5.7</span></div><div style="display:flex;align-items:center;gap:0.5rem;margin:0.2rem 0;font-size:0.82rem;"><span style="min-width:50px;font-weight:500;">Brian</span><div style="flex:1;height:14px;background:#edf2f7;border-radius:3px;overflow:hidden;"><div style="height:100%;width:30%;background:var(--red);"></div></div><span style="min-width:30px;text-align:right;font-weight:700;">3.0</span></div></div><div class="card" style="padding:1rem;"><h3 style="margin:0 0 0.5rem;"><span style="color:var(--text-light);font-size:0.78rem;">[#14]</span> 사이버 킬 체인</h3><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:0.3rem;font-size:0.78rem;margin-bottom:0.5rem;"><div><strong>평균</strong> 4.7</div><div><strong>편차</strong> 2.6</div><div><strong>최소</strong> 1.0</div><div><strong>최대</strong> 7.0</div><div><strong>달성률</strong> 67%</div><div><strong>평균분량</strong> 19.7줄</div></div><div style="display:flex;align-items:center;gap:0.5rem;margin:0.2rem 0;font-size:0.82rem;"><span style="min-width:50px;font-weight:500;">Andrew</span><div style="flex:1;height:14px;background:#edf2f7;border-radius:3px;overflow:hidden;"><div style="height:100%;width:60%;background:var(--green);"></div></div><span style="min-width:30px;text-align:right;font-weight:700;">6.0</span></div><div style="display:flex;align-items:center;gap:0.5rem;margin:0.2rem 0;font-size:0.82rem;"><span style="min-width:50px;font-weight:500;">Brian</span><div style="flex:1;height:14px;background:#edf2f7;border-radius:3px;overflow:hidden;"><div style="height:100%;width:10%;background:var(--red);"></div></div><span style="min-width:30px;text-align:right;font-weight:700;">1.0</span></div><div style="display:flex;align-items:center;gap:0.5rem;margin:0.2rem 0;font-size:0.82rem;"><span style="min-width:50px;font-weight:500;">Charles</span><div style="flex:1;height:14px;background:#edf2f7;border-radius:3px;overflow:hidden;"><div style="height:100%;width:70%;background:var(--green);"></div></div><span style="min-width:30px;text-align:right;font-weight:700;">7.0</span></div></div><div class="card" style="padding:1rem;"><h3 style="margin:0 0 0.5rem;"><span style="color:var(--text-light);font-size:0.78rem;">[#15]</span> 프롬프트 인젝션</h3><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:0.3rem;font-size:0.78rem;margin-bottom:0.5rem;"><div><strong>평균</strong> 4.3</div><div><strong>편차</strong> 2.1</div><div><strong>최소</strong> 1.3</div><div><strong>최대</strong> 6.0</div><div><strong>달성률</strong> 33%</div><div><strong>평균분량</strong> 22.0줄</div></div><div style="display:flex;align-items:center;gap:0.5rem;margin:0.2rem 0;font-size:0.82rem;"><span style="min-width:50px;font-weight:500;">Andrew</span><div style="flex:1;height:14px;background:#edf2f7;border-radius:3px;overflow:hidden;"><div style="height:100%;width:57%;background:var(--orange);"></div></div><span style="min-width:30px;text-align:right;font-weight:700;">5.7</span></div><div style="display:flex;align-items:center;gap:0.5rem;margin:0.2rem 0;font-size:0.82rem;"><span style="min-width:50px;font-weight:500;">Brian</span><div style="flex:1;height:14px;background:#edf2f7;border-radius:3px;overflow:hidden;"><div style="height:100%;width:13%;background:var(--red);"></div></div><span style="min-width:30px;text-align:right;font-weight:700;">1.3</span></div><div style="display:flex;align-items:center;gap:0.5rem;margin:0.2rem 0;font-size:0.82rem;"><span style="min-width:50px;font-weight:500;">Charles</span><div style="flex:1;height:14px;background:#edf2f7;border-radius:3px;overflow:hidden;"><div style="height:100%;width:60%;background:var(--green);"></div></div><span style="min-width:30px;text-align:right;font-weight:700;">6.0</span></div></div><div class="card" style="padding:1rem;"><h3 style="margin:0 0 0.5rem;"><span style="color:var(--text-light);font-size:0.78rem;">[#04]</span> RAG 검색증강생성</h3><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:0.3rem;font-size:0.78rem;margin-bottom:0.5rem;"><div><strong>평균</strong> 4.8</div><div><strong>편차</strong> 2.5</div><div><strong>최소</strong> 1.3</div><div><strong>최대</strong> 7.0</div><div><strong>달성률</strong> 67%</div><div><strong>평균분량</strong> 23.0줄</div></div><div style="display:flex;align-items:center;gap:0.5rem;margin:0.2rem 0;font-size:0.82rem;"><span style="min-width:50px;font-weight:500;">Andrew</span><div style="flex:1;height:14px;background:#edf2f7;border-radius:3px;overflow:hidden;"><div style="height:100%;width:60%;background:var(--green);"></div></div><span style="min-width:30px;text-align:right;font-weight:700;">6.0</span></div><div style="display:flex;align-items:center;gap:0.5rem;margin:0.2rem 0;font-size:0.82rem;"><span style="min-width:50px;font-weight:500;">Brian</span><div style="flex:1;height:14px;background:#edf2f7;border-radius:3px;overflow:hidden;"><div style="height:100%;width:13%;background:var(--red);"></div></div><span style="min-width:30px;text-align:right;font-weight:700;">1.3</span></div><div style="display:flex;align-items:center;gap:0.5rem;margin:0.2rem 0;font-size:0.82rem;"><span style="min-width:50px;font-weight:500;">Charles</span><div style="flex:1;height:14px;background:#edf2f7;border-radius:3px;overflow:hidden;"><div style="height:100%;width:70%;background:var(--green);"></div></div><span style="min-width:30px;text-align:right;font-weight:700;">7.0</span></div></div>
+      </div>
+    </div>
+    
+
+
+    <div class="card">
+      <h2>섹션 3 · 팩트별 인정률</h2>
+      <p style="font-size:0.82rem;color:var(--text-light);margin-bottom:1rem;">문제별 팩트 테이블 · 인정률 30% 미만 행 빨간 하이라이트 · 가점 팩트 별도 표시.</p>
+      <div style="margin-bottom:1.2rem;"><h3 style="font-size:0.92rem;color:var(--primary-light);margin-bottom:0.5rem;"><span style="color:var(--text-light);font-size:0.78rem;">[#01]</span> 베이즈 정리 (1명 선택)</h3><table class="scoretbl"><thead><tr><th style="text-align:left;">팩트</th><th>✓</th><th>△</th><th>✗</th><th>인정률</th></tr></thead><tbody><tr ><td class="tl" style="font-size:0.78rem;">F1<br><span style="font-size:0.72rem;color:var(--text-light);">베이즈 정리 정의</span></td><td>1</td><td>0</td><td>0</td><td style="font-weight:700;color:var(--text);">100%</td></tr><tr ><td class="tl" style="font-size:0.78rem;">F2<br><span style="font-size:0.72rem;color:var(--text-light);">베이즈 공식과 4요소</span></td><td>1</td><td>0</td><td>0</td><td style="font-weight:700;color:var(--text);">100%</td></tr><tr style="background:#fef2f2;"><td class="tl" style="font-size:0.78rem;">F3<br><span style="font-size:0.72rem;color:var(--text-light);">수치 예시와 기저율 무시</span></td><td>0</td><td>0</td><td>1</td><td style="font-weight:700;color:var(--red);">0%</td></tr><tr style="background:#fef2f2;"><td class="tl" style="font-size:0.78rem;">F4<br><span style="font-size:0.72rem;color:var(--text-light);">빈도주의 vs 베이즈주의 비교</span></td><td>0</td><td>0</td><td>1</td><td style="font-weight:700;color:var(--red);">0%</td></tr><tr style="background:#fef2f2;"><td class="tl" style="font-size:0.78rem;">F5<br><span style="font-size:0.72rem;color:var(--text-light);">나이브 베이즈 분류기</span></td><td>0</td><td>0</td><td>1</td><td style="font-weight:700;color:var(--red);">0%</td></tr><tr style="background:#fef2f2;"><td class="tl" style="font-size:0.78rem;">G1 <span class="badge badge-orange" style="font-size:0.62rem;">가점</span><br><span style="font-size:0.72rem;color:var(--text-light);">실무 사례(Gmail/COVID-19)</span></td><td>0</td><td>0</td><td>1</td><td style="font-weight:700;color:var(--red);">0%</td></tr><tr ><td class="tl" style="font-size:0.78rem;">G2 <span class="badge badge-orange" style="font-size:0.62rem;">가점</span><br><span style="font-size:0.72rem;color:var(--text-light);">연관 이론(MLE/MAP/칼만)</span></td><td>0</td><td>1</td><td>0</td><td style="font-weight:700;color:var(--text);">50%</td></tr><tr ><td class="tl" style="font-size:0.78rem;">S1<br><span style="font-size:0.72rem;color:var(--text-light);">구조 완결성</span></td><td>1</td><td>0</td><td>0</td><td style="font-weight:700;color:var(--text);">100%</td></tr></tbody></table></div><div style="margin-bottom:1.2rem;"><h3 style="font-size:0.92rem;color:var(--primary-light);margin-bottom:0.5rem;"><span style="color:var(--text-light);font-size:0.78rem;">[#02]</span> 차원 축소 (3명 선택)</h3><table class="scoretbl"><thead><tr><th style="text-align:left;">팩트</th><th>✓</th><th>△</th><th>✗</th><th>인정률</th></tr></thead><tbody><tr ><td class="tl" style="font-size:0.78rem;">F1<br><span style="font-size:0.72rem;color:var(--text-light);">차원의 저주와 차원 축소 정의</span></td><td>1</td><td>2</td><td>0</td><td style="font-weight:700;color:var(--text);">67%</td></tr><tr ><td class="tl" style="font-size:0.78rem;">F2<br><span style="font-size:0.72rem;color:var(--text-light);">PCA의 원리와 5단계</span></td><td>1</td><td>1</td><td>1</td><td style="font-weight:700;color:var(--text);">50%</td></tr><tr style="background:#fef2f2;"><td class="tl" style="font-size:0.78rem;">F3<br><span style="font-size:0.72rem;color:var(--text-light);">설명 분산비 수치 예시</span></td><td>0</td><td>0</td><td>3</td><td style="font-weight:700;color:var(--red);">0%</td></tr><tr style="background:#fef2f2;"><td class="tl" style="font-size:0.78rem;">F4<br><span style="font-size:0.72rem;color:var(--text-light);">t-SNE 원리와 Crowding Problem</span></td><td>0</td><td>1</td><td>2</td><td style="font-weight:700;color:var(--red);">17%</td></tr><tr ><td class="tl" style="font-size:0.78rem;">F5<br><span style="font-size:0.72rem;color:var(--text-light);">PCA vs t-SNE 비교</span><div style="font-size:0.7rem;color:#dc2626;margin-top:0.15rem;">이상치: Charles</div></td><td>1</td><td>0</td><td>2</td><td style="font-weight:700;color:var(--text);">33%</td></tr><tr style="background:#fef2f2;"><td class="tl" style="font-size:0.78rem;">G1 <span class="badge badge-orange" style="font-size:0.62rem;">가점</span><br><span style="font-size:0.72rem;color:var(--text-light);">UMAP 최신 동향</span></td><td>0</td><td>0</td><td>3</td><td style="font-weight:700;color:var(--red);">0%</td></tr><tr style="background:#fef2f2;"><td class="tl" style="font-size:0.78rem;">G2 <span class="badge badge-orange" style="font-size:0.62rem;">가점</span><br><span style="font-size:0.72rem;color:var(--text-light);">실무 사례 또는 오토인코더</span></td><td>0</td><td>1</td><td>2</td><td style="font-weight:700;color:var(--red);">17%</td></tr><tr ><td class="tl" style="font-size:0.78rem;">S1<br><span style="font-size:0.72rem;color:var(--text-light);">구조 완결성</span></td><td>1</td><td>1</td><td>1</td><td style="font-weight:700;color:var(--text);">50%</td></tr></tbody></table></div><div style="margin-bottom:1.2rem;"><h3 style="font-size:0.92rem;color:var(--primary-light);margin-bottom:0.5rem;"><span style="color:var(--text-light);font-size:0.78rem;">[#03]</span> 트랜스포머 어텐션 메커니즘 (1명 선택)</h3><table class="scoretbl"><thead><tr><th style="text-align:left;">팩트</th><th>✓</th><th>△</th><th>✗</th><th>인정률</th></tr></thead><tbody><tr ><td class="tl" style="font-size:0.78rem;">F1<br><span style="font-size:0.72rem;color:var(--text-light);">트랜스포머 정의</span></td><td>0</td><td>1</td><td>0</td><td style="font-weight:700;color:var(--text);">50%</td></tr><tr style="background:#fef2f2;"><td class="tl" style="font-size:0.78rem;">F2<br><span style="font-size:0.72rem;color:var(--text-light);">RNN 한계와 트랜스포머 해결</span></td><td>0</td><td>0</td><td>1</td><td style="font-weight:700;color:var(--red);">0%</td></tr><tr style="background:#fef2f2;"><td class="tl" style="font-size:0.78rem;">F3<br><span style="font-size:0.72rem;color:var(--text-light);">스케일드 닷-프로덕트 어텐션 수식</span></td><td>0</td><td>0</td><td>1</td><td style="font-weight:700;color:var(--red);">0%</td></tr><tr style="background:#fef2f2;"><td class="tl" style="font-size:0.78rem;">F4<br><span style="font-size:0.72rem;color:var(--text-light);">멀티 헤드 어텐션</span></td><td>0</td><td>0</td><td>1</td><td style="font-weight:700;color:var(--red);">0%</td></tr><tr style="background:#fef2f2;"><td class="tl" style="font-size:0.78rem;">F5<br><span style="font-size:0.72rem;color:var(--text-light);">아키텍처 핵심 구성요소</span></td><td>0</td><td>0</td><td>1</td><td style="font-weight:700;color:var(--red);">0%</td></tr><tr style="background:#fef2f2;"><td class="tl" style="font-size:0.78rem;">G1 <span class="badge badge-orange" style="font-size:0.62rem;">가점</span><br><span style="font-size:0.72rem;color:var(--text-light);">파생 모델 계보</span></td><td>0</td><td>0</td><td>1</td><td style="font-weight:700;color:var(--red);">0%</td></tr><tr style="background:#fef2f2;"><td class="tl" style="font-size:0.78rem;">G2 <span class="badge badge-orange" style="font-size:0.62rem;">가점</span><br><span style="font-size:0.72rem;color:var(--text-light);">실무 사례</span></td><td>0</td><td>0</td><td>1</td><td style="font-weight:700;color:var(--red);">0%</td></tr><tr style="background:#fef2f2;"><td class="tl" style="font-size:0.78rem;">S1<br><span style="font-size:0.72rem;color:var(--text-light);">구조 완결성</span></td><td>0</td><td>0</td><td>1</td><td style="font-weight:700;color:var(--red);">0%</td></tr></tbody></table></div><div style="margin-bottom:1.2rem;"><h3 style="font-size:0.92rem;color:var(--primary-light);margin-bottom:0.5rem;"><span style="color:var(--text-light);font-size:0.78rem;">[#05]</span> CNN과 RNN 구조적 특징 (1명 선택)</h3><table class="scoretbl"><thead><tr><th style="text-align:left;">팩트</th><th>✓</th><th>△</th><th>✗</th><th>인정률</th></tr></thead><tbody><tr ><td class="tl" style="font-size:0.78rem;">F1<br><span style="font-size:0.72rem;color:var(--text-light);">CNN/RNN 역할 구분</span></td><td>1</td><td>0</td><td>0</td><td style="font-weight:700;color:var(--text);">100%</td></tr><tr ><td class="tl" style="font-size:0.78rem;">F2<br><span style="font-size:0.72rem;color:var(--text-light);">CNN 3대 레이어 구조</span></td><td>1</td><td>0</td><td>0</td><td style="font-weight:700;color:var(--text);">100%</td></tr><tr style="background:#fef2f2;"><td class="tl" style="font-size:0.78rem;">F3<br><span style="font-size:0.72rem;color:var(--text-light);">CNN 설계 원리</span></td><td>0</td><td>0</td><td>1</td><td style="font-weight:700;color:var(--red);">0%</td></tr><tr ><td class="tl" style="font-size:0.78rem;">F4<br><span style="font-size:0.72rem;color:var(--text-light);">RNN 순환 구조와 LSTM 게이트</span></td><td>0</td><td>1</td><td>0</td><td style="font-weight:700;color:var(--text);">50%</td></tr><tr ><td class="tl" style="font-size:0.78rem;">F5<br><span style="font-size:0.72rem;color:var(--text-light);">CNN vs RNN 비교</span></td><td>0</td><td>1</td><td>0</td><td style="font-weight:700;color:var(--text);">50%</td></tr><tr style="background:#fef2f2;"><td class="tl" style="font-size:0.78rem;">G1 <span class="badge badge-orange" style="font-size:0.62rem;">가점</span><br><span style="font-size:0.72rem;color:var(--text-light);">대표 모델 진화</span></td><td>0</td><td>0</td><td>1</td><td style="font-weight:700;color:var(--red);">0%</td></tr><tr style="background:#fef2f2;"><td class="tl" style="font-size:0.78rem;">G2 <span class="badge badge-orange" style="font-size:0.62rem;">가점</span><br><span style="font-size:0.72rem;color:var(--text-light);">실무 사례 또는 ViT 수렴</span></td><td>0</td><td>0</td><td>1</td><td style="font-weight:700;color:var(--red);">0%</td></tr><tr ><td class="tl" style="font-size:0.78rem;">S1<br><span style="font-size:0.72rem;color:var(--text-light);">구조 완결성</span></td><td>1</td><td>0</td><td>0</td><td style="font-weight:700;color:var(--text);">100%</td></tr></tbody></table></div>
+    <div style="margin-bottom:1.2rem;"><h3 style="font-size:0.92rem;color:var(--primary-light);margin-bottom:0.5rem;"><span style="color:var(--text-light);font-size:0.78rem;">[#07]</span> TCP 혼잡제어 (3명 선택)</h3><table class="scoretbl"><thead><tr><th style="text-align:left;">팩트</th><th>✓</th><th>△</th><th>✗</th><th>인정률</th></tr></thead><tbody><tr style="background:#fef2f2;"><td class="tl" style="font-size:0.78rem;">F1<br><span style="font-size:0.72rem;color:var(--text-light);">혼잡 제어 등장 배경</span></td><td>0</td><td>0</td><td>3</td><td style="font-weight:700;color:var(--red);">0%</td></tr><tr ><td class="tl" style="font-size:0.78rem;">F2<br><span style="font-size:0.72rem;color:var(--text-light);">CWND와 흐름 제어 비교</span></td><td>1</td><td>1</td><td>1</td><td style="font-weight:700;color:var(--text);">50%</td></tr><tr ><td class="tl" style="font-size:0.78rem;">F3<br><span style="font-size:0.72rem;color:var(--text-light);">4단계 메커니즘</span></td><td>2</td><td>1</td><td>0</td><td style="font-weight:700;color:var(--text);">83%</td></tr><tr ><td class="tl" style="font-size:0.78rem;">F4<br><span style="font-size:0.72rem;color:var(--text-light);">CWND 변화 그래프/수치 예시</span></td><td>1</td><td>2</td><td>0</td><td style="font-weight:700;color:var(--text);">67%</td></tr><tr style="background:#fef2f2;"><td class="tl" style="font-size:0.78rem;">F5<br><span style="font-size:0.72rem;color:var(--text-light);">AIMD 원리</span></td><td>0</td><td>1</td><td>2</td><td style="font-weight:700;color:var(--red);">17%</td></tr><tr ><td class="tl" style="font-size:0.78rem;">G1 <span class="badge badge-orange" style="font-size:0.62rem;">가점</span><br><span style="font-size:0.72rem;color:var(--text-light);">TCP 알고리즘 변형</span></td><td>0</td><td>2</td><td>1</td><td style="font-weight:700;color:var(--text);">33%</td></tr><tr ><td class="tl" style="font-size:0.78rem;">G2 <span class="badge badge-orange" style="font-size:0.62rem;">가점</span><br><span style="font-size:0.72rem;color:var(--text-light);">실무 사례(BBR/QUIC)</span><div style="font-size:0.7rem;color:#dc2626;margin-top:0.15rem;">이상치: Charles</div></td><td>1</td><td>0</td><td>2</td><td style="font-weight:700;color:var(--text);">33%</td></tr><tr ><td class="tl" style="font-size:0.78rem;">S1<br><span style="font-size:0.72rem;color:var(--text-light);">구조 완결성</span></td><td>1</td><td>2</td><td>0</td><td style="font-weight:700;color:var(--text);">67%</td></tr></tbody></table></div><div style="margin-bottom:1.2rem;"><h3 style="font-size:0.92rem;color:var(--primary-light);margin-bottom:0.5rem;"><span style="color:var(--text-light);font-size:0.78rem;">[#08]</span> OSPF 라우팅 프로토콜 (3명 선택)</h3><table class="scoretbl"><thead><tr><th style="text-align:left;">팩트</th><th>✓</th><th>△</th><th>✗</th><th>인정률</th></tr></thead><tbody><tr ><td class="tl" style="font-size:0.78rem;">F1<br><span style="font-size:0.72rem;color:var(--text-light);">OSPF 정의와 표준</span></td><td>0</td><td>3</td><td>0</td><td style="font-weight:700;color:var(--text);">50%</td></tr><tr ><td class="tl" style="font-size:0.78rem;">F2<br><span style="font-size:0.72rem;color:var(--text-light);">거리 벡터 vs 링크 상태 비교</span><div style="font-size:0.7rem;color:#dc2626;margin-top:0.15rem;">이상치: Charles</div></td><td>1</td><td>0</td><td>2</td><td style="font-weight:700;color:var(--text);">33%</td></tr><tr ><td class="tl" style="font-size:0.78rem;">F3<br><span style="font-size:0.72rem;color:var(--text-light);">다익스트라 알고리즘과 Cost</span></td><td>0</td><td>2</td><td>1</td><td style="font-weight:700;color:var(--text);">33%</td></tr><tr ><td class="tl" style="font-size:0.78rem;">F4<br><span style="font-size:0.72rem;color:var(--text-light);">OSPF 동작 5단계</span></td><td>0</td><td>3</td><td>0</td><td style="font-weight:700;color:var(--text);">50%</td></tr><tr style="background:#fef2f2;"><td class="tl" style="font-size:0.78rem;">F5<br><span style="font-size:0.72rem;color:var(--text-light);">Area 계층 구조</span></td><td>0</td><td>1</td><td>2</td><td style="font-weight:700;color:var(--red);">17%</td></tr><tr style="background:#fef2f2;"><td class="tl" style="font-size:0.78rem;">G1 <span class="badge badge-orange" style="font-size:0.62rem;">가점</span><br><span style="font-size:0.72rem;color:var(--text-light);">OSPF 패킷 5종</span></td><td>0</td><td>0</td><td>3</td><td style="font-weight:700;color:var(--red);">0%</td></tr><tr ><td class="tl" style="font-size:0.78rem;">G2 <span class="badge badge-orange" style="font-size:0.62rem;">가점</span><br><span style="font-size:0.72rem;color:var(--text-light);">실무 사례 또는 연관 프로토콜</span></td><td>0</td><td>2</td><td>1</td><td style="font-weight:700;color:var(--text);">33%</td></tr><tr ><td class="tl" style="font-size:0.78rem;">S1<br><span style="font-size:0.72rem;color:var(--text-light);">구조 완결성</span></td><td>1</td><td>2</td><td>0</td><td style="font-weight:700;color:var(--text);">67%</td></tr></tbody></table></div><div style="margin-bottom:1.2rem;"><h3 style="font-size:0.92rem;color:var(--primary-light);margin-bottom:0.5rem;"><span style="color:var(--text-light);font-size:0.78rem;">[#09]</span> 6G 이동통신과 AI-RAN (1명 선택)</h3><table class="scoretbl"><thead><tr><th style="text-align:left;">팩트</th><th>✓</th><th>△</th><th>✗</th><th>인정률</th></tr></thead><tbody><tr ><td class="tl" style="font-size:0.78rem;">F1<br><span style="font-size:0.72rem;color:var(--text-light);">6G 비전과 KPI</span></td><td>0</td><td>1</td><td>0</td><td style="font-weight:700;color:var(--text);">50%</td></tr><tr ><td class="tl" style="font-size:0.78rem;">F2<br><span style="font-size:0.72rem;color:var(--text-light);">AI-RAN 정의</span></td><td>0</td><td>1</td><td>0</td><td style="font-weight:700;color:var(--text);">50%</td></tr><tr style="background:#fef2f2;"><td class="tl" style="font-size:0.78rem;">F3<br><span style="font-size:0.72rem;color:var(--text-light);">기존 RAN vs AI-RAN 비교</span></td><td>0</td><td>0</td><td>1</td><td style="font-weight:700;color:var(--red);">0%</td></tr><tr ><td class="tl" style="font-size:0.78rem;">F4<br><span style="font-size:0.72rem;color:var(--text-light);">O-RAN/RIC 아키텍처</span></td><td>0</td><td>1</td><td>0</td><td style="font-weight:700;color:var(--text);">50%</td></tr><tr ><td class="tl" style="font-size:0.78rem;">F5<br><span style="font-size:0.72rem;color:var(--text-light);">AI-RAN 5대 핵심 기능</span></td><td>0</td><td>1</td><td>0</td><td style="font-weight:700;color:var(--text);">50%</td></tr><tr style="background:#fef2f2;"><td class="tl" style="font-size:0.78rem;">G1 <span class="badge badge-orange" style="font-size:0.62rem;">가점</span><br><span style="font-size:0.72rem;color:var(--text-light);">6G 핵심 기술 6종</span></td><td>0</td><td>0</td><td>1</td><td style="font-weight:700;color:var(--red);">0%</td></tr><tr style="background:#fef2f2;"><td class="tl" style="font-size:0.78rem;">G2 <span class="badge badge-orange" style="font-size:0.62rem;">가점</span><br><span style="font-size:0.72rem;color:var(--text-light);">실무 사례</span></td><td>0</td><td>0</td><td>1</td><td style="font-weight:700;color:var(--red);">0%</td></tr><tr ><td class="tl" style="font-size:0.78rem;">S1<br><span style="font-size:0.72rem;color:var(--text-light);">구조 완결성</span></td><td>0</td><td>1</td><td>0</td><td style="font-weight:700;color:var(--text);">50%</td></tr></tbody></table></div><div style="margin-bottom:1.2rem;"><h3 style="font-size:0.92rem;color:var(--primary-light);margin-bottom:0.5rem;"><span style="color:var(--text-light);font-size:0.78rem;">[#11]</span> 마이클 포터 5-Forces Model (3명 선택)</h3><table class="scoretbl"><thead><tr><th style="text-align:left;">팩트</th><th>✓</th><th>△</th><th>✗</th><th>인정률</th></tr></thead><tbody><tr ><td class="tl" style="font-size:0.78rem;">F1<br><span style="font-size:0.72rem;color:var(--text-light);">5-Forces Model 정의</span></td><td>3</td><td>0</td><td>0</td><td style="font-weight:700;color:var(--text);">100%</td></tr><tr ><td class="tl" style="font-size:0.78rem;">F2<br><span style="font-size:0.72rem;color:var(--text-light);">5가지 경쟁 세력</span></td><td>2</td><td>1</td><td>0</td><td style="font-weight:700;color:var(--text);">83%</td></tr><tr style="background:#fef2f2;"><td class="tl" style="font-size:0.78rem;">F3<br><span style="font-size:0.72rem;color:var(--text-light);">진입 장벽 및 각 세력 강도 요인</span></td><td>0</td><td>1</td><td>2</td><td style="font-weight:700;color:var(--red);">17%</td></tr><tr ><td class="tl" style="font-size:0.78rem;">F4<br><span style="font-size:0.72rem;color:var(--text-light);">3대 본원적 전략 연계</span><div style="font-size:0.7rem;color:#dc2626;margin-top:0.15rem;">이상치: Charles</div></td><td>1</td><td>0</td><td>2</td><td style="font-weight:700;color:var(--text);">33%</td></tr><tr ><td class="tl" style="font-size:0.78rem;">F5<br><span style="font-size:0.72rem;color:var(--text-light);">IT 산업 적용 사례</span><div style="font-size:0.7rem;color:#dc2626;margin-top:0.15rem;">이상치: Andrew</div></td><td>1</td><td>0</td><td>2</td><td style="font-weight:700;color:var(--text);">33%</td></tr><tr style="background:#fef2f2;"><td class="tl" style="font-size:0.78rem;">G1 <span class="badge badge-orange" style="font-size:0.62rem;">가점</span><br><span style="font-size:0.72rem;color:var(--text-light);">한계와 보완 프레임워크</span></td><td>0</td><td>0</td><td>3</td><td style="font-weight:700;color:var(--red);">0%</td></tr><tr style="background:#fef2f2;"><td class="tl" style="font-size:0.78rem;">G2 <span class="badge badge-orange" style="font-size:0.62rem;">가점</span><br><span style="font-size:0.72rem;color:var(--text-light);">연관 프레임워크(SWOT/가치 사슬)</span></td><td>0</td><td>1</td><td>2</td><td style="font-weight:700;color:var(--red);">17%</td></tr><tr ><td class="tl" style="font-size:0.78rem;">S1<br><span style="font-size:0.72rem;color:var(--text-light);">구조 완결성</span></td><td>2</td><td>1</td><td>0</td><td style="font-weight:700;color:var(--text);">83%</td></tr></tbody></table></div><div style="margin-bottom:1.2rem;"><h3 style="font-size:0.92rem;color:var(--primary-light);margin-bottom:0.5rem;"><span style="color:var(--text-light);font-size:0.78rem;">[#12]</span> ISMS-P 인증 제도 (3명 선택)</h3><table class="scoretbl"><thead><tr><th style="text-align:left;">팩트</th><th>✓</th><th>△</th><th>✗</th><th>인정률</th></tr></thead><tbody><tr ><td class="tl" style="font-size:0.78rem;">F1<br><span style="font-size:0.72rem;color:var(--text-light);">ISMS-P 정의와 통합 배경</span></td><td>0</td><td>3</td><td>0</td><td style="font-weight:700;color:var(--text);">50%</td></tr><tr ><td class="tl" style="font-size:0.78rem;">F2<br><span style="font-size:0.72rem;color:var(--text-light);">법적 근거</span></td><td>1</td><td>1</td><td>1</td><td style="font-weight:700;color:var(--text);">50%</td></tr><tr ><td class="tl" style="font-size:0.78rem;">F3<br><span style="font-size:0.72rem;color:var(--text-light);">3대 영역 101개 항목</span></td><td>2</td><td>1</td><td>0</td><td style="font-weight:700;color:var(--text);">83%</td></tr><tr ><td class="tl" style="font-size:0.78rem;">F4<br><span style="font-size:0.72rem;color:var(--text-light);">인증 의무 대상</span><div style="font-size:0.7rem;color:#dc2626;margin-top:0.15rem;">이상치: Andrew</div></td><td>1</td><td>0</td><td>2</td><td style="font-weight:700;color:var(--text);">33%</td></tr><tr ><td class="tl" style="font-size:0.78rem;">F5<br><span style="font-size:0.72rem;color:var(--text-light);">인증 절차 또는 개인정보 생명주기</span></td><td>1</td><td>1</td><td>1</td><td style="font-weight:700;color:var(--text);">50%</td></tr><tr ><td class="tl" style="font-size:0.78rem;">G1 <span class="badge badge-orange" style="font-size:0.62rem;">가점</span><br><span style="font-size:0.72rem;color:var(--text-light);">연관 제도(ISO 27001/GDPR)</span><div style="font-size:0.7rem;color:#dc2626;margin-top:0.15rem;">이상치: Charles</div></td><td>1</td><td>0</td><td>2</td><td style="font-weight:700;color:var(--text);">33%</td></tr><tr style="background:#fef2f2;"><td class="tl" style="font-size:0.78rem;">G2 <span class="badge badge-orange" style="font-size:0.62rem;">가점</span><br><span style="font-size:0.72rem;color:var(--text-light);">위반 제재 또는 최신 동향</span></td><td>0</td><td>1</td><td>2</td><td style="font-weight:700;color:var(--red);">17%</td></tr><tr ><td class="tl" style="font-size:0.78rem;">S1<br><span style="font-size:0.72rem;color:var(--text-light);">구조 완결성</span><div style="font-size:0.7rem;color:#dc2626;margin-top:0.15rem;">이상치: Brian</div></td><td>2</td><td>0</td><td>1</td><td style="font-weight:700;color:var(--text);">67%</td></tr></tbody></table></div><div style="margin-bottom:1.2rem;"><h3 style="font-size:0.92rem;color:var(--primary-light);margin-bottom:0.5rem;"><span style="color:var(--text-light);font-size:0.78rem;">[#13]</span> 제로 트러스트 아키텍처 (2명 선택)</h3><table class="scoretbl"><thead><tr><th style="text-align:left;">팩트</th><th>✓</th><th>△</th><th>✗</th><th>인정률</th></tr></thead><tbody><tr style="background:#fef2f2;"><td class="tl" style="font-size:0.78rem;">F1<br><span style="font-size:0.72rem;color:var(--text-light);">경계 기반 보안의 한계</span></td><td>0</td><td>1</td><td>1</td><td style="font-weight:700;color:var(--red);">25%</td></tr><tr ><td class="tl" style="font-size:0.78rem;">F2<br><span style="font-size:0.72rem;color:var(--text-light);">제로 트러스트 정의</span></td><td>0</td><td>2</td><td>0</td><td style="font-weight:700;color:var(--text);">50%</td></tr><tr style="background:#fef2f2;"><td class="tl" style="font-size:0.78rem;">F3<br><span style="font-size:0.72rem;color:var(--text-light);">3대 핵심 원칙</span></td><td>0</td><td>1</td><td>1</td><td style="font-weight:700;color:var(--red);">25%</td></tr><tr style="background:#fef2f2;"><td class="tl" style="font-size:0.78rem;">F4<br><span style="font-size:0.72rem;color:var(--text-light);">NIST SP 800-207 아키텍처 구성</span></td><td>0</td><td>1</td><td>1</td><td style="font-weight:700;color:var(--red);">25%</td></tr><tr ><td class="tl" style="font-size:0.78rem;">F5<br><span style="font-size:0.72rem;color:var(--text-light);">핵심 구현 기술(SDP/마이크로세그/IAM)</span></td><td>1</td><td>1</td><td>0</td><td style="font-weight:700;color:var(--text);">75%</td></tr><tr style="background:#fef2f2;"><td class="tl" style="font-size:0.78rem;">G1 <span class="badge badge-orange" style="font-size:0.62rem;">가점</span><br><span style="font-size:0.72rem;color:var(--text-light);">구글 BeyondCorp 또는 한국 가이드라인</span></td><td>0</td><td>0</td><td>2</td><td style="font-weight:700;color:var(--red);">0%</td></tr><tr style="background:#fef2f2;"><td class="tl" style="font-size:0.78rem;">G2 <span class="badge badge-orange" style="font-size:0.62rem;">가점</span><br><span style="font-size:0.72rem;color:var(--text-light);">SASE 또는 연관 프레임워크</span></td><td>0</td><td>0</td><td>2</td><td style="font-weight:700;color:var(--red);">0%</td></tr><tr ><td class="tl" style="font-size:0.78rem;">S1<br><span style="font-size:0.72rem;color:var(--text-light);">구조 완결성</span></td><td>1</td><td>1</td><td>0</td><td style="font-weight:700;color:var(--text);">75%</td></tr></tbody></table></div><div style="margin-bottom:1.2rem;"><h3 style="font-size:0.92rem;color:var(--primary-light);margin-bottom:0.5rem;"><span style="color:var(--text-light);font-size:0.78rem;">[#14]</span> 사이버 킬 체인 (3명 선택)</h3><table class="scoretbl"><thead><tr><th style="text-align:left;">팩트</th><th>✓</th><th>△</th><th>✗</th><th>인정률</th></tr></thead><tbody><tr ><td class="tl" style="font-size:0.78rem;">F1<br><span style="font-size:0.72rem;color:var(--text-light);">사이버 킬 체인 정의</span></td><td>2</td><td>1</td><td>0</td><td style="font-weight:700;color:var(--text);">83%</td></tr><tr ><td class="tl" style="font-size:0.78rem;">F2<br><span style="font-size:0.72rem;color:var(--text-light);">7단계 프로세스</span><div style="font-size:0.7rem;color:#dc2626;margin-top:0.15rem;">이상치: Brian</div></td><td>2</td><td>0</td><td>1</td><td style="font-weight:700;color:var(--text);">67%</td></tr><tr ><td class="tl" style="font-size:0.78rem;">F3<br><span style="font-size:0.72rem;color:var(--text-light);">각 단계 공격 활동과 방어 전략</span></td><td>1</td><td>1</td><td>1</td><td style="font-weight:700;color:var(--text);">50%</td></tr><tr ><td class="tl" style="font-size:0.78rem;">F4<br><span style="font-size:0.72rem;color:var(--text-light);">전략적 원리(비대칭 방어)</span></td><td>0</td><td>2</td><td>1</td><td style="font-weight:700;color:var(--text);">33%</td></tr><tr style="background:#fef2f2;"><td class="tl" style="font-size:0.78rem;">F5<br><span style="font-size:0.72rem;color:var(--text-light);">MITRE ATT&amp;CK 비교</span></td><td>0</td><td>1</td><td>2</td><td style="font-weight:700;color:var(--red);">17%</td></tr><tr style="background:#fef2f2;"><td class="tl" style="font-size:0.78rem;">G1 <span class="badge badge-orange" style="font-size:0.62rem;">가점</span><br><span style="font-size:0.72rem;color:var(--text-light);">실제 공격 사례</span></td><td>0</td><td>0</td><td>3</td><td style="font-weight:700;color:var(--red);">0%</td></tr><tr ><td class="tl" style="font-size:0.78rem;">G2 <span class="badge badge-orange" style="font-size:0.62rem;">가점</span><br><span style="font-size:0.72rem;color:var(--text-light);">연관 보안</span><div style="font-size:0.7rem;color:#dc2626;margin-top:0.15rem;">이상치: Charles</div></td><td>1</td><td>0</td><td>2</td><td style="font-weight:700;color:var(--text);">33%</td></tr><tr ><td class="tl" style="font-size:0.78rem;">S1<br><span style="font-size:0.72rem;color:var(--text-light);">구조 완결성</span><div style="font-size:0.7rem;color:#dc2626;margin-top:0.15rem;">이상치: Brian</div></td><td>2</td><td>0</td><td>1</td><td style="font-weight:700;color:var(--text);">67%</td></tr></tbody></table></div><div style="margin-bottom:1.2rem;"><h3 style="font-size:0.92rem;color:var(--primary-light);margin-bottom:0.5rem;"><span style="color:var(--text-light);font-size:0.78rem;">[#15]</span> 프롬프트 인젝션 (3명 선택)</h3><table class="scoretbl"><thead><tr><th style="text-align:left;">팩트</th><th>✓</th><th>△</th><th>✗</th><th>인정률</th></tr></thead><tbody><tr ><td class="tl" style="font-size:0.78rem;">F1<br><span style="font-size:0.72rem;color:var(--text-light);">프롬프트 인젝션 정의와 OWASP</span></td><td>2</td><td>1</td><td>0</td><td style="font-weight:700;color:var(--text);">83%</td></tr><tr style="background:#fef2f2;"><td class="tl" style="font-size:0.78rem;">F2<br><span style="font-size:0.72rem;color:var(--text-light);">근본 원인</span></td><td>0</td><td>1</td><td>2</td><td style="font-weight:700;color:var(--red);">17%</td></tr><tr ><td class="tl" style="font-size:0.78rem;">F3<br><span style="font-size:0.72rem;color:var(--text-light);">직접 프롬프트 인젝션 기법</span></td><td>1</td><td>1</td><td>1</td><td style="font-weight:700;color:var(--text);">50%</td></tr><tr ><td class="tl" style="font-size:0.78rem;">F4<br><span style="font-size:0.72rem;color:var(--text-light);">간접 프롬프트 인젝션과 위험성</span><div style="font-size:0.7rem;color:#dc2626;margin-top:0.15rem;">이상치: Andrew</div></td><td>1</td><td>0</td><td>2</td><td style="font-weight:700;color:var(--text);">33%</td></tr><tr style="background:#fef2f2;"><td class="tl" style="font-size:0.78rem;">F5<br><span style="font-size:0.72rem;color:var(--text-light);">방어 4계층</span></td><td>0</td><td>1</td><td>2</td><td style="font-weight:700;color:var(--red);">17%</td></tr><tr style="background:#fef2f2;"><td class="tl" style="font-size:0.78rem;">G1 <span class="badge badge-orange" style="font-size:0.62rem;">가점</span><br><span style="font-size:0.72rem;color:var(--text-light);">SQL 인젝션과의 비교</span></td><td>0</td><td>0</td><td>3</td><td style="font-weight:700;color:var(--red);">0%</td></tr><tr style="background:#fef2f2;"><td class="tl" style="font-size:0.78rem;">G2 <span class="badge badge-orange" style="font-size:0.62rem;">가점</span><br><span style="font-size:0.72rem;color:var(--text-light);">실제 사례</span></td><td>0</td><td>0</td><td>3</td><td style="font-weight:700;color:var(--red);">0%</td></tr><tr ><td class="tl" style="font-size:0.78rem;">S1<br><span style="font-size:0.72rem;color:var(--text-light);">구조 완결성</span></td><td>2</td><td>1</td><td>0</td><td style="font-weight:700;color:var(--text);">83%</td></tr></tbody></table></div><div style="margin-bottom:1.2rem;"><h3 style="font-size:0.92rem;color:var(--primary-light);margin-bottom:0.5rem;"><span style="color:var(--text-light);font-size:0.78rem;">[#04]</span> RAG 검색증강생성 (3명 선택)</h3><table class="scoretbl"><thead><tr><th style="text-align:left;">팩트</th><th>✓</th><th>△</th><th>✗</th><th>인정률</th></tr></thead><tbody><tr ><td class="tl" style="font-size:0.78rem;">F1<br><span style="font-size:0.72rem;color:var(--text-light);">LLM 할루시네이션과 RAG 등장 배경</span></td><td>1</td><td>1</td><td>1</td><td style="font-weight:700;color:var(--text);">50%</td></tr><tr ><td class="tl" style="font-size:0.78rem;">F2<br><span style="font-size:0.72rem;color:var(--text-light);">RAG 정의</span></td><td>2</td><td>1</td><td>0</td><td style="font-weight:700;color:var(--text);">83%</td></tr><tr ><td class="tl" style="font-size:0.78rem;">F3<br><span style="font-size:0.72rem;color:var(--text-light);">사전처리 4단계(Indexing)</span><div style="font-size:0.7rem;color:#dc2626;margin-top:0.15rem;">이상치: Brian</div></td><td>2</td><td>0</td><td>1</td><td style="font-weight:700;color:var(--text);">67%</td></tr><tr ><td class="tl" style="font-size:0.78rem;">F4<br><span style="font-size:0.72rem;color:var(--text-light);">런타임 4단계(Query Pipeline)</span></td><td>1</td><td>1</td><td>1</td><td style="font-weight:700;color:var(--text);">50%</td></tr><tr ><td class="tl" style="font-size:0.78rem;">F5<br><span style="font-size:0.72rem;color:var(--text-light);">고도화 기법(하이브리드/Reranking)</span></td><td>0</td><td>2</td><td>1</td><td style="font-weight:700;color:var(--text);">33%</td></tr><tr style="background:#fef2f2;"><td class="tl" style="font-size:0.78rem;">G1 <span class="badge badge-orange" style="font-size:0.62rem;">가점</span><br><span style="font-size:0.72rem;color:var(--text-light);">벡터 DB 솔루션 비교</span></td><td>0</td><td>1</td><td>2</td><td style="font-weight:700;color:var(--red);">17%</td></tr><tr ><td class="tl" style="font-size:0.78rem;">G2 <span class="badge badge-orange" style="font-size:0.62rem;">가점</span><br><span style="font-size:0.72rem;color:var(--text-light);">실무 사례 또는 GraphRAG</span><div style="font-size:0.7rem;color:#dc2626;margin-top:0.15rem;">이상치: Charles</div></td><td>1</td><td>0</td><td>2</td><td style="font-weight:700;color:var(--text);">33%</td></tr><tr ><td class="tl" style="font-size:0.78rem;">S1<br><span style="font-size:0.72rem;color:var(--text-light);">구조 완결성</span></td><td>2</td><td>1</td><td>0</td><td style="font-weight:700;color:var(--text);">83%</td></tr></tbody></table></div></div>
+    
+
+
+    <div class="card">
+      <h2>섹션 4 · 학급 약점·강점 토픽</h2>
+      <div class="qual-grid">
+        <div class="qual-item" style="border-color:var(--red);background:#fef2f2;">
+          <div class="qual-header"><div class="qual-title" style="color:var(--red);">약점 TOP 3</div></div>
+          <ul style="margin-left:1.2rem;font-size:0.88rem;margin-top:0.5rem;"><li><strong>차원 축소</strong> — 평균 3.3/10 <span style="color:var(--text-light);font-size:0.8rem;">(랭크 1)</span></li><li><strong>OSPF 라우팅 프로토콜</strong> — 평균 3.9/10 <span style="color:var(--text-light);font-size:0.8rem;">(랭크 2)</span></li><li><strong>TCP 혼잡제어</strong> — 평균 4.3/10 <span style="color:var(--text-light);font-size:0.8rem;">(랭크 3)</span></li></ul>
+        </div>
+        <div class="qual-item" style="border-color:var(--green);background:#f0fdf4;">
+          <div class="qual-header"><div class="qual-title" style="color:var(--green);">강점 TOP 3</div></div>
+          <ul style="margin-left:1.2rem;font-size:0.88rem;margin-top:0.5rem;"><li><strong>마이클 포터 5-Forces Model</strong> — 평균 5.1/10 <span style="color:var(--text-light);font-size:0.8rem;">(랭크 1)</span></li><li><strong>RAG 검색증강생성</strong> — 평균 4.8/10 <span style="color:var(--text-light);font-size:0.8rem;">(랭크 2)</span></li><li><strong>ISMS-P 인증 제도</strong> — 평균 4.7/10 <span style="color:var(--text-light);font-size:0.8rem;">(랭크 3)</span></li></ul>
+        </div>
+      </div>
+      
+        <div class="comment-box critical" style="margin-top:1rem;">
+          <div class="comment-title">전원 누락 팩트 (인정률 0%)</div>
+          <ul><li>마이클 포터 5-Forces Model · 한계와 보완 프레임워크</li><li>차원 축소 · 설명 분산비 수치 예시</li><li>차원 축소 · UMAP 최신 동향</li><li>TCP 혼잡제어 · 혼잡 제어 등장 배경</li><li>제로 트러스트 아키텍처 · 구글 BeyondCorp 또는 한국 가이드라인</li><li>제로 트러스트 아키텍처 · SASE 또는 연관 프레임워크</li><li>프롬프트 인젝션 · SQL 인젝션과의 비교</li><li>프롬프트 인젝션 · 실제 사례</li><li>사이버 킬 체인 · 실제 공격 사례</li><li>OSPF 라우팅 프로토콜 · OSPF 패킷 5종</li></ul>
+        </div>
+        
+    </div>
+    
+
+
+    <div class="card">
+      <h2>섹션 5 · 편향 감사 요약</h2>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:0.6rem;margin-bottom:1rem;">
+        <div style="padding:0.8rem;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;">
+          <div style="font-size:0.78rem;color:#1e40af;">팩트 outlier</div>
+          <div style="font-size:1.6rem;font-weight:900;color:#1e40af;">14건</div>
+          <div style="font-size:0.72rem;color:#3b82f6;">전원 upheld (조정 0건)</div>
+        </div>
+        <div style="padding:0.8rem;background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;">
+          <div style="font-size:0.78rem;color:#78350f;">학생 outlier</div>
+          <div style="font-size:1.6rem;font-weight:900;color:#78350f;">16건</div>
+          <div style="font-size:0.72rem;color:#92400e;">전원 upheld (조정 0건)</div>
+        </div>
+        <div style="padding:0.8rem;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;">
+          <div style="font-size:0.78rem;color:#065f46;">reviewFlags</div>
+          <div style="font-size:1.6rem;font-weight:900;color:#065f46;">0건</div>
+          <div style="font-size:0.72rem;color:#10b981;">자동 재검토 불필요</div>
+        </div>
+      </div>
+
+      <h3>상향/하향 이탈 패턴</h3>
+      <p style="font-size:0.86rem;color:var(--text);margin-bottom:0.3rem;"><strong style="color:var(--green);">상향 이탈 :</strong> Charles (6건), Andrew (2건)</p>
+      <p style="font-size:0.86rem;color:var(--text);margin-bottom:0.8rem;"><strong style="color:var(--red);">하향 이탈 :</strong> Brian (7건), Andrew (1건)</p>
+
+      <h3>팩트 단위 outlier (상위 10건)</h3>
+      <ul style="margin-left:1.2rem;font-size:0.82rem;line-height:1.7;">
+        <li><strong>ISMS-P 인증 제도</strong> · 인증 의무 대상 — Andrew (다수(no) 속에 단독 yes)</li><li><strong>ISMS-P 인증 제도</strong> · 연관 제도(ISO 27001/GDPR) — Charles (다수(no) 속에 단독 yes)</li><li><strong>ISMS-P 인증 제도</strong> · 구조 완결성 — Brian (다수(yes) 속에 단독 no)</li><li><strong>마이클 포터 5-Forces Model</strong> · 3대 본원적 전략 연계 — Charles (다수(no) 속에 단독 yes)</li><li><strong>마이클 포터 5-Forces Model</strong> · IT 산업 적용 사례 — Andrew (다수(no) 속에 단독 yes)</li><li><strong>차원 축소</strong> · PCA vs t-SNE 비교 — Charles (다수(no) 속에 단독 yes)</li><li><strong>TCP 혼잡제어</strong> · 실무 사례(BBR/QUIC) — Charles (다수(no) 속에 단독 yes)</li><li><strong>RAG 검색증강생성</strong> · 사전처리 4단계(Indexing) — Brian (다수(yes) 속에 단독 no)</li><li><strong>RAG 검색증강생성</strong> · 실무 사례 또는 GraphRAG — Charles (다수(no) 속에 단독 yes)</li><li><strong>프롬프트 인젝션</strong> · 간접 프롬프트 인젝션과 위험성 — Andrew (다수(no) 속에 단독 yes)</li>
+      </ul>
+
+      <h3 style="margin-top:1rem;">학생 단위 outlier (상위 12건)</h3>
+      <ul style="margin-left:1.2rem;font-size:0.82rem;line-height:1.7;">
+        <li><strong>ISMS-P 인증 제도</strong> · Brian <span style="color:var(--red);">▼ 57%</span> (평균(4.7) 대비 -57% 이탈)</li><li><strong>마이클 포터 5-Forces Model</strong> · Brian <span style="color:var(--red);">▼ 35%</span> (평균(5.1) 대비 -35% 이탈)</li><li><strong>차원 축소</strong> · Brian <span style="color:var(--red);">▼ 70%</span> (평균(3.3) 대비 -70% 이탈)</li><li><strong>차원 축소</strong> · Charles <span style="color:var(--green);">▲ 80%</span> (평균(3.3) 대비 +80% 이탈)</li><li><strong>TCP 혼잡제어</strong> · Charles <span style="color:var(--green);">▲ 38%</span> (평균(4.3) 대비 +38% 이탈)</li><li><strong>제로 트러스트 아키텍처</strong> · Andrew <span style="color:var(--green);">▲ 31%</span> (평균(4.3) 대비 +31% 이탈)</li><li><strong>제로 트러스트 아키텍처</strong> · Brian <span style="color:var(--red);">▼ 31%</span> (평균(4.3) 대비 -31% 이탈)</li><li><strong>RAG 검색증강생성</strong> · Brian <span style="color:var(--red);">▼ 73%</span> (평균(4.8) 대비 -73% 이탈)</li><li><strong>RAG 검색증강생성</strong> · Charles <span style="color:var(--green);">▲ 47%</span> (평균(4.8) 대비 +47% 이탈)</li><li><strong>프롬프트 인젝션</strong> · Andrew <span style="color:var(--green);">▲ 32%</span> (평균(4.3) 대비 +32% 이탈)</li><li><strong>프롬프트 인젝션</strong> · Brian <span style="color:var(--red);">▼ 70%</span> (평균(4.3) 대비 -70% 이탈)</li><li><strong>프롬프트 인젝션</strong> · Charles <span style="color:var(--green);">▲ 38%</span> (평균(4.3) 대비 +38% 이탈)</li>
+      </ul>
+    </div>
+    
+
+
+    <div class="card">
+      <h2>섹션 6 · 가점·상한 통계 (v1.1 신규)</h2>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0.6rem;margin-bottom:1.2rem;">
+        <div style="padding:0.8rem;background:#f0fdf4;border:1.5px solid #34d399;border-radius:8px;">
+          <div style="font-size:0.78rem;color:#065f46;">가점 발동</div>
+          <div style="font-size:1.8rem;font-weight:900;color:#065f46;">2건</div>
+          <div style="font-size:0.72rem;color:#10b981;">Charles 2건 (RAG · 사이버킬체인)</div>
+        </div>
+        <div style="padding:0.8rem;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;">
+          <div style="font-size:0.78rem;color:#1e40af;">필수 커브 적용</div>
+          <div style="font-size:1.8rem;font-weight:900;color:#1e40af;">30건</div>
+          <div style="font-size:0.72rem;color:#3b82f6;">전 문제 100%</div>
+        </div>
+        <div style="padding:0.8rem;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;">
+          <div style="font-size:0.78rem;color:#991b1b;">내용 미달 강등</div>
+          <div style="font-size:1.8rem;font-weight:900;color:#991b1b;">8건</div>
+          <div style="font-size:0.72rem;color:#dc2626;">전원 Brian (시간 관리)</div>
+        </div>
+      </div>
+
+      <h3>가점 발동 케이스 (2건)</h3>
+      <div style="padding:0.8rem 1rem;background:#f0fdf4;border:1.5px solid #34d399;border-radius:8px;margin:0.3rem 0;"><div style="font-size:0.85rem;"><strong style="color:#065f46;">Charles</strong> · 문11 사이버 킬 체인 (2W_01_14)</div><div style="font-size:0.78rem;color:#047857;margin-top:0.2rem;">최종 제안 7.0점 · 차별화 단락 충실 증거 (RAG Naive→Modular 진화 / 킬체인 제로트러스트 연계)</div></div><div style="padding:0.8rem 1rem;background:#f0fdf4;border:1.5px solid #34d399;border-radius:8px;margin:0.3rem 0;"><div style="font-size:0.85rem;"><strong style="color:#065f46;">Charles</strong> · 문13 RAG 검색증강생성 (2W_01_04)</div><div style="font-size:0.78rem;color:#047857;margin-top:0.2rem;">최종 제안 7.0점 · 차별화 단락 충실 증거 (RAG Naive→Modular 진화 / 킬체인 제로트러스트 연계)</div></div>
+
+      <h3 style="margin-top:1.2rem;">분량 구간별 분포 (30문항)</h3>
+      <div style="display:flex;align-items:center;gap:0.5rem;margin:0.3rem 0;font-size:0.84rem;"><span style="min-width:200px;">분량 미달 (below_threshold)</span><div style="flex:1;height:16px;background:#edf2f7;border-radius:3px;overflow:hidden;"><div style="height:100%;width:46%;background:#dc2626;"></div></div><span style="min-width:70px;text-align:right;font-weight:700;">6건 (46%)</span></div><div style="display:flex;align-items:center;gap:0.5rem;margin:0.3rem 0;font-size:0.84rem;"><span style="min-width:200px;">부분 하(partial_low)</span><div style="flex:1;height:16px;background:#edf2f7;border-radius:3px;overflow:hidden;"><div style="height:100%;width:8%;background:#f97316;"></div></div><span style="min-width:70px;text-align:right;font-weight:700;">1건 (8%)</span></div><div style="display:flex;align-items:center;gap:0.5rem;margin:0.3rem 0;font-size:0.84rem;"><span style="min-width:200px;">부분 상(partial_high)</span><div style="flex:1;height:16px;background:#edf2f7;border-radius:3px;overflow:hidden;"><div style="height:100%;width:23%;background:#eab308;"></div></div><span style="min-width:70px;text-align:right;font-weight:700;">3건 (23%)</span></div><div style="display:flex;align-items:center;gap:0.5rem;margin:0.3rem 0;font-size:0.84rem;"><span style="min-width:200px;">표준(standard)</span><div style="flex:1;height:16px;background:#edf2f7;border-radius:3px;overflow:hidden;"><div style="height:100%;width:131%;background:#10b981;"></div></div><span style="min-width:70px;text-align:right;font-weight:700;">17건 (131%)</span></div><div style="display:flex;align-items:center;gap:0.5rem;margin:0.3rem 0;font-size:0.84rem;"><span style="min-width:200px;">차별화(bonus_eligible)</span><div style="flex:1;height:16px;background:#edf2f7;border-radius:3px;overflow:hidden;"><div style="height:100%;width:23%;background:#3b82f6;"></div></div><span style="min-width:70px;text-align:right;font-weight:700;">3건 (23%)</span></div>
+
+      <h3 style="margin-top:1.2rem;">내용 미달 강등 상세 (8건)</h3>
+      <ul style="margin-left:1.2rem;font-size:0.85rem;"><li><strong>Andrew</strong> · 문2 차원 축소</li><li><strong>Andrew</strong> · 문6 OSPF 라우팅 프로토콜</li><li><strong>Brian</strong> · 문2 차원 축소</li><li><strong>Brian</strong> · 문3 트랜스포머 어텐션 메커니즘</li><li><strong>Brian</strong> · 문9 ISMS-P 인증 제도</li><li><strong>Brian</strong> · 문11 사이버 킬 체인</li><li><strong>Brian</strong> · 문12 프롬프트 인젝션</li><li><strong>Brian</strong> · 문13 RAG 검색증강생성</li></ul>
+      <p style="font-size:0.78rem;color:var(--text-light);margin-top:0.5rem;">→ 시간 관리 중요성 증거: 뒤 문제일수록 공백 증가 패턴.</p>
+    </div>
+    
+
+
+        <div class="card">
+      <h2>섹션 7 · 다음 강의 우선순위</h2>
+      <p style="font-size:0.86rem;color:var(--text-light);margin-bottom:1rem;">학급 약점 토픽을 기반으로 한 다음 강의(3주차) 우선순위 제안.</p>
+
+      <div class="comment-box critical">
+        <div class="comment-title">1순위 · 차원 축소 (평균 3.33/10)</div>
+        <ul>
+          <li><strong>t-SNE/UMAP 원리</strong>: KL 다이버전스·Crowding Problem·t-분포 두꺼운 꼬리</li>
+          <li><strong>설명 분산비</strong>: 85~95% 누적 수치 기준 + 실무 해석</li>
+          <li><strong>PCA 5단계</strong>: 표준화→공분산→고유값분해→주성분 선택→변환</li>
+          <li><strong>오토인코더 연결</strong>: 비선형 PCA의 신경망 버전 (차별화 포인트)</li>
+          <li>실습 사례: 1000 Genomes / scRNA-seq 시각화</li>
+        </ul>
+      </div>
+
+      <div class="comment-box improve">
+        <div class="comment-title">2순위 · OSPF 라우팅 프로토콜 (평균 3.9/10)</div>
+        <ul>
+          <li><strong>Area 계층 구조</strong>: Area 0 Backbone + ABR/ASBR/Stub/NSSA 분류</li>
+          <li><strong>Cost 수식</strong>: Cost = Reference Bandwidth / Interface Bandwidth (100Mbps=1 기준)</li>
+          <li><strong>OSPF 패킷 5종</strong>: Hello / DBD / LSR / LSU / LSAck (가점 팩트)</li>
+          <li><strong>5단계 동작</strong>: Hello → DBD 동기화 → LSA 플러딩 → DR/BDR 선출 → SPF 계산</li>
+          <li>RFC 2328 표준번호 명시 습관화</li>
+        </ul>
+      </div>
+
+      <div class="comment-box improve">
+        <div class="comment-title">3순위 · TCP 혼잡제어 (평균 4.33/10)</div>
+        <ul>
+          <li><strong>AIMD 원리</strong>: Additive Increase / Multiplicative Decrease (용어 자체 필수)</li>
+          <li><strong>현대 알고리즘</strong>: Tahoe → Reno → CUBIC → BBR 진화</li>
+          <li><strong>실무 사례</strong>: YouTube BBR 4% 향상, 넷플릭스 QUIC 50% 단축 수치</li>
+          <li><strong>1986 혼잡 붕괴</strong>: Van Jacobson 1988 배경</li>
+        </ul>
+      </div>
+
+      <div class="comment-box good" style="margin-top:1rem;">
+        <div class="comment-title">학급 공통 습관 개선</div>
+        <ul>
+          <li><strong>실무 사례 빈도↑</strong>: "수치+기관명+연도" 패턴 암기 습관 (BBR/QUIC, BeyondCorp, 삼성/NVIDIA 등)</li>
+          <li><strong>차별화 단락 필수화</strong>: 3단락에 반드시 "연관 프레임워크 비교 + 최신 동향" 배치</li>
+          <li><strong>시간 관리</strong>: 10문제 × 약 10분 = 100분. 뒤 문제일수록 공백 증가 → 전반부 분량 관리 필요 (Brian 패턴)</li>
+        </ul>
+      </div>
+    </div>
+
+
+</div>
+
+</body>
+</html>
